@@ -1,9 +1,9 @@
 // =========================================================
-//  TRANG ĐƠN HÀNG
+//  ORDERS PAGE
 // =========================================================
 @use '../abstracts' as *;
 
-// Tab Đơn mua / Đơn bán: dạng nút chia đôi
+// Purchases / Sales tabs: a split button
 .role-tabs {
   display: inline-flex;
   justify-self: start;
@@ -128,7 +128,7 @@
     color: var(--color-text-muted);
   }
 
-  // <details> thông tin nhận hàng
+  // <details> with the shipping details
   &__receiver {
     font-size: $font-size-sm;
 
@@ -176,8 +176,8 @@
   }
 }
 
-// ---------- Thanh tiến trình đơn ----------
-// Mỗi bước: chấm tròn (::after) + nhãn, nối với bước trước bằng đường kẻ (::before)
+// ---------- Order progress bar ----------
+// Each step: a dot (::after) + label, joined to the previous step by a line (::before)
 .order-steps {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -196,7 +196,7 @@
       font-size: 0.75rem;
     }
 
-    // Chấm tròn (order: -1 -> nằm trên nhãn)
+    // Dot (order: -1 -> sits above the label)
     &::after {
       content: '';
       position: relative;
@@ -209,7 +209,7 @@
       background: var(--color-surface);
     }
 
-    // Đường nối với bước trước
+    // Line to the previous step
     & + li::before {
       content: '';
       position: absolute;
@@ -249,7 +249,7 @@
   }
 }
 
-// Số đơn cần xử lý trên tab Đơn mua / Đơn bán
+// Orders needing action on the Purchases / Sales tabs
 .role-tabs__badge {
   min-width: 20px;
   padding: 0 6px;

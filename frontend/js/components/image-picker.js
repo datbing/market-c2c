@@ -1,36 +1,36 @@
 /**
- * Chọn ảnh cho tin đăng. Ảnh CHỈ nằm trong bộ nhớ trình duyệt cho tới khi bấm Đăng.
+ * Image picker for listings. Images stay ONLY in browser memory until Post is clicked.
  *
- * HTML viết sẵn trong sell.html:
+ * HTML written in sell.html:
  *   <div class="image-picker" id="...">
  *     <label class="image-picker__drop"> <input type="file" multiple accept="image/*"> ...</label>
- *     <ul class="image-picker__list"></ul>     (ảnh xem trước, từ <template id="tpl-image-item">)
+ *     <ul class="image-picker__list"></ul>     (previews, from <template id="tpl-image-item">)
  *     <p data-picker-status></p>
  *   </div>
  *
- * Tính năng: chọn nhiều ảnh, kéo thả file vào khung, nén bằng Canvas,
- * xem trước (URL.createObjectURL), xóa, đặt ảnh bìa, kéo thả để sắp xếp.
- * Khi sửa tin: nạp sẵn ảnh đã đăng (addExisting), trộn chung với ảnh mới.
- * Mỗi lần danh sách đổi -> phát CustomEvent 'images:change' trên phần tử gốc.
+ * Features: pick multiple images, drop files onto the box, compress with Canvas,
+ * preview (URL.createObjectURL), remove, set as cover, drag and drop to reorder.
+ * When editing: preloads the existing images (addExisting), mixed with new ones.
+ * Every change to the list -> dispatches the 'images:change' CustomEvent on the root element.
  */
 import { assetUrl } from '../config.js';
 import { cloneTemplate } from '../utils/template.js';
 import { compressImage, formatBytes } from '../utils/image.js';
 import { showToast } from './toast.js';
 
-const MAX_INPUT_BYTES = 25 * 1024 * 1024; // ảnh gốc tối đa 25MB (trước khi nén)
+const MAX_INPUT_BYTES = 25 * 1024 * 1024; // original image up to 25MB (before compression)
 
 let nextId = 1;
 
 export class ImagePicker {
   /**
-   * Ảnh mới: có `blob`. Ảnh đã đăng (khi sửa tin): `blob` = null, có `existingId`.
+   * New image: has a `blob`. Existing image (when editing): `blob` = null, has an `existingId`.
    * @type {{ id: number, blob: Blob|null, existingId: number|null, url: string, name: string }[]}
    */
   items = [];
-  /** Số ảnh đang nén */
+  /** Number of images being compressed */
   #processing = 0;
-  /** id ảnh đang được kéo (sắp xếp) */
+  /** id of the image being dragged (reordering) */
   #draggingId = null;
 
   /**
@@ -57,30 +57,30 @@ export class ImagePicker {
     return this.#processing > 0;
   }
 
-  /** Các ảnh mới theo thứ tự hiển thị (dùng khi đăng tin) */
+  /** New images in display order (used when posting) */
   get blobs() {
     return this.items.filter((item) => item.blob).map((item) => item.blob);
   }
 
-  /** Tất cả ảnh theo thứ tự: { existingId } = ảnh cũ giữ lại, { blob } = ảnh mới (dùng khi sửa tin) */
+  /** Every image in order: { existingId } = kept old image, { blob } = new image (used when editing) */
   get images() {
     return this.items.map((item) => (item.existingId ? { existingId: item.existingId } : { blob: item.blob }));
   }
 
-  /** Có ảnh mới chưa gửi lên không (để hỏi lại khi rời trang) */
+  /** Whether there are unsent new images (to warn before leaving the page) */
   get hasNewImages() {
     return this.items.some((item) => item.blob);
   }
 
-  /** URL xem trước của ảnh bìa (null nếu chưa có ảnh) */
+  /** Preview URL of the cover image (null when there are no images) */
   get coverUrl() {
     return this.items[0]?.url ?? null;
   }
 
   // ---------------------------------------------------------
-  //  Thêm / xóa / sắp xếp
+  //  Add / remove / reorder
   // ---------------------------------------------------------
-  /** Nạp ảnh đã đăng của tin (chế độ sửa tin) */
+  /** Load the listing's existing images (edit mode) */
   addExisting(images) {
     images.forEach((image, i) => {
       this.items.push({
@@ -94,7 +94,7 @@ export class ImagePicker {
     this.#changed();
   }
 
-  /** Nén và thêm các file người dùng chọn (vượt số lượng thì bỏ bớt, có báo) */
+  /** Compress and add the files the user picked (extra files beyond the limit are dropped, with a notice) */
   async addFiles(fileList) {
     const files = [...fileList];
     const room = this.max - this.items.length - this.#processing;
@@ -121,7 +121,7 @@ export class ImagePicker {
     this.#processing += accepted.length;
     this.#render();
 
-    // Nén song song; ảnh nào lỗi thì báo riêng, không ảnh hưởng ảnh khác
+    // Compress in parallel; a failing image is reported on its own without affecting the others
     const results = await Promise.allSettled(accepted.map((file) => compressImage(file)));
     results.forEach((result, i) => {
       if (result.status === 'fulfilled') {
@@ -145,12 +145,12 @@ export class ImagePicker {
   remove(id) {
     const item = this.items.find((x) => x.id === id);
     if (!item) return;
-    if (item.blob) URL.revokeObjectURL(item.url); // giải phóng bộ nhớ của ảnh xem trước
+    if (item.blob) URL.revokeObjectURL(item.url); // free the preview's memory
     this.items = this.items.filter((x) => x.id !== id);
     this.#changed();
   }
 
-  /** Đưa ảnh lên đầu danh sách -> thành ảnh bìa */
+  /** Move an image to the front of the list -> it becomes the cover */
   makeCover(id) {
     const item = this.items.find((x) => x.id === id);
     if (!item) return;
@@ -158,7 +158,7 @@ export class ImagePicker {
     this.#changed();
   }
 
-  /** Chuyển ảnh `id` tới vị trí của ảnh `targetId` (kéo thả sắp xếp) */
+  /** Move image `id` to the position of image `targetId` (drag and drop reordering) */
   move(id, targetId) {
     const from = this.items.findIndex((x) => x.id === id);
     const to = this.items.findIndex((x) => x.id === targetId);
@@ -177,7 +177,7 @@ export class ImagePicker {
   }
 
   // ---------------------------------------------------------
-  //  Hiển thị
+  //  Rendering
   // ---------------------------------------------------------
   #changed() {
     this.#render();
@@ -210,16 +210,16 @@ export class ImagePicker {
   }
 
   // ---------------------------------------------------------
-  //  Sự kiện
+  //  Events
   // ---------------------------------------------------------
   #bindEvents() {
-    // Chọn file bằng hộp thoại của hệ điều hành
+    // Pick files with the OS file dialog
     this.input.addEventListener('change', () => {
       this.addFiles(this.input.files);
-      this.input.value = ''; // reset để chọn lại đúng file vừa xóa vẫn được
+      this.input.value = ''; // reset so the same file can be picked again after removing it
     });
 
-    // Kéo file từ máy tính thả vào khung
+    // Drag files from the computer and drop them onto the box
     ['dragenter', 'dragover'].forEach((type) =>
       this.drop.addEventListener(type, (e) => {
         if (!e.dataTransfer?.types.includes('Files')) return;
@@ -236,7 +236,7 @@ export class ImagePicker {
       if (!this.input.disabled) this.addFiles(e.dataTransfer.files);
     });
 
-    // Nút trên từng ảnh (event delegation)
+    // Buttons on each image (event delegation)
     this.list.addEventListener('click', (e) => {
       const button = e.target.closest('[data-image-action]');
       if (!button) return;
@@ -245,7 +245,7 @@ export class ImagePicker {
       else this.makeCover(id);
     });
 
-    // Kéo thả để sắp xếp ảnh (HTML5 Drag and Drop API)
+    // Drag and drop to reorder images (HTML5 Drag and Drop API)
     this.list.addEventListener('dragstart', (e) => {
       const li = e.target.closest('[data-image-id]');
       if (!li) return;

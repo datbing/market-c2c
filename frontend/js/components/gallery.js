@@ -1,10 +1,10 @@
 /**
- * Bộ ảnh của trang chi tiết tin.
- * HTML viết sẵn trong product.html (khung ảnh lớn, nút trước/sau, dải ảnh nhỏ,
- * hộp xem phóng to <dialog>), ảnh nhỏ nhân bản từ <template id="tpl-gallery-thumb">.
+ * Image gallery of the listing detail page.
+ * The HTML is written in product.html (main image, prev/next buttons, thumbnail strip,
+ * zoom <dialog>), thumbnails are cloned from <template id="tpl-gallery-thumb">.
  *
- * Điều khiển: bấm ảnh nhỏ, nút trước/sau, phím ← →, vuốt trên điện thoại,
- * bấm ảnh lớn để mở <dialog> xem phóng to (Esc để đóng - hành vi có sẵn của <dialog>).
+ * Controls: click a thumbnail, prev/next buttons, Left/Right arrow keys, swipe on phones,
+ * click the main image to open the zoom <dialog> (Esc closes it - built-in <dialog> behavior).
  */
 import { assetUrl } from '../config.js';
 import { cloneTemplate } from '../utils/template.js';
@@ -15,15 +15,15 @@ export class Gallery {
   index = 0;
 
   /**
-   * @param {HTMLElement} root   phần tử .gallery
+   * @param {HTMLElement} root   the .gallery element
    * @param {object} options
    * @param {{ url: string }[]} options.images
-   * @param {string} options.title          tên tin, dùng làm alt ảnh
-   * @param {string} [options.placeholderIcon] class icon khi tin không có ảnh
+   * @param {string} options.title          listing title, used as the image alt text
+   * @param {string} [options.placeholderIcon] icon class when the listing has no images
    */
   constructor(root, { images, title, placeholderIcon = 'bi-box-seam' }) {
     this.root = root;
-    // Ảnh nằm ở server API (khác origin) -> đổi "/uploads/..." thành URL đầy đủ
+    // Images live on the API server (different origin) -> turn "/uploads/..." into a full URL
     this.images = images.map((image) => ({ ...image, url: assetUrl(image.url) }));
     this.title = title;
 
@@ -47,7 +47,7 @@ export class Gallery {
     this.show(0);
   }
 
-  /** Tin không có ảnh: hiện icon danh mục, ẩn mọi nút điều khiển */
+  /** Listing without images: show the category icon, hide every control */
   #renderEmpty(icon) {
     this.el.placeholder.querySelector('.bi').className = `bi ${icon}`;
     this.el.placeholder.hidden = false;
@@ -79,7 +79,7 @@ export class Gallery {
     );
   }
 
-  /** Hiện ảnh thứ i (tự quay vòng khi vượt đầu/cuối) */
+  /** Show image i (wraps around past the first/last image) */
   show(i) {
     const total = this.images.length;
     this.index = (i + total) % total;
@@ -94,10 +94,10 @@ export class Gallery {
       btn.classList.toggle('is-active', active);
       btn.setAttribute('aria-current', String(active));
     });
-    // Cuộn dải ảnh nhỏ để ảnh đang chọn luôn nhìn thấy
+    // Scroll the thumbnail strip so the selected image stays visible
     this.el.thumbs.querySelector('.is-active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
-    // Đang mở hộp phóng to thì cập nhật luôn
+    // Also update the zoom dialog if it is open
     if (this.el.dialog?.open) this.#renderLightbox();
   }
 
@@ -110,7 +110,7 @@ export class Gallery {
   }
 
   // ---------------------------------------------------------
-  //  Hộp xem phóng to (<dialog>)
+  //  Zoom dialog (<dialog>)
   // ---------------------------------------------------------
   #renderLightbox() {
     const { dialog } = this.el;
@@ -131,7 +131,7 @@ export class Gallery {
   }
 
   // ---------------------------------------------------------
-  //  Sự kiện
+  //  Events
   // ---------------------------------------------------------
   #bindEvents() {
     const { thumbs, open, dialog } = this.el;
@@ -147,14 +147,14 @@ export class Gallery {
     });
 
 
-    // Phím mũi tên khi focus đang ở trong bộ ảnh
+    // Arrow keys while focus is inside the gallery
     this.root.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight') this.next();
       if (e.key === 'ArrowLeft') this.prev();
     });
 
-    // Vuốt trái/phải trên màn hình cảm ứng.
-    // Sau khi vuốt trình duyệt vẫn bắn thêm "click" -> dùng cờ để không mở hộp phóng to nhầm
+    // Swipe left/right on touch screens.
+    // The browser still fires a "click" after a swipe -> use a flag so the zoom dialog does not open by mistake
     let startX = null;
     let swiped = false;
     open.addEventListener('pointerdown', (e) => {
@@ -180,7 +180,7 @@ export class Gallery {
     dialog.addEventListener('click', (e) => {
       const nav = e.target.closest('[data-lightbox-nav]');
       if (nav) nav.dataset.lightboxNav === 'next' ? this.next() : this.prev();
-      // Bấm ra vùng tối bên ngoài ảnh -> đóng
+      // Click on the dark area outside the image -> close
       else if (e.target === dialog) dialog.close();
     });
     dialog.addEventListener('keydown', (e) => {

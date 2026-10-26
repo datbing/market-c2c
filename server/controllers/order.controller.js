@@ -1,6 +1,6 @@
 /**
- * Controller đơn hàng.
- * Mỗi món trong giỏ -> 1 đơn riêng (mỗi tin = 1 món của 1 người bán).
+ * Order controller.
+ * Each cart item -> its own order (each listing = one item from one seller).
  */
 import { withTransaction } from '../config/db.js';
 import { HttpError } from '../utils/HttpError.js';
@@ -10,19 +10,19 @@ import * as Order from '../models/order.model.js';
 const PHONE_RE = /^0\d{9}$/;
 const MAX_ITEMS = 20;
 
-/** Chuyển sang số nguyên dương, sai thì trả fallback */
+/** Parse as a positive integer, return the fallback when invalid */
 const toPositiveInt = (value, fallback) => {
   const n = Number.parseInt(value, 10);
   return Number.isInteger(n) && n > 0 ? n : fallback;
 };
 
 /**
- * Ai được chuyển đơn từ trạng thái nào sang trạng thái nào.
- *   pending   -> confirmed (người bán xác nhận), cancelled (người bán hoặc người mua hủy)
- *   confirmed -> shipping (người bán giao hàng), cancelled (người bán hủy)
- *   shipping  -> completed (người bán, hoặc người mua bấm "đã nhận hàng")
- *   completed / cancelled: kết thúc, không đổi nữa
- * Đơn hoàn thành -> tin tự chuyển "đã bán".
+ * Who may move an order from which status to which.
+ *   pending   -> confirmed (seller confirms), cancelled (seller or buyer cancels)
+ *   confirmed -> shipping (seller ships), cancelled (seller cancels)
+ *   shipping  -> completed (seller, or the buyer clicks "received")
+ *   completed / cancelled: final, no further changes
+ * Completed order -> the listing automatically becomes "sold".
  */
 const TRANSITIONS = {
   pending: { confirmed: ['seller'], cancelled: ['seller', 'buyer'] },
@@ -40,9 +40,9 @@ const STATUS_MESSAGES = {
 };
 
 /**
- * POST /api/orders  (đăng nhập)
+ * POST /api/orders  (logged in)
  * Body: { listingIds: number[], receiverName, receiverPhone, address, province, note? }
- * Tạo tất cả đơn trong 1 transaction: 1 món lỗi thì không tạo đơn nào, báo rõ món nào lỗi.
+ * Creates every order in one transaction: if one item fails no order is created, and the failing items are reported.
  */
 export async function createOrders(req, res) {
   const body = req.body ?? {};
@@ -62,7 +62,7 @@ export async function createOrders(req, res) {
     note: [rules.maxLength(500, 'Ghi chú tối đa 500 ký tự')],
   });
 
-  // Danh sách tin: mảng số nguyên dương, không trùng
+  // Listing list: positive integers, no duplicates
   const listingIds = Array.isArray(body.listingIds)
     ? [...new Set(body.listingIds.map((id) => toPositiveInt(id, null)))]
     : [];
@@ -79,7 +79,7 @@ export async function createOrders(req, res) {
     const byId = new Map(listings.map((l) => [l.id, l]));
     const reserved = await Order.findListingsWithOpenOrder(conn, listingIds);
 
-    // Kiểm tra từng món, gom tất cả lỗi để báo một lần
+    // Check every item, collect all errors to report them at once
     const problems = listingIds
       .map((id) => {
         const l = byId.get(id);
@@ -128,8 +128,8 @@ export async function createOrders(req, res) {
 }
 
 /**
- * GET /api/orders?role=buyer|seller&status=&page=&limit=  (đăng nhập)
- * meta.counts = số đơn theo trạng thái (theo vai trò đang xem).
+ * GET /api/orders?role=buyer|seller&status=&page=&limit=  (logged in)
+ * meta.counts = number of orders per status (for the role being viewed).
  */
 export async function listOrders(req, res) {
   const qs = req.query;
@@ -157,14 +157,14 @@ export async function listOrders(req, res) {
 }
 
 /**
- * GET /api/orders/summary  (đăng nhập)
- * Số đơn cần xử lý -> header hiện chấm đỏ / số trên mục "Đơn hàng" ở mọi trang.
+ * GET /api/orders/summary  (logged in)
+ * Orders needing action -> the header shows a red dot / number on the "Orders" item on every page.
  */
 export async function orderSummary(req, res) {
   res.json({ success: true, data: { needAction: await Order.countNeedAction(req.user.id) } });
 }
 
-/** Lấy đơn + kiểm tra người xem là người mua, người bán hoặc admin */
+/** Load the order + check that the viewer is the buyer, the seller or an admin */
 async function getVisibleOrder(req) {
   const id = toPositiveInt(req.params.id, null);
   const row = id ? await Order.findById(id) : null;
@@ -173,15 +173,15 @@ async function getVisibleOrder(req) {
   return row;
 }
 
-/** GET /api/orders/:id  (người mua / người bán / admin) */
+/** GET /api/orders/:id  (buyer / seller / admin) */
 export async function getOrder(req, res) {
   const row = await getVisibleOrder(req);
   res.json({ success: true, data: Order.toOrder(row, req.user.id) });
 }
 
 /**
- * PATCH /api/orders/:id/status  { status }  (người mua / người bán, theo bảng TRANSITIONS)
- * Hoàn thành đơn -> tin chuyển "đã bán" trong cùng transaction.
+ * PATCH /api/orders/:id/status  { status }  (buyer / seller, following the TRANSITIONS table)
+ * Completing an order -> the listing becomes "sold" in the same transaction.
  */
 export async function updateOrderStatus(req, res) {
   const id = toPositiveInt(req.params.id, null);

@@ -1,7 +1,7 @@
 // =========================================================
-//  TRANG GIỎ HÀNG
-//  Mobile/tablet: danh sách -> thông tin nhận hàng -> tóm tắt (1 cột)
-//  Desktop: bên trái danh sách + form, bên phải tóm tắt dính khi cuộn
+//  CART PAGE
+//  Mobile/tablet: items -> shipping details -> summary (1 column)
+//  Desktop: items + form on the left, summary on the right (sticky while scrolling)
 // =========================================================
 @use '../abstracts' as *;
 
@@ -56,7 +56,7 @@
   }
 }
 
-// Nhóm theo người bán
+// Group by seller
 .cart-group {
   padding-block: $space-3;
 
@@ -79,7 +79,7 @@
   }
 }
 
-// 1 món: [ô chọn] [ảnh] [tên + khu vực] [giá] [xóa]
+// One item: [checkbox] [image] [title + area] [price] [remove]
 .cart-item {
   display: grid;
   grid-template-columns: auto 64px minmax(0, 1fr) auto;
@@ -175,7 +175,7 @@
     }
   }
 
-  // Món không mua được: mờ đi, giá gạch ngang
+  // Item that cannot be bought: faded, price struck through
   &.is-unavailable {
     background: var(--color-surface-2);
 
@@ -191,7 +191,7 @@
   }
 }
 
-// ---------- Tóm tắt ----------
+// ---------- Summary ----------
 .cart-summary {
   display: grid;
   gap: $space-4;

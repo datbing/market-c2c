@@ -1,8 +1,8 @@
 // =========================================================
-//  TRANG CHI TIẾT TIN
-//  Mobile : ảnh -> thông tin -> mô tả -> lưu ý (1 cột)
-//  Tablet : ảnh | thông tin, mô tả + lưu ý bên dưới (2 cột)
-//  Desktop: cột trái ảnh + mô tả + lưu ý, cột phải thông tin dính khi cuộn
+//  LISTING DETAIL PAGE
+//  Mobile : images -> info -> description -> tips (1 column)
+//  Tablet : images | info, description + tips below (2 columns)
+//  Desktop: left column images + description + tips, right column info (sticky while scrolling)
 // =========================================================
 @use '../abstracts' as *;
 
@@ -48,7 +48,7 @@
     grid-area: gallery;
   }
 
-  // ---------- Cột thông tin ----------
+  // ---------- Info column ----------
   &__info {
     grid-area: info;
     display: grid;
@@ -111,7 +111,7 @@
     }
   }
 
-  // Bảng thông tin dạng lưới 2 cột (dl/dt/dd)
+  // Info table as a 2-column grid (dl/dt/dd)
   &__meta {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -164,7 +164,7 @@
     }
   }
 
-  // ---------- Mô tả + lưu ý ----------
+  // ---------- Description + tips ----------
   &__description,
   &__tips {
     @include surface($space-5);
@@ -182,7 +182,7 @@
     grid-area: description;
 
     p {
-      white-space: pre-line; // giữ xuống dòng người bán đã gõ
+      white-space: pre-line; // keep the seller's line breaks
       overflow-wrap: anywhere;
       line-height: 1.7;
     }
@@ -205,7 +205,7 @@
     }
   }
 
-  // ---------- Khung chờ khi đang tải ----------
+  // ---------- Skeleton while loading ----------
   &--loading {
     grid-template-areas: none;
   }
@@ -227,7 +227,7 @@
   }
 }
 
-// Nút giỏ hàng: chữ đổi theo aria-pressed (chưa có / đã có trong giỏ)
+// Cart button: text switches on aria-pressed (not in cart / in cart)
 .cart-toggle {
   &__added {
     display: none;
@@ -244,7 +244,7 @@
   }
 }
 
-// Nút lưu tin: tim + chữ đổi theo aria-pressed
+// Save button: heart + text switch on aria-pressed
 .favorite-toggle {
   .bi-heart-fill,
   .favorite-toggle__on {
@@ -266,7 +266,7 @@
   }
 }
 
-// ---------- Thẻ người bán ----------
+// ---------- Seller card ----------
 .seller-card {
   @include surface($space-4);
 
@@ -316,7 +316,7 @@
   font-size: 1.25rem;
 }
 
-// Avatar trong thẻ người bán: nền cam (avatar ở header dùng nền trắng vì nằm trên nền cam)
+// Avatar in the seller card: orange background (the header avatar is white since it sits on orange)
 .seller-card .avatar {
   background: var(--color-primary);
   color: var(--color-on-primary);
@@ -324,4 +324,19 @@
 
 .related {
   min-width: 0;
+}
+
+// The "Report" button is less prominent than the others, turns red on hover
+.product__report:hover {
+  color: var(--color-danger);
+}
+
+// Report reasons stacked vertically
+.report-options {
+  display: grid;
+  gap: $space-2;
+
+  input {
+    margin-top: 2px;
+  }
 }

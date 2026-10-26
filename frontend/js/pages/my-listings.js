@@ -1,10 +1,10 @@
 /**
- * TRANG TIN ĐĂNG CỦA TÔI: /my-listings (bắt buộc đăng nhập)
- *  - Tab lọc theo trạng thái kèm số lượng (Tất cả / Đang bán / Chờ duyệt / Đã bán / Đang ẩn / Bị từ chối)
- *  - Tìm kiếm trong tin của mình (debounce), phân trang
- *  - Hành động theo trạng thái: sửa, đánh dấu đã bán, ẩn, hiện lại, đăng bán lại, xóa
- *    (xác nhận bằng <dialog> trước khi xóa / đánh dấu đã bán)
- *  - Bộ lọc giữ trên URL (?status=&q=&page=) -> F5 / chia sẻ link vẫn đúng tab
+ * MY LISTINGS PAGE: /my-listings (login required)
+ *  - Status tabs with counts (All / Active / Pending / Sold / Hidden / Rejected)
+ *  - Search within your own listings (debounced), pagination
+ *  - Actions by status: edit, mark as sold, hide, show again, relist, delete
+ *    (confirmed with a <dialog> before deleting / marking as sold)
+ *  - Filters are kept in the URL (?status=&q=&page=) -> F5 / shared links open the right tab
  */
 import { $, $$, debounce } from '../utils/dom.js';
 import { cloneTemplate, fillFields } from '../utils/template.js';
@@ -22,8 +22,8 @@ import { listingUrl } from '../components/listing-card.js';
 const PAGE_SIZE = 10;
 
 /**
- * Nút hành động được hiện theo trạng thái tin (các nút đều có sẵn trong template).
- * "delete" còn phụ thuộc tin đã có đơn hàng chưa (xử lý riêng).
+ * Action buttons shown for each listing status (every button already exists in the template).
+ * "delete" also depends on whether the listing already has orders (handled separately).
  */
 const ACTIONS_BY_STATUS = {
   active: ['edit', 'sold', 'hide', 'delete'],
@@ -33,7 +33,7 @@ const ACTIONS_BY_STATUS = {
   rejected: ['edit', 'delete'],
 };
 
-/** Hành động -> trạng thái mới + hộp xác nhận (nếu cần) */
+/** Action -> new status + confirmation dialog (if needed) */
 const STATUS_ACTIONS = {
   sold: {
     status: 'sold',
@@ -48,7 +48,7 @@ const STATUS_ACTIONS = {
   relist: { status: 'active' },
 };
 
-/** Lời nhắn khi tab đang chọn không có tin nào */
+/** Message when the selected tab has no listings */
 const EMPTY_TEXTS = {
   all: 'Bạn chưa đăng tin nào. Đăng tin đầu tiên để bắt đầu bán nhé!',
   active: 'Không có tin nào đang bán.',
@@ -60,7 +60,7 @@ const EMPTY_TEXTS = {
 
 class MyListingsPage {
   filters = { status: '', q: '', page: 1 };
-  /** Map id -> tin đang hiển thị */
+  /** Map id -> listing on screen */
   listings = new Map();
   controller = null;
 
@@ -101,7 +101,7 @@ class MyListingsPage {
     };
   }
 
-  /** Đổi bộ lọc -> ghi lên URL -> tải lại */
+  /** Change filters -> write them to the URL -> reload */
   setFilters(patch) {
     this.filters = { ...this.filters, page: 1, ...patch };
     const params = new URLSearchParams();
@@ -114,9 +114,9 @@ class MyListingsPage {
   }
 
   // =======================================================
-  //  TẢI DỮ LIỆU
+  //  LOADING DATA
   // =======================================================
-  /** 'loading' | 'list' | 'empty' | 'error' - các khối viết sẵn trong HTML */
+  /** 'loading' | 'list' | 'empty' | 'error' - blocks written in the HTML */
   showState(state) {
     const { list, loading, empty, error, pagination } = this.el;
     loading.hidden = state !== 'loading';
@@ -131,14 +131,14 @@ class MyListingsPage {
     const controller = new AbortController();
     this.controller = controller;
 
-    // Đã có danh sách -> làm mờ thay vì hiện khung chờ (đỡ giật trang)
+    // A list is already shown -> fade it instead of showing skeletons (less jumpy)
     if (this.el.list.hidden) this.showState('loading');
     else this.el.list.classList.add('is-loading');
 
     try {
       const { data, meta } = await getMyListings({ ...this.filters, limit: PAGE_SIZE }, controller.signal);
 
-      // Trang hiện tại không còn tin (vd vừa xóa tin cuối trang) -> lùi 1 trang
+      // The current page has no listings left (e.g. the last one was just deleted) -> go back one page
       if (data.length === 0 && this.filters.page > 1) {
         this.setFilters({ page: this.filters.page - 1 });
         return;
@@ -156,9 +156,9 @@ class MyListingsPage {
   }
 
   // =======================================================
-  //  HIỂN THỊ
+  //  RENDERING
   // =======================================================
-  /** Cập nhật số đếm + tab đang chọn (các tab viết sẵn trong HTML) */
+  /** Update the counts + selected tab (the tabs are written in the HTML) */
   renderTabs(counts) {
     $$('[data-status-tab]', this.el.tabs).forEach((tab) => {
       const status = tab.dataset.statusTab;
@@ -181,7 +181,7 @@ class MyListingsPage {
       $('#my-empty-text').textContent = q
         ? `Không tìm thấy tin nào khớp với "${q}".`
         : EMPTY_TEXTS[status || 'all'];
-      // Gợi ý đăng tin chỉ khi thật sự chưa có tin nào
+      // Only suggest posting when there really are no listings at all
       $('#my-empty-cta').hidden = Boolean(q || status);
       this.showState('empty');
       return;
@@ -192,7 +192,7 @@ class MyListingsPage {
     renderPagination(this.el.pagination, meta);
   }
 
-  /** 1 dòng tin từ <template id="tpl-my-listing"> */
+  /** One listing row from <template id="tpl-my-listing"> */
   createRow(item) {
     const row = cloneTemplate('tpl-my-listing');
     row.dataset.id = item.id;
@@ -206,7 +206,7 @@ class MyListingsPage {
       category: item.category.name,
     });
 
-    // Ảnh bìa hoặc icon danh mục
+    // Cover image or category icon
     const thumb = row.querySelector('.my-listing__thumb');
     thumb.href = listingUrl(item.id);
     if (item.thumbnail) {
@@ -222,7 +222,7 @@ class MyListingsPage {
     row.querySelector('.badge').classList.add(`badge--status-${item.status}`);
     row.querySelector('[data-field="created"]').title = formatDate(item.createdAt);
 
-    // Thông tin thêm theo trạng thái
+    // Extra info depending on the status
     const note = row.querySelector('.my-listing__note');
     if (item.status === 'rejected') {
       note.textContent = `Lý do từ chối: ${item.rejectReason || 'không ghi rõ'}. Sửa tin để gửi duyệt lại.`;
@@ -236,7 +236,7 @@ class MyListingsPage {
       note.hidden = false;
     }
 
-    // Chỉ hiện các nút hợp với trạng thái; tin đã có đơn thì không xóa được
+    // Only show the buttons valid for the status; listings with orders cannot be deleted
     const allowed = new Set(ACTIONS_BY_STATUS[item.status] ?? []);
     if (item.orderCount > 0) allowed.delete('delete');
     row.querySelectorAll('[data-action]').forEach((btn) => {
@@ -249,7 +249,7 @@ class MyListingsPage {
   }
 
   // =======================================================
-  //  HÀNH ĐỘNG
+  //  ACTIONS
   // =======================================================
   async changeStatus(item, action, button) {
     const { status, confirm } = STATUS_ACTIONS[action];
@@ -259,7 +259,7 @@ class MyListingsPage {
     try {
       const { message } = await updateListingStatus(item.id, status);
       showToast(message, 'success');
-      this.load(); // số đếm trên tab thay đổi -> tải lại
+      this.load(); // tab counts changed -> reload
     } catch (err) {
       showToast(err.message, 'error');
       button.disabled = false;
@@ -286,13 +286,13 @@ class MyListingsPage {
   }
 
   bindEvents() {
-    // Tab trạng thái
+    // Status tabs
     this.el.tabs.addEventListener('click', (e) => {
       const tab = e.target.closest('[data-status-tab]');
       if (tab) this.setFilters({ status: tab.dataset.statusTab });
     });
 
-    // Tìm kiếm: debounce, Enter thì tìm ngay
+    // Search: debounced, Enter searches immediately
     const search = debounce(() => this.setFilters({ q: this.el.search.value.trim() }), 400);
     this.el.search.addEventListener('input', search);
     $('#my-search-form').addEventListener('submit', (e) => {
@@ -301,7 +301,7 @@ class MyListingsPage {
       this.setFilters({ q: this.el.search.value.trim() });
     });
 
-    // Nút trên từng dòng (event delegation)
+    // Buttons on each row (event delegation)
     this.el.list.addEventListener('click', (e) => {
       const button = e.target.closest('button[data-action]');
       if (!button) return;
@@ -313,7 +313,7 @@ class MyListingsPage {
       else if (STATUS_ACTIONS[action]) this.changeStatus(item, action, button);
     });
 
-    // Phân trang
+    // Pagination
     this.el.pagination.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-page]');
       if (!btn || btn.disabled) return;

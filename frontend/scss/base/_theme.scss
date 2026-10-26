@@ -1,14 +1,14 @@
 // =========================================================
-//  THEME SÁNG / TỐI bằng CSS custom properties.
-//  JS chỉ cần đổi <html data-theme="dark"> là toàn trang đổi màu.
-//  Component KHÔNG viết màu cứng, chỉ dùng các biến ở đây.
+//  LIGHT / DARK THEME with CSS custom properties.
+//  JS only switches <html data-theme="dark"> and the whole page changes color.
+//  Components do NOT hard-code colors, they only use the variables here.
 // =========================================================
 @use '../abstracts' as *;
 
 :root {
   color-scheme: light;
 
-  // ---------- Nền & chữ ----------
+  // ---------- Background & text ----------
   --color-bg: #f5f5f5;
   --color-surface: #ffffff;
   --color-surface-2: #fafafa;
@@ -16,7 +16,7 @@
   --color-text-muted: #757575;
   --color-border: #e8e8e8;
 
-  // ---------- Màu thương hiệu ----------
+  // ---------- Brand colors ----------
   --color-primary: #{$color-primary};
   --color-primary-hover: #{$color-primary-dark};
   --color-primary-soft: #{$color-primary-soft};
@@ -38,12 +38,12 @@
   --badge-bg: #ffffff;
   --badge-fg: #{$color-primary};
 
-  // Nút trắng (đặt trên nền cam: header, banner)
+  // White button (on orange backgrounds: header, banner)
   --btn-white-bg: #ffffff;
   --btn-white-fg: #{$color-primary};
   --btn-white-hover: #fff3ef;
 
-  // ---------- Khối nổi bật (banner trang chủ, giới thiệu trang đăng nhập) ----------
+  // ---------- Highlight blocks (home banner, login page introduction) ----------
   --hero-bg:
     radial-gradient(circle at 85% 20%, rgb(255 255 255 / 18%) 0 90px, transparent 91px),
     radial-gradient(circle at 95% 90%, rgb(255 255 255 / 12%) 0 140px, transparent 141px),
@@ -53,7 +53,7 @@
   --hero-chip-bg: rgb(255 255 255 / 16%);
   --hero-icon: #ffffff;
 
-  // ---------- Thẻ tin ----------
+  // ---------- Listing card ----------
   --fav-bg: rgb(255 255 255 / 92%);
   --fav-fg: #555555;
 
@@ -65,10 +65,10 @@
 }
 
 // =========================================================
-//  GIAO DIỆN TỐI
-//  - Xám hơi ngả lạnh, mỗi lớp (nền < thẻ < thẻ lồng) sáng dần -> có chiều sâu
-//  - Cam chỉ dùng làm điểm nhấn (viền, nút, giá), không phủ cả khối lớn gây chói
-//  - Cam sáng hơn bản light để đủ tương phản trên nền tối
+//  DARK THEME
+//  - Slightly cool grays, each layer (page < card < nested card) a bit lighter -> depth
+//  - Orange is only an accent (borders, buttons, prices), never a large glaring block
+//  - Orange is brighter than in light mode for enough contrast on dark backgrounds
 // =========================================================
 [data-theme='dark'] {
   color-scheme: dark;
@@ -88,7 +88,7 @@
   --color-danger: #f26b67;
   --color-info: #5b9cf0;
 
-  // Header tối, viền cam mảnh bên dưới
+  // Dark header, thin orange line below
   --header-bg: #171b22;
   --header-fg: #e7e9ee;
   --header-border: var(--color-primary);
@@ -99,12 +99,12 @@
   --badge-bg: var(--color-primary);
   --badge-fg: #ffffff;
 
-  // "Nút trắng" trên nền tối -> thành nút cam
+  // "White button" on dark backgrounds -> becomes an orange button
   --btn-white-bg: var(--color-primary);
   --btn-white-fg: #ffffff;
   --btn-white-hover: var(--color-primary-hover);
 
-  // Banner: nền tối, ánh cam nhẹ ở góc thay vì phủ cam toàn khối
+  // Banner: dark background, a soft orange glow in the corner instead of a full orange block
   --hero-bg:
     radial-gradient(circle at 88% 12%, rgb(255 106 61 / 30%), transparent 42%),
     radial-gradient(circle at 0% 100%, rgb(255 106 61 / 12%), transparent 38%),

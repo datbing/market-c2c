@@ -1,13 +1,13 @@
 /**
- * Thanh phân trang. Nút "trước/sau" có sẵn trong HTML (<nav id="pagination">),
- * nút số trang nhân bản từ <template id="tpl-page-number"> và <template id="tpl-page-gap">.
- * Click được xử lý bằng event delegation ở trang sử dụng (đọc data-page).
+ * Pagination bar. The prev/next buttons are in the HTML (<nav id="pagination">),
+ * page number buttons are cloned from <template id="tpl-page-number"> and <template id="tpl-page-gap">.
+ * Clicks are handled with event delegation by the page using it (reads data-page).
  */
 import { cloneTemplate } from '../utils/template.js';
 
 /**
- * Tính danh sách số trang cần hiện, rút gọn bằng "…" khi nhiều trang.
- * Ví dụ trang 6/20 -> [1, '…', 5, 6, 7, '…', 20]
+ * Compute the page numbers to show, collapsed with "…" when there are many pages.
+ * Example page 6/20 -> [1, '…', 5, 6, 7, '…', 20]
  */
 export function getPageItems(page, totalPages, siblings = 1) {
   const pages = new Set([1, totalPages]);
@@ -17,7 +17,7 @@ export function getPageItems(page, totalPages, siblings = 1) {
 
   const sorted = [...pages].sort((a, b) => a - b);
 
-  // Chèn "…" vào chỗ bị nhảy cóc
+  // Insert "…" where pages are skipped
   return sorted.reduce((items, p, index) => {
     if (index > 0 && p - sorted[index - 1] > 1) items.push('…');
     items.push(p);
@@ -26,8 +26,8 @@ export function getPageItems(page, totalPages, siblings = 1) {
 }
 
 /**
- * Cập nhật thanh phân trang. Chỉ có 1 trang thì ẩn đi.
- * @param {HTMLElement} nav  phần tử <nav class="pagination">
+ * Update the pagination bar. Hidden when there is only one page.
+ * @param {HTMLElement} nav  the <nav class="pagination"> element
  */
 export function renderPagination(nav, { page, totalPages }) {
   nav.hidden = totalPages <= 1;

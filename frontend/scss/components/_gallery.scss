@@ -1,12 +1,12 @@
 // =========================================================
-//  BỘ ẢNH + HỘP XEM PHÓNG TO (<dialog>)
+//  GALLERY + ZOOM VIEW (<dialog>)
 // =========================================================
 @use '../abstracts' as *;
 
 .gallery {
   min-width: 0;
 
-  // Khung ảnh lớn: vuông, ảnh "contain" để không cắt mất món đồ
+  // Main image box: square, image uses "contain" so the item is never cropped
   &__stage {
     position: relative;
     aspect-ratio: 1 / 1;
@@ -24,7 +24,7 @@
     border: 0;
     background: none;
     cursor: zoom-in;
-    touch-action: pan-y; // cho phép cuộn dọc trang, vuốt ngang để đổi ảnh
+    touch-action: pan-y; // allow vertical page scrolling, horizontal swipes change the image
 
     img {
       width: 100%;
@@ -84,7 +84,7 @@
     font-size: 0.75rem;
   }
 
-  // Dải chéo "ĐÃ BÁN" ở góc
+  // Diagonal "SOLD" ribbon in the corner
   &__ribbon {
     position: absolute;
     top: 22px;
@@ -101,7 +101,7 @@
     box-shadow: var(--shadow-sm);
   }
 
-  // Dải ảnh nhỏ: cuộn ngang
+  // Thumbnail strip: horizontal scroll
   &__thumbs {
     display: flex;
     gap: $space-2;
@@ -144,7 +144,7 @@
   }
 }
 
-// ---------- Hộp xem phóng to ----------
+// ---------- Zoom view ----------
 .lightbox {
   width: 100vw;
   max-width: 100vw;
@@ -156,7 +156,7 @@
   background: transparent;
   color: #fff;
 
-  // Nền mờ phía sau dialog (pseudo-element có sẵn của <dialog>)
+  // Dimmed backdrop behind the dialog (built-in <dialog> pseudo-element)
   &::backdrop {
     background: rgb(0 0 0 / 88%);
   }

@@ -1,11 +1,11 @@
 /**
- * Model Listing: bảng `listings` (+ ảnh đại diện từ `listing_images`).
+ * Listing model: `listings` table (+ cover image from `listing_images`).
  */
 import { query, queryOne } from '../config/db.js';
 
 /**
- * Whitelist kiểu sắp xếp -> mệnh đề ORDER BY.
- * Không bao giờ nối trực tiếp giá trị người dùng gửi lên vào SQL.
+ * Sort whitelist -> ORDER BY clause.
+ * User input is never concatenated directly into SQL.
  */
 const SORTS = {
   newest: 'l.created_at DESC, l.id DESC',
@@ -16,14 +16,14 @@ const SORTS = {
 export const SORT_KEYS = Object.keys(SORTS);
 export const CONDITIONS = ['new', 'like_new', 'used'];
 
-/** Đường dẫn ảnh trong DB -> URL dùng được ở frontend */
+/** Image path stored in the DB -> URL usable by the frontend */
 export function toImageUrl(path) {
   if (!path) return null;
   if (/^(https?:)?\//.test(path)) return path;
   return `/uploads/${path}`;
 }
 
-/** Dòng DB -> object JSON rút gọn dùng cho danh sách (card) */
+/** DB row -> compact JSON object for lists (cards) */
 export function toListingCard(row) {
   return {
     id: row.id,
@@ -45,31 +45,31 @@ export function toListingCard(row) {
   };
 }
 
-/** Escape ký tự đặc biệt của LIKE (% và _) để người dùng gõ "%" không thành wildcard */
+/** Escape LIKE special characters (% and _) so a user typing "%" does not get a wildcard */
 const escapeLike = (str) => str.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 
 /**
- * Dựng mệnh đề WHERE cho danh sách công khai.
- * Chỉ lấy tin đang bán (active) của người bán chưa bị khóa.
+ * Build the WHERE clause for the public list.
+ * Only active listings of sellers who are not locked.
  * @returns {{ where: string, params: any[] }}
  */
 function buildPublicWhere({ keywords = [], category, province, condition, minPrice, maxPrice, excludeId }) {
   const conditions = ["l.status = 'active'", "u.status = 'active'"];
   const params = [];
 
-  // Bỏ 1 tin khỏi kết quả (vd: "tin cùng danh mục" không lặp lại tin đang xem)
+  // Leave one listing out (e.g. "related listings" should not repeat the one being viewed)
   if (excludeId) {
     conditions.push('l.id <> ?');
     params.push(excludeId);
   }
 
-  // Mỗi từ khóa phải xuất hiện trong search_text (đã bỏ dấu) -> tìm kiếm AND
+  // Every keyword must appear in search_text (without diacritics) -> AND search
   for (const word of keywords) {
     conditions.push('l.search_text LIKE ?');
     params.push(`%${escapeLike(word)}%`);
   }
 
-  // Danh mục: nhận id (số) hoặc slug
+  // Category: accepts an id (number) or a slug
   if (category) {
     if (/^\d+$/.test(category)) {
       conditions.push('c.id = ?');
@@ -80,7 +80,7 @@ function buildPublicWhere({ keywords = [], category, province, condition, minPri
     }
   }
 
-  // Tỉnh/thành: so khớp một phần để "Hồ Chí Minh" khớp cả "TP. Hồ Chí Minh"
+  // Province: partial match so "Hồ Chí Minh" also matches "TP. Hồ Chí Minh"
   if (province) {
     conditions.push('l.province LIKE ?');
     params.push(`%${escapeLike(province)}%`);
@@ -110,7 +110,7 @@ const FROM_JOIN = `
   JOIN users u      ON u.id = l.user_id`;
 
 /**
- * Danh sách tin đang bán có lọc + sắp xếp + phân trang.
+ * Active listings with filtering + sorting + pagination.
  * @returns {Promise<{ rows: any[], total: number }>}
  */
 export async function findPublic(filters, { sort = 'newest', page = 1, limit = 12 } = {}) {
@@ -118,7 +118,7 @@ export async function findPublic(filters, { sort = 'newest', page = 1, limit = 1
   const orderBy = SORTS[sort] ?? SORTS.newest;
   const offset = (page - 1) * limit;
 
-  // Đếm tổng và lấy dữ liệu trang hiện tại song song
+  // Count the total and load the current page in parallel
   const [countRow, rows] = await Promise.all([
     queryOne(`SELECT COUNT(*) AS total ${FROM_JOIN} WHERE ${where}`, params),
     query(
@@ -143,12 +143,12 @@ export async function findPublic(filters, { sort = 'newest', page = 1, limit = 1
 }
 
 // ---------------------------------------------------------
-//  Chi tiết 1 tin
+//  Listing detail
 // ---------------------------------------------------------
 
 /**
- * Lấy 1 tin (mọi trạng thái) kèm danh mục + người bán.
- * Controller tự quyết định ai được xem tin chưa/không còn bán.
+ * Load one listing (any status) with its category + seller.
+ * The controller decides who may see listings that are not (or no longer) for sale.
  */
 export function findDetailById(id) {
   return queryOne(
@@ -168,7 +168,7 @@ export function findDetailById(id) {
   );
 }
 
-/** Ảnh của 1 tin theo thứ tự hiển thị */
+/** A listing's images in display order */
 export function findImages(listingId) {
   return query(
     'SELECT id, path FROM listing_images WHERE listing_id = ? ORDER BY sort_order, id',
@@ -176,17 +176,17 @@ export function findImages(listingId) {
   );
 }
 
-/** Tăng lượt xem (không cập nhật updated_at để không làm sai "ngày sửa tin") */
+/** Increase the view count (without touching updated_at, so the "edited" date stays correct) */
 export function incrementViews(id) {
   return query('UPDATE listings SET views = views + 1, updated_at = updated_at WHERE id = ?', [id]);
 }
 
 /**
- * Dòng DB -> JSON chi tiết.
+ * DB row -> detailed JSON.
  * @param {object} row
  * @param {object[]} images
  * @param {{ isOwner: boolean, isAdmin: boolean }} viewer
- *   chủ tin hoặc admin -> thấy thêm lý do bị từ chối
+ *   owner or admin -> also sees the reject reason
  */
 export function toListingDetail(row, images, { isOwner = false, isAdmin = false } = {}) {
   return {
@@ -203,7 +203,7 @@ export function toListingDetail(row, images, { isOwner = false, isAdmin = false 
     updatedAt: row.updated_at,
     ...((isOwner || isAdmin) && { rejectReason: row.reject_reason }),
     isOwner,
-    // Đang có đơn chưa xử lý xong -> món đồ đang được giữ cho người đặt
+    // An open order exists -> the item is being held for the buyer
     reserved: Boolean(row.has_open_order),
     category: {
       id: row.category_id,
@@ -225,16 +225,16 @@ export function toListingDetail(row, images, { isOwner = false, isAdmin = false 
 }
 
 // ---------------------------------------------------------
-//  Tạo tin
+//  Creating listings
 // ---------------------------------------------------------
 
 /**
- * Thêm tin mới (trạng thái "pending" - chờ admin duyệt) kèm ảnh.
- * Chạy trong transaction: truyền vào `conn` từ withTransaction().
+ * Insert a new listing (status "pending" - waiting for admin review) with its images.
+ * Runs inside a transaction: pass the `conn` from withTransaction().
  * @param {import('mysql2/promise').PoolConnection} conn
  * @param {object} data
- * @param {string[]} imagePaths  đường dẫn ảnh theo thứ tự hiển thị (ảnh đầu = ảnh bìa)
- * @returns {Promise<number>} id tin vừa tạo
+ * @param {string[]} imagePaths  image paths in display order (the first one is the cover)
+ * @returns {Promise<number>} id of the new listing
  */
 export async function createWithImages(conn, data, imagePaths) {
   const { userId, categoryId, title, description, price, condition, province, searchText } = data;
@@ -248,7 +248,7 @@ export async function createWithImages(conn, data, imagePaths) {
   const listingId = result.insertId;
 
   if (imagePaths.length > 0) {
-    // Thêm nhiều dòng 1 lần: VALUES ? với mảng 2 chiều (mysql2 tự escape từng giá trị)
+    // Insert several rows at once: VALUES ? with a 2D array (mysql2 escapes every value)
     await conn.query('INSERT INTO listing_images (listing_id, path, sort_order) VALUES ?', [
       imagePaths.map((imagePath, index) => [listingId, imagePath, index]),
     ]);
@@ -257,12 +257,12 @@ export async function createWithImages(conn, data, imagePaths) {
 }
 
 // ---------------------------------------------------------
-//  Tin của tôi (người bán quản lý tin)
+//  My listings (sellers managing their listings)
 // ---------------------------------------------------------
 export const STATUSES = ['pending', 'active', 'sold', 'hidden', 'rejected'];
 
 /**
- * Tin của 1 người dùng (mọi trạng thái), lọc theo trạng thái + từ khóa, mới nhất trước.
+ * A user's listings (any status), filtered by status + keyword, newest first.
  * @returns {Promise<{ rows: any[], total: number }>}
  */
 export async function findByOwner(userId, { status, keywords = [], page = 1, limit = 10 } = {}) {
@@ -300,7 +300,7 @@ export async function findByOwner(userId, { status, keywords = [], page = 1, lim
   return { rows, total: Number(countRow.total) };
 }
 
-/** Số tin theo từng trạng thái của 1 người dùng: { all, pending, active, sold, hidden, rejected } */
+/** Listing count per status for one user: { all, pending, active, sold, hidden, rejected } */
 export async function countByStatus(userId) {
   const rows = await query(
     'SELECT status, COUNT(*) AS total FROM listings WHERE user_id = ? GROUP BY status',
@@ -314,7 +314,7 @@ export async function countByStatus(userId) {
   return counts;
 }
 
-/** Dòng "tin của tôi" -> JSON: như thẻ tin + lý do từ chối, ngày bán, số đơn */
+/** "My listings" row -> JSON: like a card + reject reason, sold date, order count */
 export function toOwnerListing(row) {
   return {
     ...toListingCard(row),
@@ -325,7 +325,7 @@ export function toOwnerListing(row) {
   };
 }
 
-/** Đổi trạng thái. Chuyển sang "sold" thì ghi ngày bán, rời "sold" thì xóa ngày bán */
+/** Change the status. Moving to "sold" records the sold date, leaving "sold" clears it */
 export function updateStatus(id, status) {
   return query(
     `UPDATE listings
@@ -336,15 +336,15 @@ export function updateStatus(id, status) {
   );
 }
 
-/** Tin đã có đơn hàng chưa (có thì không cho xóa vì đơn còn tham chiếu tới tin) */
+/** Whether the listing already has orders (if so it cannot be deleted, orders still reference it) */
 export async function hasOrders(id) {
   const row = await queryOne('SELECT COUNT(*) AS total FROM orders WHERE listing_id = ?', [id]);
   return Number(row.total) > 0;
 }
 
 /**
- * Xóa tin (ảnh trong DB tự xóa theo ON DELETE CASCADE).
- * @returns {Promise<string[]>} đường dẫn file ảnh để xóa khỏi đĩa sau đó
+ * Delete a listing (its image rows are removed by ON DELETE CASCADE).
+ * @returns {Promise<string[]>} image file paths to delete from disk afterwards
  */
 export async function deleteById(conn, id) {
   const [images] = await conn.query('SELECT path FROM listing_images WHERE listing_id = ?', [id]);
@@ -353,13 +353,13 @@ export async function deleteById(conn, id) {
 }
 
 /**
- * Sửa tin + sắp xếp lại ảnh.
+ * Edit a listing + reorder its images.
  * @param {import('mysql2/promise').PoolConnection} conn
  * @param {number} id
- * @param {object} data  các cột cần sửa (giống createWithImages) + status mới (nếu đổi)
- * @param {{ id?: number, path?: string }[]} finalImages  danh sách ảnh cuối cùng theo thứ tự:
- *        ảnh cũ giữ lại có `id`, ảnh mới có `path`
- * @returns {Promise<string[]>} đường dẫn ảnh cũ bị bỏ -> xóa khỏi đĩa sau khi commit
+ * @param {object} data  columns to update (same as createWithImages) + the new status (if it changes)
+ * @param {{ id?: number, path?: string }[]} finalImages  final image list in order:
+ *        kept old images have an `id`, new images have a `path`
+ * @returns {Promise<string[]>} paths of removed old images -> delete from disk after commit
  */
 export async function updateWithImages(conn, id, data, finalImages) {
   const { categoryId, title, description, price, condition, province, searchText, status } = data;
@@ -373,7 +373,7 @@ export async function updateWithImages(conn, id, data, finalImages) {
     [categoryId, title, description, price, condition, province, searchText, status, status, id],
   );
 
-  // Ảnh cũ không còn trong danh sách -> xóa dòng DB, trả đường dẫn để xóa file
+  // Old images no longer in the list -> delete the DB rows, return the paths to delete the files
   const [oldImages] = await conn.query('SELECT id, path FROM listing_images WHERE listing_id = ?', [id]);
   const keptIds = new Set(finalImages.filter((img) => img.id).map((img) => img.id));
   const removed = oldImages.filter((img) => !keptIds.has(img.id));
@@ -381,7 +381,7 @@ export async function updateWithImages(conn, id, data, finalImages) {
     await conn.query('DELETE FROM listing_images WHERE id IN (?)', [removed.map((img) => img.id)]);
   }
 
-  // Cập nhật thứ tự ảnh cũ + thêm ảnh mới đúng vị trí
+  // Update the order of old images + insert new images at the right positions
   for (const [index, image] of finalImages.entries()) {
     if (image.id) {
       await conn.query('UPDATE listing_images SET sort_order = ? WHERE id = ?', [index, image.id]);

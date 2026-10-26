@@ -1,9 +1,9 @@
 /**
- * TRANG ĐĂNG KÝ
- *  - Quy tắc validate giống server (server/controllers/auth.controller.js)
- *  - Nhập lại mật khẩu, đo độ mạnh mật khẩu (<meter>), đồng ý điều khoản
- *  - Email đã tồn tại (409) -> lỗi hiện ngay dưới ô email
- *  - Server tự đăng nhập sau khi đăng ký -> chuyển về trang trước (?redirect=)
+ * REGISTER PAGE
+ *  - Same validation rules as the server (server/controllers/auth.controller.js)
+ *  - Password confirmation, password strength meter (<meter>), terms agreement
+ *  - Email already taken (409) -> error shown right under the email field
+ *  - The server logs in automatically after registering -> go back to the previous page (?redirect=)
  */
 import { $ } from '../utils/dom.js';
 import { rules } from '../utils/validators.js';
@@ -14,10 +14,10 @@ import { FormHandler } from '../components/form.js';
 import { initPasswordToggles, bindStrengthMeter } from '../components/password-field.js';
 import { redirectIfLoggedIn, keepRedirectOnLinks } from '../components/auth-page.js';
 
-const PHONE_RE = /^0\d{9}$/; // 10 số, bắt đầu bằng 0 (giống server)
+const PHONE_RE = /^0\d{9}$/; // 10 digits starting with 0 (same as the server)
 
 async function main() {
-  // Đã đăng nhập -> chuyển trang luôn, không khởi tạo gì thêm
+  // Already logged in -> redirect right away, nothing else to initialize
   if (await redirectIfLoggedIn()) return;
 
   initHeader();

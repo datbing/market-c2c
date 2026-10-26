@@ -1,16 +1,16 @@
 /**
- * Hộp xác nhận dùng thẻ <dialog> của HTML5 (thay cho window.confirm xấu và chặn trang).
+ * Confirm dialog using the HTML5 <dialog> element (instead of the ugly, page-blocking window.confirm).
  *
- * HTML viết sẵn trong trang:
+ * HTML written in the page:
  *   <dialog id="confirm-dialog">
- *     <form method="dialog">          <- bấm nút trong form này tự đóng dialog
+ *     <form method="dialog">          <- buttons inside this form close the dialog automatically
  *       <h2 data-confirm-title></h2> <p data-confirm-message></p>
  *       <button value="cancel">       <- dialog.returnValue = "cancel"
  *       <button value="confirm" data-confirm-ok>
  *     </form>
  *   </dialog>
  *
- * Dùng:  if (await confirmDialog({ title: 'Xóa tin?', danger: true })) { ... }
+ * Usage:  if (await confirmDialog({ title: 'Xóa tin?', danger: true })) { ... }
  */
 
 /**
@@ -18,8 +18,8 @@
  * @param {string} options.title
  * @param {string} [options.message]
  * @param {string} [options.confirmText]
- * @param {boolean} [options.danger]  nút đồng ý màu đỏ (thao tác không hoàn tác được)
- * @returns {Promise<boolean>} true nếu người dùng bấm đồng ý
+ * @param {boolean} [options.danger]  red confirm button (irreversible action)
+ * @returns {Promise<boolean>} true if the user confirmed
  */
 export function confirmDialog({ title, message = '', confirmText = 'Đồng ý', danger = false }) {
   const dialog = document.getElementById('confirm-dialog');
@@ -35,7 +35,7 @@ export function confirmDialog({ title, message = '', confirmText = 'Đồng ý',
   dialog.showModal();
   ok.focus();
 
-  // Esc hoặc nút Hủy -> returnValue khác "confirm"
+  // Esc or the Cancel button -> returnValue is not "confirm"
   return new Promise((resolve) => {
     dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
   });

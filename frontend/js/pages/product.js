@@ -1,11 +1,12 @@
 /**
- * TRANG CHI TIẾT TIN: /product?id=123
- *  - Gọi song song chi tiết tin (API của mình) + tỷ giá USD (API công khai) bằng Promise.all
- *  - Bộ ảnh (components/gallery.js), hộp xem phóng to bằng <dialog>
- *  - Thêm vào giỏ / Mua ngay / Yêu thích (LocalStorage), chia sẻ (Web Share API / Clipboard API)
- *  - Lưu vào "Tin vừa xem" (LocalStorage) -> hiện ở trang chủ
- *  - Tin cùng danh mục (tải sau, lỗi thì ẩn khối, không ảnh hưởng phần chính)
- *  - Các trạng thái: đang tải / không tìm thấy / lỗi mạng / đã bán / chờ duyệt (chủ tin)
+ * LISTING DETAIL PAGE: /product?id=123
+ *  - Loads the listing (our API) + the USD rate (public API) in parallel with Promise.all
+ *  - Image gallery (components/gallery.js), zoom view with <dialog>
+ *  - Add to cart / Buy now / Favorite (LocalStorage), share (Web Share API / Clipboard API)
+ *  - Saved to "Recently viewed" (LocalStorage) -> shown on the home page
+ *  - Listings in the same category (loaded later; on error the block is hidden without affecting the page)
+ *  - States: loading / not found / network error / sold / pending (owner)
+ *  - Report a listing: <dialog> to pick a reason + description (login required)
  */
 import { $ } from '../utils/dom.js';
 import { formatVND, formatUSD, timeAgo, formatDate, CONDITION_LABELS } from '../utils/format.js';
@@ -13,13 +14,16 @@ import { cart, favorites, recentlyViewed, toListingSnapshot } from '../services/
 import { getListing, getRelatedListings } from '../services/catalog.js';
 import { getUsdRate } from '../services/public-api.js';
 import { getCurrentUser, loginUrl } from '../services/auth.js';
+import { createReport } from '../services/reports.js';
+import { rules } from '../utils/validators.js';
+import { FormHandler, initCharCounters } from '../components/form.js';
 import { initHeader } from '../components/header.js';
 import { showToast } from '../components/toast.js';
 import { Gallery } from '../components/gallery.js';
 import { createListingCard, setFavoriteButton } from '../components/listing-card.js';
 import { toggleFavorite, watchFavorites } from '../components/favorite.js';
 
-/** Nội dung khung thông báo theo trạng thái tin: [kiểu alert, icon, câu chữ] */
+/** Status notice content by listing status: [alert type, icon, text] */
 const STATUS_NOTICES = {
   sold: (l) => ['info', 'bi-bag-check', `Món đồ này đã được bán${l.soldAt ? ` ngày ${formatDate(l.soldAt)}` : ''}.`],
   pending: () => ['warning', 'bi-hourglass-split', 'Tin đang chờ quản trị viên duyệt, người khác chưa nhìn thấy tin này.'],
@@ -30,9 +34,9 @@ const STATUS_NOTICES = {
 class ProductPage {
   listing = null;
   usdRate = null;
-  /** Thêm vào giỏ hàng / mua được không (đang bán và không phải tin của mình) */
+  /** Whether it can be added to the cart / bought (active and not your own listing) */
   canBuy = false;
-  /** Map id -> tin cùng danh mục (để lưu snapshot khi bấm tim) */
+  /** Map id -> related listing (to save a snapshot when clicking the heart) */
   relatedItems = new Map();
 
   constructor(id) {
@@ -59,7 +63,7 @@ class ProductPage {
     watchFavorites();
     this.bindEvents();
 
-    // id phải là số nguyên dương, không thì khỏi gọi API
+    // id must be a positive integer, otherwise do not call the API
     if (!/^\d+$/.test(this.id ?? '')) {
       this.showState('not-found');
       return;
@@ -67,7 +71,7 @@ class ProductPage {
     this.load();
   }
 
-  /** 'loading' | 'content' | 'not-found' | 'error' - các khối đều viết sẵn trong HTML */
+  /** 'loading' | 'content' | 'not-found' | 'error' - every block is written in the HTML */
   showState(state) {
     const { loading, notFound, error, content } = this.el;
     loading.hidden = state !== 'loading';
@@ -80,7 +84,7 @@ class ProductPage {
   async load() {
     this.showState('loading');
     try {
-      // Tỷ giá không bao giờ làm hỏng trang: getUsdRate lỗi thì trả null
+      // The exchange rate never breaks the page: getUsdRate returns null on error
       const [listing, rate] = await Promise.all([getListing(this.id), getUsdRate()]);
       this.listing = listing;
       this.usdRate = rate;
@@ -91,7 +95,7 @@ class ProductPage {
       if (listing.status === 'active' && !listing.isOwner) {
         recentlyViewed.add(toListingSnapshot(listing));
       }
-      this.loadRelated(); // không chờ: khối phụ tải sau
+      this.loadRelated(); // no await: the secondary block loads later
     } catch (err) {
       if (err.status === 404) {
         this.showState('not-found');
@@ -103,13 +107,13 @@ class ProductPage {
   }
 
   // =======================================================
-  //  HIỂN THỊ
+  //  RENDERING
   // =======================================================
   render() {
     const l = this.listing;
     const categoryUrl = `/?category=${encodeURIComponent(l.category.slug)}`;
 
-    // Tiêu đề tab + mô tả cho chia sẻ
+    // Tab title + description for sharing
     document.title = `${l.title} | Market C2C`;
     $('meta[name="description"]')?.setAttribute('content', l.description.slice(0, 160));
 
@@ -119,7 +123,7 @@ class ProductPage {
     crumbCategory.href = categoryUrl;
     $('#crumb-title').textContent = l.title;
 
-    // Bộ ảnh
+    // Gallery
     new Gallery($('#gallery'), {
       images: l.images,
       title: l.title,
@@ -127,7 +131,7 @@ class ProductPage {
     });
     $('#sold-ribbon').hidden = l.status !== 'sold';
 
-    // Thông tin chính
+    // Main info
     const condition = $('#product-condition');
     condition.textContent = CONDITION_LABELS[l.condition] ?? '';
     condition.className = `badge badge--${l.condition}`;
@@ -153,7 +157,7 @@ class ProductPage {
     this.renderStatus();
     this.renderActions();
 
-    // Nút tim dùng chung cơ chế với thẻ tin (data-id ở khối cha, data-action="favorite")
+    // The heart button uses the same mechanism as listing cards (data-id on the parent, data-action="favorite")
     this.el.content.dataset.id = l.id;
     setFavoriteButton(this.el.favorite, favorites.has(l.id));
   }
@@ -168,11 +172,11 @@ class ProductPage {
     $('#seller-sold').textContent = seller.soldCount;
   }
 
-  /** Khung thông báo trạng thái (đã bán, chờ duyệt, ẩn, bị từ chối) */
+  /** Status notice (sold, pending, hidden, rejected) */
   renderStatus() {
     const box = this.el.status;
     const l = this.listing;
-    // Tin đang bán nhưng đã có người đặt (đơn chưa xử lý xong)
+    // Listing is active but already reserved by someone (order still open)
     const reservedNotice =
       l.status === 'active' && l.reserved
         ? l.isOwner
@@ -194,7 +198,8 @@ class ProductPage {
     this.canBuy = status === 'active' && !isOwner && !this.listing.reserved;
 
     this.el.ownerNote.hidden = !isOwner;
-    // Tin đã bán không sửa được -> ẩn link "Sửa tin"
+    $('#report-btn').hidden = isOwner;
+    // Sold listings cannot be edited -> hide the "Edit" link
     const editLink = $('#owner-edit');
     editLink.href = `/sell?edit=${this.listing.id}`;
     editLink.hidden = status === 'sold';
@@ -204,7 +209,7 @@ class ProductPage {
     this.renderCartButton();
   }
 
-  /** Nút giỏ hàng: chưa có -> "Thêm vào giỏ", đã có -> "Xem giỏ hàng" (CSS đổi chữ theo aria-pressed) */
+  /** Cart button: not in cart -> "Add to cart", already in cart -> "View cart" (CSS swaps the text via aria-pressed) */
   renderCartButton() {
     if (!this.listing) return;
     const inCart = cart.has(this.listing.id);
@@ -212,7 +217,7 @@ class ProductPage {
   }
 
   // =======================================================
-  //  TIN CÙNG DANH MỤC
+  //  RELATED LISTINGS
   // =======================================================
   async loadRelated() {
     const { related, relatedList } = this.el;
@@ -232,13 +237,13 @@ class ProductPage {
       $('#related-more').href = `/?category=${encodeURIComponent(this.listing.category.slug)}`;
       related.hidden = false;
     } catch (err) {
-      // Khối phụ: lỗi thì ẩn đi, chỉ ghi log
-      console.warn('[related] Không tải được tin cùng danh mục:', err.message);
+      // Secondary block: hide it on error, just log
+      console.warn('[related] Could not load related listings:', err.message);
     }
   }
 
   // =======================================================
-  //  HÀNH ĐỘNG
+  //  ACTIONS
   // =======================================================
   addToCart() {
     const l = this.listing;
@@ -250,7 +255,7 @@ class ProductPage {
     showToast('Đã thêm vào giỏ hàng', 'success');
   }
 
-  /** Mua ngay: bắt buộc đăng nhập; thêm vào giỏ (nếu chưa có) rồi sang giỏ hàng */
+  /** Buy now: login required; add to the cart (if not there yet) then go to the cart */
   async buyNow() {
     const button = this.el.buyNow;
     button.disabled = true;
@@ -268,7 +273,41 @@ class ProductPage {
     }
   }
 
-  /** Chia sẻ: điện thoại dùng bảng chia sẻ của hệ điều hành, máy tính thì sao chép link */
+  /** Share: phones use the OS share sheet, desktops copy the link */
+  // =======================================================
+  //  REPORT A LISTING
+  // =======================================================
+  async openReport() {
+    const user = await getCurrentUser().catch(() => null);
+    if (!user) {
+      window.location.href = loginUrl();
+      return;
+    }
+    const dialog = $('#report-dialog');
+    const form = $('#report-form');
+    if (!this.reportForm) {
+      initCharCounters(form);
+      this.reportForm = new FormHandler(form, {
+        schema: {
+          type: [rules.required('Vui lòng chọn lý do')],
+          // "Other reason" requires a description of at least 10 characters
+          detail: [(v, data) => (data.type === 'other' && String(v ?? '').trim().length < 10 ? 'Vui lòng mô tả ít nhất 10 ký tự' : null)],
+        },
+        alert: $('#report-alert'),
+        onSubmit: async ({ type, detail }) => {
+          const reason = type === 'other' ? detail : [type, detail].filter(Boolean).join(': ');
+          showToast(await createReport(this.listing.id, reason), 'success');
+          dialog.close();
+        },
+      });
+      $('#report-cancel').addEventListener('click', () => dialog.close());
+    }
+    form.reset();
+    this.reportForm.showErrors({});
+    this.reportForm.hideAlert();
+    dialog.showModal();
+  }
+
   async share() {
     const url = window.location.href;
     try {
@@ -279,7 +318,7 @@ class ProductPage {
       await navigator.clipboard.writeText(url);
       showToast('Đã sao chép liên kết tin đăng', 'success');
     } catch (err) {
-      if (err.name === 'AbortError') return; // người dùng tự đóng bảng chia sẻ
+      if (err.name === 'AbortError') return; // the user closed the share sheet
       showToast('Không chia sẻ được, hãy sao chép địa chỉ trên thanh trình duyệt', 'warning');
     }
   }
@@ -288,10 +327,11 @@ class ProductPage {
     this.el.addToCart.addEventListener('click', () => this.addToCart());
     this.el.buyNow.addEventListener('click', () => this.buyNow());
     this.el.share.addEventListener('click', () => this.share());
+    $('#report-btn').addEventListener('click', () => this.openReport());
     this.el.favorite.addEventListener('click', () => toggleFavorite(this.listing));
     $('#product-retry').addEventListener('click', () => this.load());
 
-    // Tim trên các thẻ "tin cùng danh mục" (event delegation)
+    // Hearts on the related listing cards (event delegation)
     this.el.relatedList.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action="favorite"]');
       if (!btn) return;
@@ -299,7 +339,7 @@ class ProductPage {
       if (item) toggleFavorite(item);
     });
 
-    // Giỏ hàng đổi ở tab khác / header -> cập nhật nút
+    // Cart changed in another tab / the header -> update the button
     window.addEventListener('cart:change', () => this.renderCartButton());
   }
 }

@@ -11,7 +11,7 @@
 
   <title>Giỏ hàng | Market C2C</title>
 
-  <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
+  <!-- Apply the light/dark theme before the page paints to avoid a color flash -->
   <script src="/js/theme-init.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/css/main.css">
@@ -19,13 +19,13 @@
 
 <body>
   <!-- =====================================================
-       HEADER (dùng chung: copy nguyên khối này sang các trang khác)
+       HEADER (shared: copy this whole block to the other pages)
        ===================================================== -->
   <header class="site-header">
     <div class="container site-header__inner">
       <a class="logo" href="/" aria-label="Market C2C - Trang chủ">
-        <!-- Responsive bằng HTML: màn hình < 576px dùng logo vuông, lớn hơn dùng logo có chữ.
-             Có 2 bản: chữ navy cho nền sáng, chữ sáng cho nền tối (CSS chọn theo [data-theme]) -->
+        <!-- Responsive via HTML: screens < 576px use the square logo, larger ones the text logo.
+             Two versions: navy text for light backgrounds, light text for dark ones (CSS picks by [data-theme]) -->
         <picture class="logo__picture logo__picture--light">
           <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
           <img class="logo__img" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C">
@@ -45,7 +45,7 @@
           <i class="bi bi-search" aria-hidden="true"></i>
         </button>
 
-        <!-- Lịch sử tìm kiếm (LocalStorage) -->
+        <!-- Search history (LocalStorage) -->
         <div class="search__dropdown" id="search-history" hidden>
           <div class="search__dropdown-head">
             <span>Tìm kiếm gần đây</span>
@@ -56,7 +56,7 @@
       </form>
 
       <nav class="header-actions" aria-label="Tiện ích và tài khoản">
-        <!-- CSS tự hiện mặt trăng (sáng) hoặc mặt trời (tối) theo [data-theme] -->
+        <!-- CSS shows the moon (light) or the sun (dark) based on [data-theme] -->
         <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
           <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
           <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
@@ -70,9 +70,9 @@
           <span class="icon-btn__badge" data-count="cart" hidden>0</span>
         </a>
 
-        <!-- Tài khoản: JS bật 1 trong 2 khối sau khi gọi /api/auth/me -->
+        <!-- Account: JS shows one of the two blocks after calling /api/auth/me -->
         <div class="account" id="account-area">
-          <!-- Dưới 1200px chỉ hiện icon, chữ vẫn được trình đọc màn hình đọc -->
+          <!-- Below 1200px only the icon is visible; the text is still read by screen readers -->
           <a class="account__login" id="account-guest" href="/login" hidden>
             <i class="bi bi-person-circle" aria-hidden="true"></i><span>Đăng nhập</span>
           </a>
@@ -115,13 +115,13 @@
   </header>
 
   <!-- =====================================================
-       NỘI DUNG TRANG GIỎ HÀNG
+       CART PAGE CONTENT
        ===================================================== -->
   <main class="site-main">
     <div class="container cart-page">
       <h1 class="cart-page__title">Giỏ hàng <span class="cart-page__count" id="cart-count"></span></h1>
 
-      <!-- Giỏ trống -->
+      <!-- Empty cart -->
       <div class="state" id="cart-empty" hidden>
         <i class="bi bi-cart3" aria-hidden="true"></i>
         <p class="state__title">Giỏ hàng đang trống</p>
@@ -131,7 +131,7 @@
 
       <div class="cart-layout" id="cart-content" hidden>
         <div class="cart-main">
-          <!-- Danh sách món, nhóm theo người bán -->
+          <!-- Items, grouped by seller -->
           <section class="cart-list" aria-labelledby="cart-list-title">
             <div class="cart-list__head">
               <h2 class="visually-hidden" id="cart-list-title">Các món trong giỏ</h2>
@@ -144,7 +144,7 @@
             <div id="cart-groups"></div>
           </section>
 
-          <!-- Thông tin nhận hàng (chỉ hiện khi đã đăng nhập) -->
+          <!-- Shipping details (only shown when logged in) -->
           <section class="sell-section" id="checkout" aria-labelledby="checkout-title" hidden>
             <h2 class="sell-section__title" id="checkout-title">
               <i class="bi bi-geo-alt" aria-hidden="true"></i> Thông tin nhận hàng
@@ -203,7 +203,7 @@
           </section>
         </div>
 
-        <!-- Tóm tắt + nút đặt hàng -->
+        <!-- Summary + order button -->
         <aside class="cart-summary" aria-labelledby="summary-title">
           <h2 class="cart-summary__title" id="summary-title">Tóm tắt đơn hàng</h2>
           <dl class="cart-summary__rows">
@@ -223,7 +223,7 @@
               </dd>
             </div>
           </dl>
-          <!-- form="checkout-form": nút nằm ngoài form vẫn gửi được form (HTML5) -->
+          <!-- form="checkout-form": a button outside the form can still submit it (HTML5) -->
           <button type="submit" form="checkout-form" class="btn btn--primary btn--lg btn--block"
                   id="checkout-submit" disabled>
             <span class="btn__spinner" aria-hidden="true"></span>
@@ -241,7 +241,7 @@
   </main>
 
   <!-- =====================================================
-       FOOTER (dùng chung)
+       FOOTER (shared)
        ===================================================== -->
   <footer class="site-footer">
     <div class="container site-footer__grid">
@@ -276,12 +276,12 @@
       Tỷ giá: open.er-api.com</p>
   </footer>
 
-  <!-- Vùng hiện thông báo (toast) -->
+  <!-- Toast notification area -->
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
   <!-- =====================================================
-       TEMPLATE DÙNG CHUNG (header, toast) - copy sang các trang khác
-       <template> không hiển thị, JS nhân bản rồi điền dữ liệu.
+       SHARED TEMPLATES (header, toast) - copy to the other pages
+       <template> is not rendered; JS clones it and fills in the data.
        ===================================================== -->
   <template id="tpl-history-item">
     <li class="search__history-item" role="option" aria-selected="false">
@@ -306,7 +306,7 @@
   </template>
 
   <!-- =====================================================
-       TEMPLATE CỦA TRANG GIỎ HÀNG
+       CART PAGE TEMPLATES
        ===================================================== -->
   <template id="tpl-cart-group">
     <section class="cart-group">

@@ -11,7 +11,7 @@
 
   <title>Đăng nhập | Market C2C</title>
 
-  <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
+  <!-- Apply the light/dark theme before the page paints to avoid a color flash -->
   <script src="/js/theme-init.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/css/main.css">
@@ -19,13 +19,13 @@
 
 <body>
   <!-- =====================================================
-       HEADER (dùng chung: copy nguyên khối này sang các trang khác)
+       HEADER (shared: copy this whole block to the other pages)
        ===================================================== -->
   <header class="site-header">
     <div class="container site-header__inner">
       <a class="logo" href="/" aria-label="Market C2C - Trang chủ">
-        <!-- Responsive bằng HTML: màn hình < 576px dùng logo vuông, lớn hơn dùng logo có chữ.
-             Có 2 bản: chữ navy cho nền sáng, chữ sáng cho nền tối (CSS chọn theo [data-theme]) -->
+        <!-- Responsive via HTML: screens < 576px use the square logo, larger ones the text logo.
+             Two versions: navy text for light backgrounds, light text for dark ones (CSS picks by [data-theme]) -->
         <picture class="logo__picture logo__picture--light">
           <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
           <img class="logo__img" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C">
@@ -45,7 +45,7 @@
           <i class="bi bi-search" aria-hidden="true"></i>
         </button>
 
-        <!-- Lịch sử tìm kiếm (LocalStorage) -->
+        <!-- Search history (LocalStorage) -->
         <div class="search__dropdown" id="search-history" hidden>
           <div class="search__dropdown-head">
             <span>Tìm kiếm gần đây</span>
@@ -56,7 +56,7 @@
       </form>
 
       <nav class="header-actions" aria-label="Tiện ích và tài khoản">
-        <!-- CSS tự hiện mặt trăng (sáng) hoặc mặt trời (tối) theo [data-theme] -->
+        <!-- CSS shows the moon (light) or the sun (dark) based on [data-theme] -->
         <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
           <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
           <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
@@ -70,9 +70,9 @@
           <span class="icon-btn__badge" data-count="cart" hidden>0</span>
         </a>
 
-        <!-- Tài khoản: JS bật 1 trong 2 khối sau khi gọi /api/auth/me -->
+        <!-- Account: JS shows one of the two blocks after calling /api/auth/me -->
         <div class="account" id="account-area">
-          <!-- Dưới 1200px chỉ hiện icon, chữ vẫn được trình đọc màn hình đọc -->
+          <!-- Below 1200px only the icon is visible; the text is still read by screen readers -->
           <a class="account__login" id="account-guest" href="/login" hidden>
             <i class="bi bi-person-circle" aria-hidden="true"></i><span>Đăng nhập</span>
           </a>
@@ -115,12 +115,12 @@
   </header>
 
   <!-- =====================================================
-       NỘI DUNG TRANG ĐĂNG NHẬP
+       LOGIN PAGE CONTENT
        ===================================================== -->
   <main class="site-main">
     <div class="container auth">
 
-      <!-- Giới thiệu (chỉ hiện trên desktop >= 1200px) -->
+      <!-- Introduction (only shown on desktop >= 1200px) -->
       <section class="auth__intro" aria-labelledby="auth-intro-title">
         <h2 class="auth__intro-title" id="auth-intro-title">Chào mừng bạn quay lại!</h2>
         <p class="auth__intro-text">Đăng nhập để mua bán nhanh hơn trên Market C2C.</p>
@@ -138,7 +138,7 @@
           Chưa có tài khoản? <a href="/register" data-keep-redirect>Đăng ký ngay</a>
         </p>
 
-        <!-- Cảnh báo chung (sai mật khẩu, tài khoản bị khóa, mất mạng...) -->
+        <!-- General alert (wrong password, locked account, network down...) -->
         <div class="alert alert--error" data-form-alert role="alert" hidden>
           <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
           <span data-alert-message></span>
@@ -158,7 +158,7 @@
             <div class="password-field">
               <input class="form-control" id="login-password" name="password" type="password"
                 autocomplete="current-password" maxlength="72" required aria-describedby="login-password-error">
-              <!-- CSS đổi icon mắt mở/đóng theo aria-pressed -->
+              <!-- CSS swaps the open/closed eye icon based on aria-pressed -->
               <button type="button" class="password-field__toggle" data-toggle-password="login-password"
                 aria-pressed="false" aria-label="Hiện mật khẩu">
                 <i class="bi bi-eye" aria-hidden="true"></i>
@@ -189,7 +189,7 @@
   </main>
 
   <!-- =====================================================
-       FOOTER (dùng chung)
+       FOOTER (shared)
        ===================================================== -->
   <footer class="site-footer">
     <div class="container site-footer__grid">
@@ -224,12 +224,12 @@
       Tỷ giá: open.er-api.com</p>
   </footer>
 
-  <!-- Vùng hiện thông báo (toast) -->
+  <!-- Toast notification area -->
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
   <!-- =====================================================
-       TEMPLATE DÙNG CHUNG (header, toast) - copy sang các trang khác
-       <template> không hiển thị, JS nhân bản rồi điền dữ liệu.
+       SHARED TEMPLATES (header, toast) - copy to the other pages
+       <template> is not rendered; JS clones it and fills in the data.
        ===================================================== -->
   <template id="tpl-history-item">
     <li class="search__history-item" role="option" aria-selected="false">

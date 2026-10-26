@@ -1,3 +1,3 @@
-// Gom biến + mixin để các partial khác chỉ cần: @use '../abstracts' as *;
+// Bundles variables + mixins so other partials only need: @use '../abstracts' as *;
 @forward 'variables';
 @forward 'mixins';

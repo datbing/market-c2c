@@ -1,0 +1,225 @@
+// =========================================================
+//  ADMIN PAGE SHELL
+//  Desktop (>= 1200px): fixed sidebar on the left + content on the right
+//  Mobile / tablet   : the sidebar is a slide-in drawer opened by the topbar menu button
+// =========================================================
+@use '../abstracts' as *;
+
+$admin-sidebar-width: 248px;
+
+.admin-body {
+  background: var(--color-bg);
+}
+
+.admin-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100vh;
+
+  @include respond-to(xl) {
+    grid-template-columns: $admin-sidebar-width minmax(0, 1fr);
+  }
+}
+
+// ---------- Sidebar ----------
+.admin-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+  padding: $space-4 $space-3;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+
+  @include respond-below(xl) {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: $z-drawer;
+    width: min(280px, 84vw);
+    overflow-y: auto;
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform 0.25s ease;
+
+    &.is-open {
+      transform: none;
+      visibility: visible;
+    }
+  }
+
+  @include respond-to(xl) {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    padding: $space-2;
+    font-size: $font-size-sm;
+    color: var(--color-text-muted);
+
+    strong {
+      display: block;
+      color: var(--color-text);
+      font-size: $font-size-base;
+    }
+  }
+
+  &__logo {
+    width: 40px;
+    height: 40px;
+  }
+
+  &__back {
+    margin-top: auto;
+  }
+}
+
+.admin-nav {
+  display: grid;
+  gap: $space-1;
+
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    padding: $space-2 $space-3;
+    border-radius: $radius;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    transition: background-color $transition, color $transition;
+
+    .bi {
+      font-size: 1.1rem;
+    }
+
+    &:hover {
+      background: var(--color-surface-2);
+      color: var(--color-text);
+    }
+
+    // Current page
+    &[aria-current='page'] {
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+      font-weight: 700;
+    }
+  }
+
+  &__badge {
+    min-width: 22px;
+    margin-left: auto;
+    padding: 0 6px;
+    border-radius: $radius-pill;
+    background: var(--color-danger);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+  }
+}
+
+.admin-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-drawer - 1;
+  background: rgb(0 0 0 / 45%);
+
+  @include respond-to(xl) {
+    display: none;
+  }
+}
+
+// ---------- Content column ----------
+.admin-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-topbar {
+  position: sticky;
+  top: 0;
+  z-index: $z-header;
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  min-height: 60px;
+  padding: $space-2 $space-4;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+
+  @include respond-to(md) {
+    padding-inline: $space-5;
+  }
+
+  // Icon buttons on a light background (unlike the orange public header)
+  .icon-btn {
+    color: var(--color-text);
+
+    &:hover {
+      background: var(--color-surface-2);
+    }
+  }
+
+  &__menu {
+    @include respond-to(xl) {
+      display: none;
+    }
+  }
+
+  &__title {
+    font-size: $font-size-lg;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    margin-left: auto;
+  }
+
+  &__label {
+    @include respond-below(md) {
+      @include visually-hidden;
+    }
+  }
+}
+
+.admin-user {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-sm;
+  font-weight: 600;
+
+  .avatar {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  &__name {
+    @include respond-below(md) {
+      @include visually-hidden;
+    }
+  }
+}
+
+.admin-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: $space-4;
+  padding: $space-4;
+
+  @include respond-to(md) {
+    gap: $space-5;
+    padding: $space-5;
+  }
+}

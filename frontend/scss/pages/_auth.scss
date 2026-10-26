@@ -1,7 +1,7 @@
 // =========================================================
-//  TRANG ĐĂNG NHẬP / ĐĂNG KÝ
-//  Mobile + tablet: chỉ có thẻ form ở giữa.
-//  Desktop (>= 1200px): khối giới thiệu bên trái + form bên phải.
+//  LOGIN / REGISTER PAGES
+//  Mobile + tablet: only the form card, centered.
+//  Desktop (>= 1200px): introduction block on the left + form on the right.
 // =========================================================
 @use '../abstracts' as *;
 
@@ -23,7 +23,7 @@
     min-height: calc(100vh - #{$header-height} - 260px);
   }
 
-  // ---------- Khối giới thiệu ----------
+  // ---------- Introduction block ----------
   &__intro {
     display: none;
 
@@ -73,7 +73,7 @@
   }
 }
 
-// ---------- Thẻ chứa form ----------
+// ---------- Form card ----------
 .auth-card {
   width: 100%;
   max-width: 480px;

@@ -1,7 +1,7 @@
 /**
- * Chế độ sáng/tối, lưu lựa chọn trong COOKIE `mc2c_theme`.
- * (File js/theme-init.js chạy sớm trong <head> để áp theme trước khi trang hiện, tránh nháy màu.)
- * Icon mặt trăng / mặt trời có sẵn trong HTML, CSS tự ẩn/hiện theo [data-theme].
+ * Light/dark mode, the choice is stored in the `mc2c_theme` COOKIE.
+ * (js/theme-init.js runs early in <head> to apply the theme before the page shows, avoiding a color flash.)
+ * The moon / sun icons are in the HTML, CSS shows/hides them based on [data-theme].
  */
 import { setCookie } from '../utils/cookie.js';
 
@@ -15,7 +15,7 @@ export function setTheme(theme) {
   window.dispatchEvent(new CustomEvent('theme:change', { detail: { theme } }));
 }
 
-/** Gắn nút đổi theme, chỉ cập nhật thuộc tính trợ năng (aria) */
+/** Wire up the theme toggle button, only updates the accessibility (aria) attributes */
 export function initThemeToggle(button) {
   if (!button) return;
 

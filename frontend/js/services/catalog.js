@@ -1,12 +1,12 @@
 /**
- * Dữ liệu từ backend của mình: danh mục, tin đăng.
+ * Data from our own backend: categories, listings.
  */
 import { api } from './api.js';
 import { cached } from './storage.js';
 
-const CATEGORY_TTL = 10 * 60 * 1000; // 10 phút
+const CATEGORY_TTL = 10 * 60 * 1000; // 10 minutes
 
-/** Danh mục (cache LocalStorage 10 phút vì ít thay đổi) */
+/** Categories (cached in LocalStorage for 10 minutes since they rarely change) */
 export function getCategories() {
   return cached('categories', CATEGORY_TTL, async () => {
     const { data } = await api.get('/api/categories');
@@ -15,7 +15,7 @@ export function getCategories() {
 }
 
 /**
- * Danh sách tin đang bán.
+ * Active listings.
  * @param {object} filters  { q, category, province, condition, minPrice, maxPrice, sort, page, limit }
  * @param {AbortSignal} [signal]
  * @returns {Promise<{ data: object[], meta: object }>}
@@ -25,13 +25,13 @@ export async function getListings(filters, signal) {
   return { data, meta };
 }
 
-/** Chi tiết 1 tin (kèm ảnh, người bán). Tin không tồn tại -> ApiError status 404 */
+/** Listing detail (with images, seller). Missing listing -> ApiError status 404 */
 export async function getListing(id, signal) {
   const { data } = await api.get(`/api/listings/${encodeURIComponent(id)}`, { signal });
   return data;
 }
 
-/** Tin cùng danh mục, bỏ ra tin đang xem */
+/** Listings in the same category, excluding the one being viewed */
 export async function getRelatedListings({ category, excludeId, limit = 8 }) {
   const { data } = await api.get('/api/listings', {
     params: { category, exclude: excludeId, limit, sort: 'newest' },
@@ -40,10 +40,10 @@ export async function getRelatedListings({ category, excludeId, limit = 8 }) {
 }
 
 /**
- * Đăng tin mới. Gửi 1 request FormData gồm các trường chữ + file ảnh (theo thứ tự hiển thị).
+ * Post a new listing. Sends one FormData request with the text fields + image files (in display order).
  * @param {object} fields  { title, categoryId, condition, price, province, description }
  * @param {Blob[]} images
- * @returns {Promise<object>} tin vừa tạo (chi tiết)
+ * @returns {Promise<object>} the created listing (detail)
  */
 export async function createListing(fields, images) {
   const formData = new FormData();
@@ -58,20 +58,20 @@ export async function createListing(fields, images) {
 }
 
 // ---------------------------------------------------------
-//  Tin của tôi
+//  My listings
 // ---------------------------------------------------------
 
 /**
- * Tin của người đang đăng nhập.
+ * Listings of the logged in user.
  * @param {{ status?: string, q?: string, page?: number, limit?: number }} filters
- * @returns {Promise<{ data: object[], meta: object }>} meta.counts = số tin theo từng trạng thái
+ * @returns {Promise<{ data: object[], meta: object }>} meta.counts = number of listings per status
  */
 export async function getMyListings(filters, signal) {
   const { data, meta } = await api.get('/api/me/listings', { params: filters, signal });
   return { data, meta };
 }
 
-/** Đổi trạng thái tin (sold / hidden / active) */
+/** Change a listing's status (sold / hidden / active) */
 export async function updateListingStatus(id, status) {
   const { data, message } = await api.patch(`/api/listings/${id}/status`, { status });
   return { listing: data, message };
@@ -83,9 +83,9 @@ export async function deleteListing(id) {
 }
 
 /**
- * Sửa tin. `images` là danh sách ảnh theo thứ tự hiển thị:
- *   { existingId: 12 } = giữ ảnh cũ, { blob: Blob } = ảnh mới.
- * Gửi lên server: các file mới trong "images" + "imageOrder" (JSON) mô tả thứ tự.
+ * Edit a listing. `images` is the list of images in display order:
+ *   { existingId: 12 } = keep an existing image, { blob: Blob } = new image.
+ * Sent to the server: the new files in "images" + "imageOrder" (JSON) describing the order.
  */
 export async function updateListing(id, fields, images) {
   const formData = new FormData();

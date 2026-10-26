@@ -1,5 +1,5 @@
 // =========================================================
-//  HỘP XÁC NHẬN (<dialog id="confirm-dialog">)
+//  CONFIRM DIALOG (<dialog id="confirm-dialog">)
 // =========================================================
 @use '../abstracts' as *;
 
@@ -12,12 +12,12 @@
   color: var(--color-text);
   box-shadow: var(--shadow-md);
 
-  // Nền mờ phía sau (pseudo-element có sẵn của <dialog>)
+  // Dimmed backdrop (built-in <dialog> pseudo-element)
   &::backdrop {
     background: rgb(0 0 0 / 50%);
   }
 
-  // Hiệu ứng hiện ra nhẹ nhàng
+  // Gentle appear animation
   &[open] {
     animation: dialog-in 0.18s ease;
   }

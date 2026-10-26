@@ -1,14 +1,14 @@
 /**
- * Thông tin đăng nhập phía client.
- * Server giữ session bằng cookie httpOnly, client chỉ hỏi "tôi là ai?" qua /api/auth/me.
+ * Client-side login state.
+ * The server keeps the session in an httpOnly cookie, the client only asks "who am I?" via /api/auth/me.
  */
 import { api } from './api.js';
 
 let currentUserPromise = null;
 
 /**
- * Lấy user đang đăng nhập (null nếu là khách).
- * Kết quả được nhớ lại trong trang để nhiều module gọi cũng chỉ tốn 1 request.
+ * Get the logged in user (null for guests).
+ * The result is cached for the page so several modules calling it cost only one request.
  */
 export function getCurrentUser({ refresh = false } = {}) {
   if (!currentUserPromise || refresh) {
@@ -16,22 +16,22 @@ export function getCurrentUser({ refresh = false } = {}) {
       .get('/api/auth/me')
       .then(({ data }) => data)
       .catch((err) => {
-        if (err.status === 401 || err.status === 403) return null; // chưa đăng nhập / bị khóa
-        currentUserPromise = null; // lỗi mạng -> lần sau thử lại
+        if (err.status === 401 || err.status === 403) return null; // not logged in / locked
+        currentUserPromise = null; // network error -> retry next time
         throw err;
       });
   }
   return currentUserPromise;
 }
 
-/** Đăng nhập, trả về user. Lỗi (sai mật khẩu, bị khóa...) ném ApiError */
+/** Log in, returns the user. Errors (wrong password, locked...) throw an ApiError */
 export async function login({ email, password }) {
   const { data } = await api.post('/api/auth/login', { email, password });
   currentUserPromise = Promise.resolve(data);
   return data;
 }
 
-/** Đăng ký (server tự đăng nhập luôn sau khi tạo tài khoản), trả về user */
+/** Register (the server logs in right after creating the account), returns the user */
 export async function register({ name, email, phone, password }) {
   const { data } = await api.post('/api/auth/register', { name, email, phone, password });
   currentUserPromise = Promise.resolve(data);
@@ -44,9 +44,9 @@ export async function logout() {
 }
 
 /**
- * Trang cần quay lại sau khi đăng nhập, lấy từ ?redirect=...
- * Chỉ chấp nhận đường dẫn nội bộ ("/sell") để tránh bị lợi dụng chuyển hướng
- * sang trang lừa đảo ("https://...", "//evil.com").
+ * Page to return to after logging in, taken from ?redirect=...
+ * Only internal paths ("/sell") are accepted, to prevent abuse as a redirect
+ * to phishing pages ("https://...", "//evil.com").
  */
 export function getRedirectTarget(fallback = '/') {
   const target = new URLSearchParams(window.location.search).get('redirect') ?? '';
@@ -54,7 +54,7 @@ export function getRedirectTarget(fallback = '/') {
   return isInternal ? target : fallback;
 }
 
-/** URL trang đăng nhập kèm ?redirect= về trang hiện tại */
+/** Login page URL with ?redirect= back to the current page */
 export function loginUrl(redirect = window.location.pathname + window.location.search) {
   return `/login?redirect=${encodeURIComponent(redirect)}`;
 }

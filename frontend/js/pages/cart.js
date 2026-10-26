@@ -1,10 +1,10 @@
 /**
- * TRANG GIỎ HÀNG + ĐẶT HÀNG: /cart
- *  - Giỏ lưu ở LocalStorage (services/stores.js). Mở trang -> hỏi lại server từng món
- *    (Promise.allSettled) xem còn mua được không: đã bán, ngừng bán, đã có người đặt, tin của mình...
- *  - Nhóm theo người bán (reduce), chọn món để đặt, tổng tiền tính lại mỗi lần chọn
- *  - Thông tin nhận hàng nhớ trong LocalStorage (shippingInfo) cho lần đặt sau
- *  - Đặt hàng: mỗi món -> 1 đơn. Món nào server từ chối thì đánh dấu ngay trên giỏ.
+ * CART + CHECKOUT PAGE: /cart
+ *  - The cart lives in LocalStorage (services/stores.js). On load -> re-check every item with the server
+ *    (Promise.allSettled) to see whether it can still be bought: sold, unavailable, already reserved, your own listing...
+ *  - Grouped by seller (reduce), pick items to order, the total is recomputed on every selection
+ *  - Shipping details are remembered in LocalStorage (shippingInfo) for the next order
+ *  - Checkout: one order per item. Items the server refuses are flagged right in the cart.
  */
 import { $, $$ } from '../utils/dom.js';
 import { cloneTemplate, fillFields } from '../utils/template.js';
@@ -29,11 +29,11 @@ const PHONE_RE = /^0\d{9}$/;
 class CartPage {
   user = null;
   usdRate = null;
-  /** Snapshot các món trong giỏ */
+  /** Snapshots of the cart items */
   items = [];
-  /** id -> { ok: true } | { ok: false, reason } | undefined (đang kiểm tra / không kiểm tra được) */
+  /** id -> { ok: true } | { ok: false, reason } | undefined (checking / could not check) */
   availability = new Map();
-  /** id các món đang được chọn để đặt */
+  /** ids of the items selected for ordering */
   selected = new Set();
 
   constructor() {
@@ -60,13 +60,13 @@ class CartPage {
     this.bindEvents();
     if (this.items.length === 0) return;
 
-    // Kiểm tra giỏ + tỷ giá + tỉnh thành cùng lúc
+    // Check the cart + exchange rate + provinces at the same time
     await Promise.all([this.checkAvailability(), this.setupCheckout(), this.loadRate()]);
   }
 
   loadItems() {
     this.items = cart.getAll();
-    // Mặc định chọn hết các món chưa bị đánh dấu không mua được
+    // Select every item not flagged as unavailable by default
     this.selected = new Set(
       this.items.filter((item) => this.availability.get(item.id)?.ok !== false).map((item) => item.id),
     );
@@ -79,7 +79,7 @@ class CartPage {
   }
 
   // =======================================================
-  //  KIỂM TRA TÌNH TRẠNG TỪNG MÓN
+  //  CHECK EACH ITEM'S AVAILABILITY
   // =======================================================
   async checkAvailability() {
     const results = await Promise.allSettled(this.items.map((item) => getListing(item.id)));
@@ -88,7 +88,7 @@ class CartPage {
     results.forEach((result, i) => {
       const { id } = this.items[i];
       if (result.status === 'rejected') {
-        // 404: tin đã xóa / chưa duyệt. Lỗi mạng thì để server kiểm tra lúc đặt
+        // 404: listing deleted / not approved. On network errors let the server check at checkout
         if (result.reason?.status === 404) this.availability.set(id, { ok: false, reason: 'Tin không còn tồn tại' });
         return;
       }
@@ -106,9 +106,9 @@ class CartPage {
       this.availability.set(id, reason ? { ok: false, reason } : { ok: true });
     });
 
-    // Cập nhật lại tiêu đề / giá / ảnh mới nhất vào giỏ (giữ nguyên thứ tự và thời điểm thêm)
+    // Write the latest title / price / image back into the cart (keeping order and added time)
     cart.save(cart.getAll().map((item) => (fresh.has(item.id) ? { ...toListingSnapshot(fresh.get(item.id)), savedAt: item.savedAt } : item)));
-    // Bỏ chọn món không mua được
+    // Deselect items that cannot be bought
     this.availability.forEach((value, id) => {
       if (!value.ok) this.selected.delete(id);
     });
@@ -117,7 +117,7 @@ class CartPage {
   }
 
   // =======================================================
-  //  HIỂN THỊ GIỎ
+  //  RENDER THE CART
   // =======================================================
   render() {
     const hasItems = this.items.length > 0;
@@ -126,7 +126,7 @@ class CartPage {
     this.el.count.textContent = hasItems ? `(${this.items.length} món)` : '';
     if (!hasItems) return;
 
-    // Gom món theo người bán bằng reduce: { sellerKey: { name, items: [] } }
+    // Group items by seller with reduce: { sellerKey: { name, items: [] } }
     const groups = this.items.reduce((acc, item) => {
       const key = item.sellerId ?? 'unknown';
       acc[key] ??= { name: item.sellerName ?? 'Người bán', items: [] };
@@ -178,7 +178,7 @@ class CartPage {
     return li;
   }
 
-  /** Tổng tiền + số món đã chọn (chỉ tính món mua được) */
+  /** Total + number of selected items (only items that can be bought) */
   renderSummary() {
     const chosen = this.items.filter((item) => this.selected.has(item.id));
     const total = chosen.reduce((sum, item) => sum + Number(item.price), 0);
@@ -194,7 +194,7 @@ class CartPage {
     this.el.selectAll.indeterminate = chosen.length > 0 && chosen.length < selectable.length;
     this.el.selectAll.disabled = selectable.length === 0;
 
-    // Khách: ẩn form nhận hàng, thay nút đặt hàng bằng link đăng nhập
+    // Guest: hide the shipping form, replace the order button with a login link
     $('#checkout').hidden = !this.user;
     this.el.submit.hidden = !this.user;
     this.el.guest.hidden = Boolean(this.user);
@@ -202,7 +202,7 @@ class CartPage {
   }
 
   // =======================================================
-  //  THÔNG TIN NHẬN HÀNG + ĐẶT HÀNG
+  //  SHIPPING DETAILS + CHECKOUT
   // =======================================================
   async setupCheckout() {
     initCharCounters(this.el.form);
@@ -219,10 +219,10 @@ class CartPage {
       },
       onSubmit: (values) => this.checkout(values),
     });
-    // Nút "Đặt hàng" nằm ngoài form (ở cột tóm tắt, dùng thuộc tính form="checkout-form" của HTML5)
+    // The "Order" button sits outside the form (in the summary column, using the HTML5 form="checkout-form" attribute)
     this.formHandler.submitButton = this.el.submit;
 
-    // Tỉnh thành (API công khai, có dự phòng)
+    // Provinces (public API, with a fallback)
     try {
       const { provinces } = await getProvinces();
       this.el.province.replaceChildren(
@@ -234,7 +234,7 @@ class CartPage {
       this.el.province.replaceChildren(new Option('Không tải được tỉnh thành', ''));
     }
 
-    // Điền sẵn: lần đặt trước (LocalStorage) > hồ sơ người dùng
+    // Prefill: previous order (LocalStorage) > user profile
     const saved = local.get(SHIPPING_KEY) ?? {};
     const defaults = {
       receiverName: saved.receiverName ?? this.user?.name ?? '',
@@ -265,14 +265,14 @@ class CartPage {
 
     try {
       const { message } = await createOrders(listingIds, receiver);
-      // Đặt xong: bỏ các món đã đặt khỏi giỏ, nhớ thông tin nhận hàng
+      // Ordered: remove the ordered items from the cart, remember the shipping details
       listingIds.forEach((id) => cart.remove(id));
       const { note, ...shipping } = receiver;
       local.set(SHIPPING_KEY, shipping);
       setFlash(message, 'success');
       window.location.assign('/orders?role=buyer');
     } catch (err) {
-      // 409: server báo món nào không đặt được -> đánh dấu ngay trên giỏ
+      // 409: the server says which items could not be ordered -> flag them in the cart
       const problems = err.errors?.items;
       if (Array.isArray(problems)) {
         problems.forEach(({ listingId, reason }) => {
@@ -281,15 +281,15 @@ class CartPage {
         });
         this.render();
       }
-      throw err; // FormHandler hiện thông báo chung
+      throw err; // FormHandler shows the general message
     }
   }
 
   // =======================================================
-  //  SỰ KIỆN
+  //  EVENTS
   // =======================================================
   bindEvents() {
-    // Chọn / bỏ chọn / xóa từng món (event delegation)
+    // Select / deselect / remove each item (event delegation)
     this.el.groups.addEventListener('change', (e) => {
       const check = e.target.closest('.cart-item__check');
       if (!check) return;
@@ -304,7 +304,7 @@ class CartPage {
       if (!btn) return;
       const id = Number(btn.closest('[data-id]').dataset.id);
       this.selected.delete(id);
-      cart.remove(id); // phát 'cart:change' -> render lại ở listener bên dưới
+      cart.remove(id); // dispatches 'cart:change' -> re-rendered by the listener below
       showToast('Đã xóa khỏi giỏ hàng', 'info');
     });
 
@@ -320,7 +320,7 @@ class CartPage {
       this.renderSummary();
     });
 
-    // Giỏ đổi (xóa món, tab khác thêm món...) -> vẽ lại
+    // Cart changed (item removed, another tab added one...) -> re-render
     window.addEventListener('cart:change', () => {
       const ids = new Set(cart.getAll().map((item) => item.id));
       this.selected = new Set([...this.selected].filter((id) => ids.has(id)));

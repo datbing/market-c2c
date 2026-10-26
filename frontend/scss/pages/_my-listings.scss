@@ -1,5 +1,5 @@
 // =========================================================
-//  TRANG TIN ĐĂNG CỦA TÔI
+//  MY LISTINGS PAGE
 // =========================================================
 @use '../abstracts' as *;
 
@@ -26,7 +26,7 @@
   }
 }
 
-// ---------- Tab trạng thái: cuộn ngang trên mobile ----------
+// ---------- Status tabs: horizontal scroll on mobile ----------
 .status-tabs {
   display: flex;
   gap: $space-2;
@@ -73,7 +73,7 @@
   }
 }
 
-// ---------- Ô tìm kiếm có icon ----------
+// ---------- Search box with an icon ----------
 .my-search {
   position: relative;
   max-width: 420px;
@@ -91,7 +91,7 @@
   }
 }
 
-// ---------- Danh sách ----------
+// ---------- List ----------
 .my-list {
   display: grid;
   gap: $space-3;
@@ -107,7 +107,7 @@
   }
 }
 
-// Mỗi tin: ảnh | thông tin | nút (desktop). Mobile: ảnh + thông tin, nút xuống hàng dưới
+// Each listing: image | info | buttons (desktop). Mobile: image + info, buttons wrap to the next row
 .my-listing {
   display: grid;
   grid-template-columns: 88px minmax(0, 1fr);

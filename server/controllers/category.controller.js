@@ -1,5 +1,5 @@
 /**
- * Controller danh mục sản phẩm.
+ * Product category controller.
  */
 import * as Category from '../models/category.model.js';
 

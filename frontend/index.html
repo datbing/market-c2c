@@ -20,7 +20,7 @@
 
   <title>Mua bán đồ cũ dễ dàng | Market C2C</title>
 
-  <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
+  <!-- Apply the light/dark theme before the page paints to avoid a color flash -->
   <script src="/js/theme-init.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/css/main.css">
@@ -28,13 +28,13 @@
 
 <body>
   <!-- =====================================================
-       HEADER (dùng chung: copy nguyên khối này sang các trang khác)
+       HEADER (shared: copy this whole block to the other pages)
        ===================================================== -->
   <header class="site-header">
     <div class="container site-header__inner">
       <a class="logo" href="/" aria-label="Market C2C - Trang chủ">
-        <!-- Responsive bằng HTML: màn hình < 576px dùng logo vuông, lớn hơn dùng logo có chữ.
-             Có 2 bản: chữ navy cho nền sáng, chữ sáng cho nền tối (CSS chọn theo [data-theme]) -->
+        <!-- Responsive via HTML: screens < 576px use the square logo, larger ones the text logo.
+             Two versions: navy text for light backgrounds, light text for dark ones (CSS picks by [data-theme]) -->
         <picture class="logo__picture logo__picture--light">
           <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
           <img class="logo__img" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C">
@@ -54,7 +54,7 @@
           <i class="bi bi-search" aria-hidden="true"></i>
         </button>
 
-        <!-- Lịch sử tìm kiếm (LocalStorage) -->
+        <!-- Search history (LocalStorage) -->
         <div class="search__dropdown" id="search-history" hidden>
           <div class="search__dropdown-head">
             <span>Tìm kiếm gần đây</span>
@@ -65,7 +65,7 @@
       </form>
 
       <nav class="header-actions" aria-label="Tiện ích và tài khoản">
-        <!-- CSS tự hiện mặt trăng (sáng) hoặc mặt trời (tối) theo [data-theme] -->
+        <!-- CSS shows the moon (light) or the sun (dark) based on [data-theme] -->
         <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
           <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
           <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
@@ -79,9 +79,9 @@
           <span class="icon-btn__badge" data-count="cart" hidden>0</span>
         </a>
 
-        <!-- Tài khoản: JS bật 1 trong 2 khối sau khi gọi /api/auth/me -->
+        <!-- Account: JS shows one of the two blocks after calling /api/auth/me -->
         <div class="account" id="account-area">
-          <!-- Dưới 1200px chỉ hiện icon, chữ vẫn được trình đọc màn hình đọc -->
+          <!-- Below 1200px only the icon is visible; the text is still read by screen readers -->
           <a class="account__login" id="account-guest" href="/login" hidden>
             <i class="bi bi-person-circle" aria-hidden="true"></i><span>Đăng nhập</span>
           </a>
@@ -124,7 +124,7 @@
   </header>
 
   <!-- =====================================================
-       NỘI DUNG TRANG CHỦ
+       HOME PAGE CONTENT
        ===================================================== -->
   <main class="site-main">
     <div class="container home">
@@ -149,7 +149,7 @@
         </ul>
       </section>
 
-      <!-- Danh mục -->
+      <!-- Categories -->
       <section aria-labelledby="categories-title">
         <div class="section-heading">
           <h2 id="categories-title">Khám phá danh mục</h2>
@@ -163,7 +163,7 @@
               <span class="category-tile__count" id="category-all-count">&nbsp;</span>
             </button>
           </li>
-          <!-- Khung chờ, bị xóa khi danh mục tải xong -->
+          <!-- Skeletons, removed once the categories have loaded -->
           <li data-skeleton>
             <div class="category-tile category-tile--loading" aria-hidden="true"><span
                 class="category-tile__icon skeleton"></span><span class="skeleton skeleton--line"></span></div>
@@ -197,7 +197,7 @@
         </p>
       </section>
 
-      <!-- Tin vừa xem (LocalStorage) -->
+      <!-- Recently viewed (LocalStorage) -->
       <section id="recent-section" aria-labelledby="recent-title" hidden>
         <div class="section-heading">
           <h2 id="recent-title">Tin bạn vừa xem</h2>
@@ -206,7 +206,7 @@
         <div class="listing-grid listing-grid--scroll" id="recent-list"></div>
       </section>
 
-      <!-- Bộ lọc + danh sách tin -->
+      <!-- Filters + listing grid -->
       <div class="home-layout" id="listings">
         <aside class="filters" id="filters" aria-labelledby="filters-title">
           <div class="filters__head">
@@ -288,7 +288,7 @@
                 <span class="filter-count" id="filter-count" hidden>0</span>
               </button>
               <label for="sort-select" class="visually-hidden">Sắp xếp theo</label>
-              <!-- value khớp whitelist sắp xếp ở backend -->
+              <!-- values match the backend sort whitelist -->
               <select class="form-control" id="sort-select">
                 <option value="newest">Mới nhất</option>
                 <option value="price_asc">Giá thấp → cao</option>
@@ -298,7 +298,7 @@
             </div>
           </div>
 
-          <!-- Chip các bộ lọc đang áp dụng -->
+          <!-- Chips for the active filters -->
           <div class="active-filters" id="active-filters" hidden>
             <div class="active-filters__list" id="chip-list"></div>
             <button type="button" class="link-btn" data-action="reset" id="chip-reset" hidden>Xóa tất cả</button>
@@ -306,7 +306,7 @@
 
           <div class="listing-grid" id="listing-grid" aria-live="polite" aria-busy="true"></div>
 
-          <!-- Không có kết quả -->
+          <!-- No results -->
           <div class="state" id="listing-empty" hidden>
             <i class="bi bi-search" aria-hidden="true"></i>
             <p class="state__title">Không tìm thấy tin đăng nào</p>
@@ -314,7 +314,7 @@
             <button type="button" class="btn btn--primary" data-action="reset">Xóa bộ lọc</button>
           </div>
 
-          <!-- Lỗi tải dữ liệu -->
+          <!-- Loading error -->
           <div class="state state--error" id="listing-error" role="alert" hidden>
             <i class="bi bi-wifi-off" aria-hidden="true"></i>
             <p class="state__title">Không tải được danh sách tin</p>
@@ -343,7 +343,7 @@
   </main>
 
   <!-- =====================================================
-       FOOTER (dùng chung)
+       FOOTER (shared)
        ===================================================== -->
   <footer class="site-footer">
     <div class="container site-footer__grid">
@@ -378,12 +378,12 @@
       Tỷ giá: open.er-api.com</p>
   </footer>
 
-  <!-- Vùng hiện thông báo (toast) -->
+  <!-- Toast notification area -->
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
   <!-- =====================================================
-       TEMPLATE DÙNG CHUNG (header, toast) - copy sang các trang khác
-       <template> không hiển thị, JS nhân bản rồi điền dữ liệu.
+       SHARED TEMPLATES (header, toast) - copy to the other pages
+       <template> is not rendered; JS clones it and fills in the data.
        ===================================================== -->
   <template id="tpl-history-item">
     <li class="search__history-item" role="option" aria-selected="false">
@@ -408,9 +408,9 @@
   </template>
 
   <!-- =====================================================
-       TEMPLATE CỦA TRANG CHỦ
+       HOME PAGE TEMPLATES
        ===================================================== -->
-  <!-- Thẻ tin đăng -->
+  <!-- Listing card -->
   <template id="tpl-listing-card">
     <article class="listing-card">
       <div class="listing-card__media">
@@ -418,7 +418,7 @@
         <span class="listing-card__placeholder"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
         <span class="badge listing-card__condition" hidden></span>
       </div>
-      <!-- CSS hiện tim rỗng / tim đặc theo aria-pressed -->
+      <!-- CSS shows an empty / filled heart based on aria-pressed -->
       <button type="button" class="listing-card__favorite" data-action="favorite" aria-pressed="false"
         aria-label="Thêm vào yêu thích">
         <i class="bi bi-heart" aria-hidden="true"></i>
@@ -440,7 +440,7 @@
     </article>
   </template>
 
-  <!-- Thẻ chờ khi đang tải -->
+  <!-- Skeleton card while loading -->
   <template id="tpl-listing-skeleton">
     <div class="listing-card" aria-hidden="true">
       <div class="skeleton skeleton--media"></div>
@@ -452,7 +452,7 @@
     </div>
   </template>
 
-  <!-- Ô danh mục -->
+  <!-- Category tile -->
   <template id="tpl-category-tile">
     <li>
       <button type="button" class="category-tile" data-category="" aria-pressed="false">
@@ -463,7 +463,7 @@
     </li>
   </template>
 
-  <!-- Chip bộ lọc đang áp dụng -->
+  <!-- Active filter chip -->
   <template id="tpl-chip">
     <span class="chip">
       <span data-field="label"></span>
@@ -473,7 +473,7 @@
     </span>
   </template>
 
-  <!-- Nút số trang -->
+  <!-- Page number button -->
   <template id="tpl-page-number">
     <button type="button" class="pagination__btn"></button>
   </template>

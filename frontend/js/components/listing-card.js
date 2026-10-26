@@ -1,20 +1,20 @@
 /**
- * Thẻ tin đăng. Cấu trúc HTML nằm trong <template id="tpl-listing-card">
- * và <template id="tpl-listing-skeleton"> của trang; file này chỉ điền dữ liệu.
+ * Listing card. The HTML structure lives in the page's <template id="tpl-listing-card">
+ * and <template id="tpl-listing-skeleton">; this file only fills in the data.
  */
 import { assetUrl } from '../config.js';
 import { cloneTemplate, fillFields } from '../utils/template.js';
 import { formatVND, formatUSD, timeAgo, CONDITION_LABELS } from '../utils/format.js';
 
-/** Link tới trang chi tiết tin */
+/** Link to the listing detail page */
 export const listingUrl = (id) => `/product?id=${encodeURIComponent(id)}`;
 
 /**
- * Tạo phần tử thẻ tin.
- * @param {object} listing  Dữ liệu từ API (hoặc snapshot trong LocalStorage)
+ * Create a listing card element.
+ * @param {object} listing  Data from the API (or a LocalStorage snapshot)
  * @param {object} [options]
  * @param {boolean} [options.isFavorite]
- * @param {number|null} [options.usdRate]  Có tỷ giá thì hiện giá quy đổi USD
+ * @param {number|null} [options.usdRate]  When an exchange rate is given, show the USD price
  * @returns {HTMLElement}
  */
 export function createListingCard(listing, { isFavorite = false, usdRate = null } = {}) {
@@ -36,7 +36,7 @@ export function createListingCard(listing, { isFavorite = false, usdRate = null 
   const time = card.querySelector('[data-field="time"]');
   if (createdAt) time.dateTime = createdAt;
 
-  // Ảnh: có thì hiện <img>, không thì hiện icon danh mục
+  // Image: show the <img> if there is one, otherwise the category icon
   if (thumbnail) {
     const img = card.querySelector('.listing-card__img');
     img.src = assetUrl(thumbnail);
@@ -48,7 +48,7 @@ export function createListingCard(listing, { isFavorite = false, usdRate = null 
     if (icon) card.querySelector('.listing-card__placeholder .bi').className = `bi ${icon}`;
   }
 
-  // Nhãn tình trạng: class badge--new / badge--like_new / badge--used đã có sẵn trong CSS
+  // Condition badge: the badge--new / badge--like_new / badge--used classes already exist in the CSS
   const badge = card.querySelector('.listing-card__condition');
   if (CONDITION_LABELS[condition]) {
     badge.textContent = CONDITION_LABELS[condition];
@@ -61,21 +61,21 @@ export function createListingCard(listing, { isFavorite = false, usdRate = null 
 }
 
 /**
- * Cập nhật nút tim. Icon tim rỗng/đặc do CSS đổi theo aria-pressed.
+ * Update the heart button. The empty/filled heart icon is switched by CSS based on aria-pressed.
  */
 export function setFavoriteButton(button, active) {
   button.setAttribute('aria-pressed', String(active));
   button.setAttribute('aria-label', active ? 'Bỏ yêu thích' : 'Thêm vào yêu thích');
 }
 
-/** Cập nhật giá USD cho các thẻ đã hiển thị (khi tỷ giá về sau danh sách) */
+/** Update the USD price of cards already rendered (when the rate arrives after the list) */
 export function applyUsdRate(root, rate) {
   root.querySelectorAll('[data-usd]').forEach((el) => {
     el.textContent = formatUSD(el.dataset.usd, rate);
   });
 }
 
-/** N thẻ skeleton khi đang tải */
+/** N skeleton cards while loading */
 export function createSkeletonCards(count = 8) {
   const fragment = document.createDocumentFragment();
   for (let i = 0; i < count; i += 1) fragment.append(cloneTemplate('tpl-listing-skeleton'));

@@ -1,8 +1,8 @@
 /**
- * Điểm khởi động server.
- *  1. Kiểm tra kết nối MySQL, lỗi thì báo rõ cách khắc phục rồi thoát.
- *  2. Đọc chứng chỉ SSL và chạy API bằng HTTPS (frontend chạy https nên API
- *     cũng phải https, nếu không trình duyệt chặn vì "mixed content").
+ * Server entry point.
+ *  1. Check the MySQL connection; on failure explain how to fix it and exit.
+ *  2. Read the SSL certificate and serve the API over HTTPS (the frontend runs on https so the API
+ *     must be https too, otherwise the browser blocks it as "mixed content").
  */
 import fs from 'node:fs';
 import https from 'node:https';
@@ -10,16 +10,16 @@ import { app } from './app.js';
 import { config } from './config/env.js';
 import { pool, checkConnection } from './config/db.js';
 
-/** Đọc file chứng chỉ + khóa, thiếu file thì báo hướng dẫn rồi thoát */
+/** Read the certificate + key files; if missing, print instructions and exit */
 function loadSslOptions() {
   const { certFile, keyFile } = config.ssl;
   try {
     return { cert: fs.readFileSync(certFile), key: fs.readFileSync(keyFile) };
   } catch (err) {
-    console.error(`✖ Không đọc được chứng chỉ SSL: ${err.message}`);
-    console.error('  → Laragon: Menu > Apache > SSL > Enabled để Laragon tạo chứng chỉ');
-    console.error(`  → Hoặc khai báo đường dẫn khác bằng SSL_CERT / SSL_KEY trong .env`);
-    console.error(`    (đang dùng: ${certFile} | ${keyFile})`);
+    console.error(`Could not read the SSL certificate: ${err.message}`);
+    console.error('  -> Laragon: Menu > Apache > SSL > Enabled to generate the certificate');
+    console.error(`  -> Or point SSL_CERT / SSL_KEY in .env to other files`);
+    console.error(`     (currently: ${certFile} | ${keyFile})`);
     process.exit(1);
   }
 }
@@ -42,7 +42,7 @@ async function bootstrap() {
     console.log(`Frontend CORS accepted: ${config.corsOrigins.join(', ')}`);
   });
 
-  // Tắt server gọn gàng khi nhấn Ctrl + C
+  // Shut the server down cleanly on Ctrl + C
   const shutdown = async () => {
     server.close();
     await pool.end();

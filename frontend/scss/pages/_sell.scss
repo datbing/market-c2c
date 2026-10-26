@@ -1,7 +1,7 @@
 // =========================================================
-//  TRANG ĐĂNG TIN
-//  Mobile/tablet: form 1 cột, phần xem trước nằm dưới.
-//  Desktop: form bên trái, xem trước + mẹo bên phải (dính khi cuộn).
+//  POST A LISTING PAGE
+//  Mobile/tablet: one-column form, preview below.
+//  Desktop: form on the left, preview + tips on the right (sticky while scrolling).
 // =========================================================
 @use '../abstracts' as *;
 
@@ -66,7 +66,7 @@
     color: var(--color-text-muted);
   }
 
-  // Thẻ xem trước: cùng cỡ thẻ ở trang chủ, chỉ để xem
+  // Preview card: same size as on the home page, display only
   &__preview {
     max-width: 280px;
 
@@ -76,7 +76,7 @@
   }
 }
 
-// Mỗi bước của form là 1 khối
+// Each step of the form is a block
 .sell-section {
   @include surface($space-4);
 
@@ -92,7 +92,7 @@
     font-size: $font-size-lg;
   }
 
-  // Số thứ tự bước trong vòng tròn
+  // Step number inside a circle
   &__step {
     @include flex-center;
     width: 28px;
@@ -104,7 +104,7 @@
     font-size: $font-size-sm;
   }
 
-  // Chỉ áp cho con trực tiếp: 2 ô nằm chung 1 .form-row không được cách thêm (sẽ bị lệch hàng)
+  // Direct children only: two fields sharing one .form-row must not get extra spacing (they would misalign)
   > .form-group + .form-group,
   > .form-row + .form-group,
   > .form-group + .form-row {

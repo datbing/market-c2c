@@ -1,14 +1,14 @@
 /**
- * Model User: chứa toàn bộ câu SQL liên quan tới bảng `users`.
- * Controller không viết SQL trực tiếp mà gọi qua các hàm ở đây.
+ * User model: holds every SQL statement for the `users` table.
+ * Controllers never write SQL directly, they call the functions here.
  */
 import { query, queryOne } from '../config/db.js';
 
-/** Các cột an toàn để trả về client (không có password_hash) */
+/** Columns safe to return to the client (no password_hash) */
 const PUBLIC_COLUMNS = `id, name, email, phone, avatar, province, role, status,
   last_login_at, created_at`;
 
-/** Chuyển 1 dòng DB (snake_case) sang object JSON (camelCase) gửi cho frontend */
+/** Convert a DB row (snake_case) into a JSON object (camelCase) for the frontend */
 export function toPublicUser(row) {
   if (!row) return null;
   return {
@@ -29,7 +29,7 @@ export function findById(id) {
   return queryOne(`SELECT ${PUBLIC_COLUMNS} FROM users WHERE id = ?`, [id]);
 }
 
-/** Lấy cả password_hash -> chỉ dùng nội bộ khi đăng nhập */
+/** Also loads password_hash -> only used internally for login */
 export function findByEmailWithPassword(email) {
   return queryOne('SELECT * FROM users WHERE email = ?', [email]);
 }

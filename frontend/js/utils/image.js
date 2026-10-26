@@ -1,24 +1,24 @@
 /**
- * Nén ảnh ngay trên trình duyệt bằng Canvas API trước khi gửi lên server.
- * Ảnh chụp điện thoại 4–8MB -> còn khoảng 150–400KB, upload nhanh và server nhẹ.
+ * Compress images in the browser with the Canvas API before sending them to the server.
+ * A 4-8MB phone photo -> about 150-400KB, faster uploads and a lighter server.
  */
 
-const OUTPUT_TYPES = ['image/webp', 'image/jpeg']; // ưu tiên WebP, trình duyệt không hỗ trợ thì JPEG
+const OUTPUT_TYPES = ['image/webp', 'image/jpeg']; // prefer WebP, fall back to JPEG if unsupported
 
-/** canvas.toBlob dùng callback -> bọc thành Promise để dùng với await */
+/** canvas.toBlob uses a callback -> wrap it in a Promise to use with await */
 const canvasToBlob = (canvas, type, quality) =>
   new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 
 /**
- * @param {File} file  ảnh người dùng chọn
+ * @param {File} file  image picked by the user
  * @param {object} [options]
- * @param {number} [options.maxSize]  cạnh dài nhất sau khi nén (px)
- * @param {number} [options.quality]  chất lượng 0–1
+ * @param {number} [options.maxSize]  longest side after compression (px)
+ * @param {number} [options.quality]  quality 0-1
  * @returns {Promise<{ blob: Blob, width: number, height: number }>}
- * @throws nếu trình duyệt không đọc được ảnh (vd: HEIC trên Chrome)
+ * @throws if the browser cannot decode the image (e.g. HEIC in Chrome)
  */
 export async function compressImage(file, { maxSize = 1280, quality = 0.82 } = {}) {
-  // createImageBitmap giải mã ảnh, tự xoay đúng chiều theo EXIF của ảnh chụp điện thoại
+  // createImageBitmap decodes the image and applies the EXIF orientation of phone photos
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
 
   const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
@@ -29,14 +29,14 @@ export async function compressImage(file, { maxSize = 1280, quality = 0.82 } = {
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff'; // ảnh PNG nền trong suốt -> nền trắng khi đổi sang JPEG
+  ctx.fillStyle = '#fff'; // transparent PNG -> white background when converting to JPEG
   ctx.fillRect(0, 0, width, height);
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
   for (const type of OUTPUT_TYPES) {
     const blob = await canvasToBlob(canvas, type, quality);
-    // Trình duyệt không hỗ trợ định dạng thì trả về PNG -> thử định dạng tiếp theo
+    // Unsupported format makes the browser return PNG -> try the next format
     if (blob && blob.type === type) return { blob, width, height };
   }
   throw new Error('Trình duyệt không nén được ảnh');

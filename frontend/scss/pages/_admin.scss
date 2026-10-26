@@ -1,0 +1,414 @@
+// =========================================================
+//  ADMIN PAGES: dashboard, data tables, toolbars
+// =========================================================
+@use 'sass:map';
+@use '../abstracts' as *;
+
+// ---------- Toolbar (filters, search, buttons) ----------
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    font-size: $font-size-sm;
+    color: var(--color-text-muted);
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space-2;
+
+    .form-control {
+      width: auto;
+    }
+  }
+
+  // Refresh button: hide the icon and show a spinner while loading
+  .is-loading .bi {
+    display: none;
+  }
+}
+
+// ---------- KPI cards ----------
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-3;
+
+  @include respond-to(md) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: $space-4;
+  }
+
+  @include respond-to(xl) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+// Icon color per card: generated with @each from a map
+$kpi-colors: (
+  primary: var(--color-primary),
+  success: var(--color-success),
+  info: var(--color-info),
+  warning: var(--color-warning),
+  danger: var(--color-danger),
+);
+
+.kpi {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  @include surface($space-4);
+  transition: border-color $transition, transform $transition;
+
+  &__icon {
+    @include flex-center;
+    width: 38px;
+    height: 38px;
+    margin-bottom: $space-2;
+    border-radius: $radius;
+    background: var(--color-surface-2);
+    font-size: 1.15rem;
+
+    @each $name, $color in $kpi-colors {
+      &--#{$name} {
+        color: $color;
+      }
+    }
+  }
+
+  &__label {
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: var(--color-text-muted);
+  }
+
+  &__value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  &__sub {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  // Cards that are links (pending listings, reports)
+  @at-root a#{&}:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  // Something needs attention -> orange border
+  &.is-alert {
+    border-color: var(--color-warning);
+
+    .kpi__value {
+      color: var(--color-warning);
+    }
+  }
+
+  // Loading: faded, pulsing number
+  &.is-loading .kpi__value {
+    color: transparent;
+    border-radius: $radius-sm;
+    background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s linear infinite;
+  }
+}
+
+// ---------- Chart grid ----------
+.dashboard {
+  display: grid;
+  gap: $space-4;
+
+  @include respond-to(md) {
+    gap: $space-5;
+  }
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: $space-4;
+
+  @include respond-to(xl) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-5;
+  }
+}
+
+.panel {
+  min-width: 0;
+  @include surface($space-4);
+
+  @include respond-to(md) {
+    padding: $space-5;
+  }
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: $space-2;
+    margin-bottom: $space-3;
+  }
+
+  &__title {
+    font-size: $font-size-base;
+  }
+
+  &__meta {
+    font-size: $font-size-sm;
+    color: var(--color-text-muted);
+  }
+
+  // Donut + legend: side by side from tablet up
+  &__donut {
+    display: grid;
+    gap: $space-4;
+    align-items: center;
+
+    @include respond-to(sm) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+}
+
+// ---------- Suggested reasons in the prompt dialog ----------
+.prompt-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  margin: $space-3 0;
+
+  &__item {
+    padding: $space-1 $space-3;
+    cursor: pointer;
+  }
+
+  &[hidden] + textarea {
+    margin-top: $space-3;
+  }
+}
+
+#prompt-dialog textarea {
+  min-height: 90px;
+}
+
+// ---------- Data table ----------
+// >= 768px: regular table. < 768px: each row becomes a card, column labels come from data-label (CSS attr())
+.data-table-wrap {
+  @include surface(0);
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+
+  &.is-loading {
+    opacity: 0.55;
+  }
+
+  th,
+  td {
+    padding: $space-3 $space-4;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    background: var(--color-surface-2);
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-top: 1px solid var(--color-border);
+
+    &:hover {
+      background: var(--color-surface-2);
+    }
+
+    &.is-locked {
+      opacity: 0.7;
+    }
+  }
+
+  code {
+    padding: 2px 6px;
+    border-radius: $radius-sm;
+    background: var(--color-surface-2);
+    font-size: 0.75rem;
+  }
+
+  &__actions {
+    text-align: right;
+    white-space: nowrap;
+
+    .btn + .btn {
+      margin-left: $space-1;
+    }
+  }
+
+  @include respond-below(md) {
+    thead {
+      @include visually-hidden;
+    }
+
+    tbody tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: $space-2 $space-3;
+      padding: $space-4;
+    }
+
+    td {
+      padding: 0;
+
+      // Column label shown above the value
+      &[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 2px;
+        color: var(--color-text-muted);
+        font-size: 0.6875rem;
+        text-transform: uppercase;
+      }
+
+      // First cell (name) + actions cell: span the full row
+      &:first-child,
+      &.data-table__actions {
+        grid-column: 1 / -1;
+      }
+
+      &:first-child::before {
+        display: none;
+      }
+    }
+
+    .data-table__actions {
+      padding-top: $space-2;
+      border-top: 1px dashed var(--color-border);
+      text-align: left;
+    }
+  }
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  min-width: 0;
+
+  .avatar {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+  }
+
+  strong {
+    display: block;
+  }
+
+  &__sub {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+  }
+}
+
+// ---------- Categories: icon ----------
+.category-icon {
+  @include flex-center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 1.1rem;
+}
+
+.icon-input {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.icon-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: $space-2;
+
+  &__item {
+    @include flex-center;
+    aspect-ratio: 1 / 1;
+    border: 1px solid var(--color-border);
+    border-radius: $radius;
+    background: var(--color-surface);
+    font-size: 1.1rem;
+
+    &:hover {
+      border-color: var(--color-primary);
+    }
+
+    &[aria-pressed='true'] {
+      border-color: var(--color-primary);
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+    }
+  }
+}
+
+// Dialog containing a form (wider than the confirm dialog)
+.confirm-dialog--form {
+  width: min(560px, calc(100vw - 32px));
+
+  .alert {
+    margin-top: $space-3;
+  }
+
+  form {
+    margin-top: $space-4;
+  }
+}
+
+// ---------- Reports: reason ----------
+.report-reason {
+  margin: 0;
+  padding: $space-3 $space-4;
+  border-left: 3px solid var(--color-warning);
+  border-radius: 0 $radius-sm $radius-sm 0;
+  background: var(--color-surface-2);
+  font-size: $font-size-sm;
+
+  footer {
+    margin-top: $space-1;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+  }
+
+  cite {
+    font-style: normal;
+    font-weight: 600;
+  }
+}

@@ -1,5 +1,5 @@
 // =========================================================
-//  ĐƯỜNG DẪN (breadcrumb): Trang chủ › Danh mục › Tên tin
+//  BREADCRUMB: Home > Category > Listing title
 // =========================================================
 @use '../abstracts' as *;
 
@@ -21,7 +21,7 @@
     gap: $space-2;
     min-width: 0;
 
-    // Dấu › giữa các mục, vẽ bằng CSS
+    // Separator between items, drawn with CSS
     & + li::before {
       content: '›';
       color: var(--color-border);
@@ -33,7 +33,7 @@
     color: var(--color-primary);
   }
 
-  // Mục cuối (tên tin) dài thì cắt "..."
+  // The last item (listing title) is truncated with "..." when too long
   [aria-current='page'] {
     max-width: 100%;
     overflow: hidden;
