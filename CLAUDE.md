@@ -99,14 +99,24 @@ uploads/                    # ảnh upload (gitignored)
 | GET | `/api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=&exclude=` | công khai |
 | GET | `/api/listings/:id` | công khai (optionalAuth) |
 | POST | `/api/listings` (FormData: `title, categoryId, condition, price, province, description` + `images` 1–6 file) | đăng nhập |
+| PUT | `/api/listings/:id` (FormData như POST + `imageOrder` JSON `["existing:<id>","new:<n>"]`) | chủ tin |
+| PATCH | `/api/listings/:id/status` `{ status }` | chủ tin |
+| DELETE | `/api/listings/:id` | chủ tin |
+| GET | `/api/me/listings?status=&q=&page=&limit=` (`meta.counts` theo trạng thái) | đăng nhập |
+| POST | `/api/orders` `{ listingIds[], receiverName, receiverPhone, address, province, note? }` (mỗi món 1 đơn) | đăng nhập |
+| GET | `/api/orders?role=buyer|seller&status=&page=` (`meta.counts`) | đăng nhập |
+| GET | `/api/orders/:id` | người mua / người bán / admin |
+| PATCH | `/api/orders/:id/status` `{ status }` | người mua / người bán (theo `TRANSITIONS`) |
 
 `/api/listings`: chỉ tin `active` của user chưa khóa. `category` nhận id hoặc slug, `province` so khớp một phần (LIKE), `sort` ∈ `newest|price_asc|price_desc|popular`, `limit` ≤ 48. Mỗi tin có `thumbnail` (ảnh đầu tiên hoặc null), `category{id,name,slug,icon}`, `seller{id,name}`. `exclude` = bỏ 1 id (tin cùng danh mục).
 
 `/api/listings/:id`: `active` + `sold` ai cũng xem; `pending|hidden|rejected` chỉ chủ tin/admin (người khác 404). Tăng `views` khi tin active và người xem không phải chủ. Trả thêm `description`, `images[{id,url}]`, `seller{id,name,avatar,province,joinedAt,activeCount,soldCount}`, `isOwner`, `rejectReason` (chỉ chủ/admin).
 
+Quy tắc chủ tin đổi trạng thái (`OWNER_TRANSITIONS` trong controller): `active → sold|hidden`, `hidden → active|sold`, `sold → active` (đăng bán lại); `pending`/`rejected` không tự đổi được. Sửa tin bị từ chối → tự về `pending`. Tin đã bán không sửa được. Tin đã có đơn không xóa được (409, gợi ý ẩn).
+
+Đơn hàng (`server/controllers/order.controller.js`): đặt hàng trong transaction + `SELECT ... FOR UPDATE` khóa tin (không đặt trùng); 1 tin chỉ có 1 đơn đang mở (`pending|confirmed|shipping`) → chi tiết tin có `reserved`, chủ tin không ẩn / đánh dấu đã bán khi còn đơn mở. `TRANSITIONS`: `pending → confirmed` (bán) / `cancelled` (bán, mua); `confirmed → shipping|cancelled` (bán); `shipping → completed` (bán, hoặc mua bấm "đã nhận hàng") → tin chuyển `sold`.
+
 Dự kiến:
-- Listings: `GET /api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=` (chỉ `active`), `GET /api/me/listings?status=`, `PUT /api/listings/:id`, `PATCH /api/listings/:id/status` (sold/hidden/active), `DELETE /api/listings/:id` (không cho xóa nếu đã có đơn, gợi ý ẩn).
-- Orders: tạo đơn từ tin `active`, người mua xem đơn mua, người bán xem đơn bán và chuyển trạng thái; hoàn thành đơn thì tin chuyển `sold`.
 - Reports: người dùng báo cáo tin.
 - Admin (`/api/admin`): thống kê dashboard, duyệt/từ chối tin, khóa/mở user, CRUD danh mục, xử lý báo cáo.
 
@@ -151,7 +161,7 @@ Dự kiến:
 
 ### LocalStorage / SessionStorage / Cookie
 Prefix key `mc2c:`. Bọc trong `storage.js` có try/catch + JSON parse an toàn.
-- LocalStorage: `cart` (giỏ hàng), `favorites`, `recentlyViewed`, `searchHistory`, `listingDraft` (nháp form đăng tin, F5 không mất), `rememberEmail` (ghi nhớ email ở trang đăng nhập), `cache:*` (cache API có TTL: danh mục, tỉnh thành, tỷ giá).
+- LocalStorage: `cart` (giỏ hàng), `favorites`, `recentlyViewed`, `searchHistory`, `listingDraft` (nháp form đăng tin, F5 không mất), `rememberEmail` (ghi nhớ email ở trang đăng nhập), `shippingInfo` (thông tin nhận hàng lần đặt trước), `cache:*` (cache API có TTL: danh mục, tỉnh thành, tỷ giá).
 - SessionStorage: trạng thái lọc/trang hiện tại khi quay lại danh sách (`homeFilters`); `flash` = thông báo để lại trước khi chuyển trang (`services/flash.js`, header tự hiện toast rồi xóa).
 - Cookie: theme sáng/tối (session đăng nhập do server quản lý bằng cookie httpOnly).
 
@@ -164,15 +174,17 @@ Prefix key `mc2c:`. Bọc trong `storage.js` có try/catch + JSON parse an toàn
 
 - [x] Khung backend, kết nối MySQL, schema + seed
 - [x] Auth (session), categories
-- [ ] Module listings — đã có danh sách, chi tiết, **tạo tin + ảnh** (`utils/multipart.js` đọc FormData bằng Web API, `utils/image-store.js` kiểm tra magic bytes / lưu / xóa ảnh, tin mới `pending`); còn sửa, xóa, đổi trạng thái (đã bán / ẩn), tin của tôi
-- [ ] Orders
+- [x] Module listings — danh sách, chi tiết, tạo tin + ảnh (`utils/multipart.js`, `utils/image-store.js`), sửa (giữ/xóa/thêm/sắp xếp ảnh), xóa, đổi trạng thái, tin của tôi (`/api/me/listings`)
+- [x] Orders (đặt hàng nhiều món, đơn mua / đơn bán, chuyển trạng thái, hoàn thành → tin `sold`)
 - [ ] Reports
 - [ ] Admin API
 - [x] Frontend: SCSS base + layout + components, header/footer dùng chung, trang chủ (`index.html` + `js/pages/home.js`)
 - [x] Frontend: đăng nhập / đăng ký (`login.html`, `register.html`): `FormHandler` (`components/form.js`) + `utils/validators.js` (cùng quy tắc với server), `?redirect=` chỉ nhận đường dẫn nội bộ (`getRedirectTarget`), trang cần đăng nhập thì chuyển tới `loginUrl()`
 - [x] Frontend: chi tiết tin `product.html?id=` (`js/pages/product.js`, `components/gallery.js` + `<dialog>` phóng to, giỏ hàng / mua ngay / yêu thích / chia sẻ, lưu `recentlyViewed`, tin cùng danh mục)
 - [x] Frontend: đăng tin `sell.html` (`js/pages/sell.js`, `components/image-picker.js` nén ảnh bằng Canvas `utils/image.js`, kéo thả sắp xếp, nháp `listingDraft`, giá có dấu chấm, thẻ xem trước)
-- [ ] Frontend: tin đăng của tôi, giỏ hàng, yêu thích, đơn hàng
+- [x] Frontend: tin đăng của tôi `my-listings.html` (tab trạng thái + số đếm, tìm kiếm, hành động theo trạng thái, `components/confirm-dialog.js` dùng `<dialog>`); sửa tin = `sell.html?edit=<id>`
+- [x] Frontend: giỏ hàng `cart.html` (kiểm tra lại từng món với server, nhóm theo người bán, đặt hàng; nút ngoài form dùng `form="checkout-form"`), đơn hàng `orders.html` (đơn mua / bán, thanh tiến trình, nút theo vai trò); trang chi tiết khóa nút mua khi tin `reserved`
+- [ ] Frontend: trang yêu thích
 - [ ] Frontend admin
 - [ ] README hoàn chỉnh + ảnh chụp màn hình cho báo cáo
 

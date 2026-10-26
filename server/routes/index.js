@@ -7,6 +7,8 @@ import { checkConnection } from '../config/db.js';
 import authRoutes from './auth.routes.js';
 import categoryRoutes from './category.routes.js';
 import listingRoutes from './listing.routes.js';
+import meRoutes from './me.routes.js';
+import orderRoutes from './order.routes.js';
 
 const router = Router();
 
@@ -22,9 +24,10 @@ router.get('/health', async (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/listings', listingRoutes);
+router.use('/me', meRoutes);
+router.use('/orders', orderRoutes);
 
 // Các module tiếp theo sẽ gắn ở đây:
-// router.use('/orders', orderRoutes);
 // router.use('/admin', adminRoutes);
 
 export default router;

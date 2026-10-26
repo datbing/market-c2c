@@ -171,7 +171,15 @@ class ProductPage {
   /** Khung thông báo trạng thái (đã bán, chờ duyệt, ẩn, bị từ chối) */
   renderStatus() {
     const box = this.el.status;
-    const notice = STATUS_NOTICES[this.listing.status]?.(this.listing);
+    const l = this.listing;
+    // Tin đang bán nhưng đã có người đặt (đơn chưa xử lý xong)
+    const reservedNotice =
+      l.status === 'active' && l.reserved
+        ? l.isOwner
+          ? ['warning', 'bi-receipt', 'Tin đang có đơn hàng chờ bạn xử lý (xem ở Đơn hàng → Đơn bán).']
+          : ['info', 'bi-hourglass-split', 'Món đồ đang có người đặt. Bạn có thể lưu tin để theo dõi.']
+        : null;
+    const notice = STATUS_NOTICES[l.status]?.(l) ?? reservedNotice;
     box.hidden = !notice;
     if (!notice) return;
 
@@ -183,9 +191,13 @@ class ProductPage {
 
   renderActions() {
     const { isOwner, status } = this.listing;
-    this.canBuy = status === 'active' && !isOwner;
+    this.canBuy = status === 'active' && !isOwner && !this.listing.reserved;
 
     this.el.ownerNote.hidden = !isOwner;
+    // Tin đã bán không sửa được -> ẩn link "Sửa tin"
+    const editLink = $('#owner-edit');
+    editLink.href = `/sell?edit=${this.listing.id}`;
+    editLink.hidden = status === 'sold';
     this.el.buyerActions.hidden = isOwner;
     this.el.buyNow.disabled = !this.canBuy;
     this.el.addToCart.disabled = !this.canBuy;

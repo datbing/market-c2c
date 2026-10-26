@@ -1,0 +1,239 @@
+// =========================================================
+//  TRANG TIN ĐĂNG CỦA TÔI
+// =========================================================
+@use '../abstracts' as *;
+
+.my-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: $space-4;
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: $space-3;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+  }
+
+  &__summary {
+    font-size: $font-size-sm;
+    color: var(--color-text-muted);
+  }
+}
+
+// ---------- Tab trạng thái: cuộn ngang trên mobile ----------
+.status-tabs {
+  display: flex;
+  gap: $space-2;
+  padding-bottom: $space-1;
+  @include scroll-x;
+
+  &__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    flex-shrink: 0;
+    padding: $space-2 $space-3;
+    border: 1px solid var(--color-border);
+    border-radius: $radius-pill;
+    background: var(--color-surface);
+    font-size: $font-size-sm;
+    white-space: nowrap;
+    transition: all $transition;
+
+    &:hover {
+      border-color: var(--color-primary);
+    }
+
+    &.is-active {
+      border-color: var(--color-primary);
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+  }
+
+  &__count {
+    min-width: 22px;
+    padding: 0 6px;
+    border-radius: $radius-pill;
+    background: var(--color-surface-2);
+    font-size: 0.75rem;
+    text-align: center;
+
+    .is-active & {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+    }
+  }
+}
+
+// ---------- Ô tìm kiếm có icon ----------
+.my-search {
+  position: relative;
+  max-width: 420px;
+
+  .bi {
+    position: absolute;
+    top: 50%;
+    left: $space-3;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+  }
+
+  .form-control {
+    padding-left: 38px;
+  }
+}
+
+// ---------- Danh sách ----------
+.my-list {
+  display: grid;
+  gap: $space-3;
+
+  &.is-loading {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  &__skeleton {
+    height: 132px;
+    border-radius: $radius;
+  }
+}
+
+// Mỗi tin: ảnh | thông tin | nút (desktop). Mobile: ảnh + thông tin, nút xuống hàng dưới
+.my-listing {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-areas:
+    'thumb body'
+    'actions actions';
+  gap: $space-3;
+  @include surface($space-3);
+
+  @include respond-to(md) {
+    grid-template-columns: 120px minmax(0, 1fr) auto;
+    grid-template-areas: 'thumb body actions';
+    align-items: center;
+    padding: $space-4;
+  }
+
+  &__thumb {
+    grid-area: thumb;
+    aspect-ratio: 1 / 1;
+    border-radius: $radius;
+    overflow: hidden;
+    background: var(--color-surface-2);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &__placeholder {
+    @include flex-center;
+    width: 100%;
+    height: 100%;
+    font-size: 2rem;
+    color: var(--color-text-muted);
+    opacity: 0.5;
+  }
+
+  &__body {
+    grid-area: body;
+    display: grid;
+    align-content: start;
+    gap: $space-1;
+    min-width: 0;
+  }
+
+  &__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space-2;
+  }
+
+  &__category {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  &__heading {
+    font-size: $font-size-base;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  &__title {
+    @include line-clamp(2);
+
+    &:hover {
+      color: var(--color-primary);
+    }
+  }
+
+  &__price {
+    color: var(--color-primary);
+    font-weight: 700;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-1 $space-3;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  &__note {
+    margin-top: $space-1;
+    padding: $space-1 $space-2;
+    border-radius: $radius-sm;
+    background: var(--color-surface-2);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+
+    &.is-error {
+      background: rgb(229 57 53 / 10%);
+      color: var(--color-danger);
+    }
+  }
+
+  &__actions {
+    grid-area: actions;
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-2;
+    padding-top: $space-3;
+    border-top: 1px solid var(--color-border);
+
+    @include respond-to(md) {
+      flex-direction: column;
+      align-items: stretch;
+      min-width: 140px;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .btn {
+      justify-content: flex-start;
+    }
+  }
+
+  &__delete {
+    color: var(--color-danger);
+
+    &:hover:not(:disabled) {
+      border-color: var(--color-danger);
+    }
+  }
+}

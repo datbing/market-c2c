@@ -91,3 +91,12 @@
     display: inline-block;
   }
 }
+
+// Nút cho thao tác không hoàn tác được (xóa...)
+.btn--danger {
+  @include button-variant(var(--color-danger), #fff, var(--color-danger));
+
+  &:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
+}

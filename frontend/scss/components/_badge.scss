@@ -53,3 +53,37 @@ $condition-colors: (
     }
   }
 }
+
+// Nhãn trạng thái tin đăng: .badge--status-active, --status-sold... (sinh bằng @each)
+$status-colors: (
+  pending: $color-warning,
+  active: $color-success,
+  sold: $color-info,
+  hidden: #8a8f98,
+  rejected: $color-danger,
+);
+
+.badge {
+  @each $name, $color in $status-colors {
+    &--status-#{$name} {
+      background: $color;
+    }
+  }
+}
+
+// Nhãn trạng thái đơn hàng: .badge--order-pending, --order-completed... (sinh bằng @each)
+$order-colors: (
+  pending: $color-warning,
+  confirmed: $color-info,
+  shipping: #7b61ff,
+  completed: $color-success,
+  cancelled: #8a8f98,
+);
+
+.badge {
+  @each $name, $color in $order-colors {
+    &--order-#{$name} {
+      background: $color;
+    }
+  }
+}

@@ -71,3 +71,12 @@ export const LISTING_STATUS_LABELS = {
   hidden: 'Đang ẩn',
   rejected: 'Bị từ chối',
 };
+
+/** Nhãn trạng thái đơn hàng (khớp ENUM orders.status) */
+export const ORDER_STATUS_LABELS = {
+  pending: 'Chờ xác nhận',
+  confirmed: 'Đã xác nhận',
+  shipping: 'Đang giao',
+  completed: 'Hoàn thành',
+  cancelled: 'Đã hủy',
+};

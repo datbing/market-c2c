@@ -9,6 +9,7 @@ import { parseMultipart, getText, getFiles } from '../utils/multipart.js';
 import { detectImageType, saveListingImages, removeImages } from '../utils/image-store.js';
 import * as Listing from '../models/listing.model.js';
 import * as Category from '../models/category.model.js';
+import * as Order from '../models/order.model.js';
 
 const MAX_LIMIT = 48;
 const DEFAULT_LIMIT = 12;
@@ -140,11 +141,35 @@ export async function getListing(req, res) {
 }
 
 /**
+ * Đọc + kiểm tra các trường chữ của tin đăng từ FormData (dùng cho tạo và sửa tin).
+ * @returns {Promise<object>} dữ liệu đã chuẩn hóa để lưu DB
+ */
+async function readListingFields(form) {
+  const body = Object.fromEntries(Object.keys(LISTING_SCHEMA).map((name) => [name, getText(form, name)]));
+  validate(body, LISTING_SCHEMA);
+
+  const categoryId = Number(body.categoryId);
+  if (!(await Category.exists(categoryId))) {
+    throw HttpError.unprocessable({ categoryId: 'Danh mục không tồn tại' });
+  }
+
+  return {
+    categoryId,
+    title: body.title,
+    description: body.description,
+    price: Number(body.price),
+    condition: body.condition,
+    province: body.province,
+    searchText: toSearchText(body.title, body.description),
+  };
+}
+
+/**
  * Kiểm tra danh sách file ảnh: số lượng, dung lượng, đúng là ảnh JPG/PNG/WebP.
  * @returns {Promise<{ buffer: Buffer, ext: string }[]>}
  */
-async function readImageFiles(files) {
-  if (files.length === 0) throw HttpError.unprocessable({ images: 'Vui lòng thêm ít nhất 1 ảnh' });
+async function readImageFiles(files, { allowEmpty = false } = {}) {
+  if (files.length === 0 && !allowEmpty) throw HttpError.unprocessable({ images: 'Vui lòng thêm ít nhất 1 ảnh' });
   if (files.length > MAX_IMAGES) {
     throw HttpError.unprocessable({ images: `Tối đa ${MAX_IMAGES} ảnh cho mỗi tin` });
   }
@@ -172,14 +197,7 @@ async function readImageFiles(files) {
  */
 export async function createListing(req, res) {
   const form = await parseMultipart(req, { maxBytes: MAX_REQUEST_BYTES });
-
-  const body = Object.fromEntries(Object.keys(LISTING_SCHEMA).map((name) => [name, getText(form, name)]));
-  validate(body, LISTING_SCHEMA);
-
-  const categoryId = Number(body.categoryId);
-  if (!(await Category.exists(categoryId))) {
-    throw HttpError.unprocessable({ categoryId: 'Danh mục không tồn tại' });
-  }
+  const fields = await readListingFields(form);
 
   const images = await readImageFiles(getFiles(form, 'images'));
   const imagePaths = await saveListingImages(images);
@@ -187,20 +205,7 @@ export async function createListing(req, res) {
   let listingId;
   try {
     listingId = await withTransaction((conn) =>
-      Listing.createWithImages(
-        conn,
-        {
-          userId: req.user.id,
-          categoryId,
-          title: body.title,
-          description: body.description,
-          price: Number(body.price),
-          condition: body.condition,
-          province: body.province,
-          searchText: toSearchText(body.title, body.description),
-        },
-        imagePaths,
-      ),
+      Listing.createWithImages(conn, { ...fields, userId: req.user.id }, imagePaths),
     );
   } catch (err) {
     await removeImages(imagePaths); // DB lỗi -> không để ảnh mồ côi trong uploads/
@@ -217,4 +222,193 @@ export async function createListing(req, res) {
     message: 'Đăng tin thành công! Tin của bạn đang chờ quản trị viên duyệt',
     data: Listing.toListingDetail(row, savedImages, { isOwner: true }),
   });
+}
+
+// =========================================================
+//  QUẢN LÝ TIN CỦA TÔI (chỉ chủ tin)
+// =========================================================
+
+/**
+ * Chủ tin được chuyển trạng thái theo bảng này (admin có API riêng để duyệt / từ chối):
+ *   active  -> sold (đã bán), hidden (tạm ẩn)
+ *   hidden  -> active (hiện lại), sold
+ *   sold    -> active (đăng bán lại, vd người mua không lấy nữa)
+ *   pending / rejected: chờ admin, chủ tin không tự đổi được
+ */
+const OWNER_TRANSITIONS = {
+  active: ['sold', 'hidden'],
+  hidden: ['active', 'sold'],
+  sold: ['active'],
+  pending: [],
+  rejected: [],
+};
+
+const STATUS_MESSAGES = {
+  sold: 'Đã đánh dấu tin là đã bán',
+  hidden: 'Đã ẩn tin, người khác sẽ không nhìn thấy',
+  active: 'Tin đã hiển thị trở lại',
+};
+
+/** Lấy tin theo :id và chắc chắn người đang đăng nhập là chủ tin */
+async function getOwnedListing(req) {
+  const id = toPositiveInt(req.params.id, null);
+  const row = id ? await Listing.findDetailById(id) : null;
+  if (!row) throw HttpError.notFound('Không tìm thấy tin đăng');
+  if (row.user_id !== req.user.id) throw HttpError.forbidden('Bạn chỉ được quản lý tin của chính mình');
+  return row;
+}
+
+/**
+ * GET /api/me/listings?status=&q=&page=&limit=  (đăng nhập)
+ * Trả thêm meta.counts = số tin theo từng trạng thái (để hiện trên các tab lọc).
+ */
+export async function listMyListings(req, res) {
+  const qs = req.query;
+  validate(qs, {
+    status: [rules.oneOf(Listing.STATUSES, 'Trạng thái không hợp lệ')],
+    q: [rules.maxLength(100, 'Từ khóa tối đa 100 ký tự')],
+  });
+
+  const page = toPositiveInt(qs.page, 1);
+  const limit = Math.min(toPositiveInt(qs.limit, 10), MAX_LIMIT);
+  const keywords = toSearchText(optionalString(qs.q) ?? '').split(' ').filter(Boolean).slice(0, 5);
+
+  const [{ rows, total }, counts] = await Promise.all([
+    Listing.findByOwner(req.user.id, { status: optionalString(qs.status), keywords, page, limit }),
+    Listing.countByStatus(req.user.id),
+  ]);
+
+  res.json({
+    success: true,
+    data: rows.map(Listing.toOwnerListing),
+    meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)), counts },
+  });
+}
+
+/**
+ * PATCH /api/listings/:id/status  { status }  (chủ tin)
+ * Dùng cho: đánh dấu đã bán, ẩn tin, hiện lại, đăng bán lại.
+ */
+export async function updateListingStatus(req, res) {
+  const row = await getOwnedListing(req);
+  const status = req.body?.status;
+
+  validate({ status }, { status: [rules.required('Thiếu trạng thái mới'), rules.oneOf(Listing.STATUSES)] });
+
+  const allowed = OWNER_TRANSITIONS[row.status] ?? [];
+  if (!allowed.includes(status)) {
+    const reasons = {
+      pending: 'Tin đang chờ duyệt, chưa đổi trạng thái được',
+      rejected: 'Tin bị từ chối, hãy sửa tin để gửi duyệt lại',
+    };
+    throw HttpError.conflict(reasons[row.status] ?? 'Không thể chuyển sang trạng thái này');
+  }
+
+  if (['sold', 'hidden'].includes(status) && (await Order.hasOpenOrder(row.id))) {
+    throw HttpError.conflict('Tin đang có đơn hàng chưa xử lý xong. Hãy xác nhận hoặc hủy đơn trước.');
+  }
+
+  await Listing.updateStatus(row.id, status);
+  const [updated, images] = await Promise.all([Listing.findDetailById(row.id), Listing.findImages(row.id)]);
+
+  res.json({
+    success: true,
+    message: STATUS_MESSAGES[status],
+    data: Listing.toListingDetail(updated, images, { isOwner: true }),
+  });
+}
+
+/**
+ * Đọc thứ tự ảnh khi sửa tin.
+ * FormData gửi "imageOrder" là JSON, vd ["existing:12", "new:0", "existing:13"]:
+ *   existing:<id> = giữ ảnh cũ có id đó, new:<n> = file thứ n trong các file "images" gửi kèm.
+ */
+function parseImageOrder(raw, { existingIds, newCount }) {
+  let order;
+  try {
+    order = JSON.parse(raw ?? '[]');
+  } catch {
+    throw HttpError.badRequest('Thứ tự ảnh không hợp lệ');
+  }
+  if (!Array.isArray(order) || order.length === 0) {
+    throw HttpError.unprocessable({ images: 'Vui lòng giữ lại hoặc thêm ít nhất 1 ảnh' });
+  }
+  if (order.length > MAX_IMAGES) {
+    throw HttpError.unprocessable({ images: `Tối đa ${MAX_IMAGES} ảnh cho mỗi tin` });
+  }
+
+  const seen = new Set();
+  return order.map((token) => {
+    const [kind, value] = String(token).split(':');
+    const n = Number(value);
+    const valid =
+      Number.isInteger(n) &&
+      !seen.has(token) &&
+      ((kind === 'existing' && existingIds.has(n)) || (kind === 'new' && n >= 0 && n < newCount));
+    if (!valid) throw HttpError.badRequest('Thứ tự ảnh không hợp lệ');
+    seen.add(token);
+    return { kind, value: n };
+  });
+}
+
+/**
+ * PUT /api/listings/:id  (chủ tin) - FormData giống lúc đăng + "imageOrder" (xem parseImageOrder)
+ * - Tin đã bán không sửa được (đăng bán lại trước)
+ * - Tin bị từ chối: sửa xong tự gửi duyệt lại (chuyển "pending", xóa lý do từ chối)
+ * - Ảnh mới chỉ ghi ra đĩa khi dữ liệu hợp lệ; ảnh cũ bị bỏ được xóa khỏi đĩa SAU khi lưu DB thành công
+ */
+export async function updateListing(req, res) {
+  const row = await getOwnedListing(req);
+  if (row.status === 'sold') throw HttpError.conflict('Tin đã bán không sửa được, hãy đăng bán lại trước');
+
+  const form = await parseMultipart(req, { maxBytes: MAX_REQUEST_BYTES });
+  const fields = await readListingFields(form);
+
+  const files = await readImageFiles(getFiles(form, 'images'), { allowEmpty: true });
+  const existingIds = new Set((await Listing.findImages(row.id)).map((img) => img.id));
+  const order = parseImageOrder(getText(form, 'imageOrder'), { existingIds, newCount: files.length });
+
+  // Chỉ ghi ra đĩa những file mới thực sự có trong thứ tự ảnh.
+  // savedPaths[i] ứng với file thứ usedIndexes[i] (theo thứ tự gửi lên, KHÔNG phải thứ tự hiển thị)
+  const usedIndexes = files.map((_, i) => i).filter((i) => order.some((o) => o.kind === 'new' && o.value === i));
+  const savedPaths = await saveListingImages(usedIndexes.map((i) => files[i]));
+  const pathOfNew = new Map(usedIndexes.map((fileIndex, i) => [fileIndex, savedPaths[i]]));
+  const finalImages = order.map(({ kind, value }) =>
+    kind === 'existing' ? { id: value } : { path: pathOfNew.get(value) },
+  );
+  const status = row.status === 'rejected' ? 'pending' : row.status;
+
+  let removedPaths;
+  try {
+    removedPaths = await withTransaction((conn) =>
+      Listing.updateWithImages(conn, row.id, { ...fields, status }, finalImages),
+    );
+  } catch (err) {
+    await removeImages(savedPaths); // DB lỗi -> bỏ ảnh mới vừa ghi
+    throw err;
+  }
+  await removeImages(removedPaths); // DB đã lưu xong mới xóa file ảnh cũ bị bỏ
+
+  const [updated, images] = await Promise.all([Listing.findDetailById(row.id), Listing.findImages(row.id)]);
+  res.json({
+    success: true,
+    message: row.status === 'rejected' ? 'Đã lưu, tin được gửi duyệt lại' : 'Đã lưu thay đổi',
+    data: Listing.toListingDetail(updated, images, { isOwner: true }),
+  });
+}
+
+/**
+ * DELETE /api/listings/:id  (chủ tin)
+ * Tin đã có đơn hàng thì không xóa (đơn còn cần thông tin tin) -> gợi ý ẩn tin.
+ */
+export async function deleteListing(req, res) {
+  const row = await getOwnedListing(req);
+  if (await Listing.hasOrders(row.id)) {
+    throw HttpError.conflict('Tin đã có đơn hàng nên không xóa được. Bạn có thể ẩn tin hoặc đánh dấu đã bán.');
+  }
+
+  const imagePaths = await withTransaction((conn) => Listing.deleteById(conn, row.id));
+  await removeImages(imagePaths); // DB đã xóa xong mới xóa file
+
+  res.json({ success: true, message: 'Đã xóa tin đăng' });
 }

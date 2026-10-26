@@ -56,3 +56,50 @@ export async function createListing(fields, images) {
   const { data, message } = await api.post('/api/listings', formData);
   return { listing: data, message };
 }
+
+// ---------------------------------------------------------
+//  Tin của tôi
+// ---------------------------------------------------------
+
+/**
+ * Tin của người đang đăng nhập.
+ * @param {{ status?: string, q?: string, page?: number, limit?: number }} filters
+ * @returns {Promise<{ data: object[], meta: object }>} meta.counts = số tin theo từng trạng thái
+ */
+export async function getMyListings(filters, signal) {
+  const { data, meta } = await api.get('/api/me/listings', { params: filters, signal });
+  return { data, meta };
+}
+
+/** Đổi trạng thái tin (sold / hidden / active) */
+export async function updateListingStatus(id, status) {
+  const { data, message } = await api.patch(`/api/listings/${id}/status`, { status });
+  return { listing: data, message };
+}
+
+export async function deleteListing(id) {
+  const { message } = await api.delete(`/api/listings/${id}`);
+  return message;
+}
+
+/**
+ * Sửa tin. `images` là danh sách ảnh theo thứ tự hiển thị:
+ *   { existingId: 12 } = giữ ảnh cũ, { blob: Blob } = ảnh mới.
+ * Gửi lên server: các file mới trong "images" + "imageOrder" (JSON) mô tả thứ tự.
+ */
+export async function updateListing(id, fields, images) {
+  const formData = new FormData();
+  Object.entries(fields).forEach(([name, value]) => formData.append(name, value));
+
+  let newIndex = 0;
+  const order = images.map((image) => {
+    if (image.existingId) return `existing:${image.existingId}`;
+    const ext = image.blob.type === 'image/webp' ? 'webp' : 'jpg';
+    formData.append('images', image.blob, `anh-moi-${newIndex + 1}.${ext}`);
+    return `new:${newIndex++}`;
+  });
+  formData.append('imageOrder', JSON.stringify(order));
+
+  const { data, message } = await api.put(`/api/listings/${id}`, formData);
+  return { listing: data, message };
+}

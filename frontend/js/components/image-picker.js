@@ -10,8 +10,10 @@
  *
  * Tính năng: chọn nhiều ảnh, kéo thả file vào khung, nén bằng Canvas,
  * xem trước (URL.createObjectURL), xóa, đặt ảnh bìa, kéo thả để sắp xếp.
+ * Khi sửa tin: nạp sẵn ảnh đã đăng (addExisting), trộn chung với ảnh mới.
  * Mỗi lần danh sách đổi -> phát CustomEvent 'images:change' trên phần tử gốc.
  */
+import { assetUrl } from '../config.js';
 import { cloneTemplate } from '../utils/template.js';
 import { compressImage, formatBytes } from '../utils/image.js';
 import { showToast } from './toast.js';
@@ -21,7 +23,10 @@ const MAX_INPUT_BYTES = 25 * 1024 * 1024; // ảnh gốc tối đa 25MB (trướ
 let nextId = 1;
 
 export class ImagePicker {
-  /** @type {{ id: number, blob: Blob, url: string, name: string }[]} */
+  /**
+   * Ảnh mới: có `blob`. Ảnh đã đăng (khi sửa tin): `blob` = null, có `existingId`.
+   * @type {{ id: number, blob: Blob|null, existingId: number|null, url: string, name: string }[]}
+   */
   items = [];
   /** Số ảnh đang nén */
   #processing = 0;
@@ -52,9 +57,19 @@ export class ImagePicker {
     return this.#processing > 0;
   }
 
-  /** Các ảnh theo thứ tự hiển thị (ảnh đầu = ảnh bìa) */
+  /** Các ảnh mới theo thứ tự hiển thị (dùng khi đăng tin) */
   get blobs() {
-    return this.items.map((item) => item.blob);
+    return this.items.filter((item) => item.blob).map((item) => item.blob);
+  }
+
+  /** Tất cả ảnh theo thứ tự: { existingId } = ảnh cũ giữ lại, { blob } = ảnh mới (dùng khi sửa tin) */
+  get images() {
+    return this.items.map((item) => (item.existingId ? { existingId: item.existingId } : { blob: item.blob }));
+  }
+
+  /** Có ảnh mới chưa gửi lên không (để hỏi lại khi rời trang) */
+  get hasNewImages() {
+    return this.items.some((item) => item.blob);
   }
 
   /** URL xem trước của ảnh bìa (null nếu chưa có ảnh) */
@@ -65,6 +80,20 @@ export class ImagePicker {
   // ---------------------------------------------------------
   //  Thêm / xóa / sắp xếp
   // ---------------------------------------------------------
+  /** Nạp ảnh đã đăng của tin (chế độ sửa tin) */
+  addExisting(images) {
+    images.forEach((image, i) => {
+      this.items.push({
+        id: nextId++,
+        blob: null,
+        existingId: image.id,
+        url: assetUrl(image.url),
+        name: `ảnh đã đăng ${i + 1}`,
+      });
+    });
+    this.#changed();
+  }
+
   /** Nén và thêm các file người dùng chọn (vượt số lượng thì bỏ bớt, có báo) */
   async addFiles(fileList) {
     const files = [...fileList];
@@ -97,7 +126,13 @@ export class ImagePicker {
     results.forEach((result, i) => {
       if (result.status === 'fulfilled') {
         const { blob } = result.value;
-        this.items.push({ id: nextId++, blob, url: URL.createObjectURL(blob), name: accepted[i].name });
+        this.items.push({
+          id: nextId++,
+          blob,
+          existingId: null,
+          url: URL.createObjectURL(blob),
+          name: accepted[i].name,
+        });
       } else {
         showToast(`Không đọc được ảnh "${accepted[i].name}" (định dạng chưa hỗ trợ)`, 'error');
       }
@@ -110,7 +145,7 @@ export class ImagePicker {
   remove(id) {
     const item = this.items.find((x) => x.id === id);
     if (!item) return;
-    URL.revokeObjectURL(item.url); // giải phóng bộ nhớ của ảnh xem trước
+    if (item.blob) URL.revokeObjectURL(item.url); // giải phóng bộ nhớ của ảnh xem trước
     this.items = this.items.filter((x) => x.id !== id);
     this.#changed();
   }
@@ -136,7 +171,7 @@ export class ImagePicker {
   }
 
   clear() {
-    this.items.forEach((item) => URL.revokeObjectURL(item.url));
+    this.items.forEach((item) => item.blob && URL.revokeObjectURL(item.url));
     this.items = [];
     this.#changed();
   }
@@ -157,7 +192,7 @@ export class ImagePicker {
         const img = li.querySelector('img');
         img.src = item.url;
         img.alt = `Ảnh ${index + 1}: ${item.name}`;
-        li.querySelector('[data-field="size"]').textContent = formatBytes(item.blob.size);
+        li.querySelector('[data-field="size"]').textContent = item.blob ? formatBytes(item.blob.size) : 'Đã đăng';
         li.querySelector('.image-picker__cover').hidden = index !== 0;
         li.querySelector('[data-image-action="cover"]').hidden = index === 0;
         return li;

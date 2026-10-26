@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Quản lý đơn mua và đơn bán trên Market C2C.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
+  <meta name="theme-color" content="#ee4d2d">
+
+  <title>Đơn hàng | Market C2C</title>
+
+  <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
+  <script src="/js/theme-init.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+
+<body>
+  <!-- =====================================================
+       HEADER (dùng chung: copy nguyên khối này sang các trang khác)
+       ===================================================== -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="/" aria-label="Market C2C - Trang chủ">
+        <!-- Responsive bằng HTML: màn hình < 576px dùng logo vuông, lớn hơn dùng logo có chữ.
+             Có 2 bản: chữ navy cho nền sáng, chữ sáng cho nền tối (CSS chọn theo [data-theme]) -->
+        <picture class="logo__picture logo__picture--light">
+          <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
+          <img class="logo__img" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C">
+        </picture>
+        <picture class="logo__picture logo__picture--dark">
+          <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
+          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C"
+            loading="lazy">
+        </picture>
+      </a>
+
+      <form class="search" id="search-form" role="search" autocomplete="off">
+        <label for="search-input" class="visually-hidden">Tìm kiếm tin đăng</label>
+        <input class="search__input" id="search-input" name="q" type="search" placeholder="Tìm iPhone, xe đạp, sách..."
+          maxlength="100" aria-controls="search-history" aria-expanded="false" aria-autocomplete="list">
+        <button class="search__submit" type="submit" aria-label="Tìm kiếm">
+          <i class="bi bi-search" aria-hidden="true"></i>
+        </button>
+
+        <!-- Lịch sử tìm kiếm (LocalStorage) -->
+        <div class="search__dropdown" id="search-history" hidden>
+          <div class="search__dropdown-head">
+            <span>Tìm kiếm gần đây</span>
+            <button type="button" class="link-btn" data-clear>Xóa tất cả</button>
+          </div>
+          <ul id="search-history-list" role="listbox" aria-label="Lịch sử tìm kiếm"></ul>
+        </div>
+      </form>
+
+      <nav class="header-actions" aria-label="Tiện ích và tài khoản">
+        <!-- CSS tự hiện mặt trăng (sáng) hoặc mặt trời (tối) theo [data-theme] -->
+        <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
+          <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
+          <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
+        </button>
+        <a class="icon-btn" href="/favorites" aria-label="Tin yêu thích">
+          <i class="bi bi-heart" aria-hidden="true"></i>
+          <span class="icon-btn__badge" data-count="favorites" hidden>0</span>
+        </a>
+        <a class="icon-btn" href="/cart" aria-label="Giỏ hàng">
+          <i class="bi bi-cart3" aria-hidden="true"></i>
+          <span class="icon-btn__badge" data-count="cart" hidden>0</span>
+        </a>
+
+        <!-- Tài khoản: JS bật 1 trong 2 khối sau khi gọi /api/auth/me -->
+        <div class="account" id="account-area">
+          <!-- Dưới 1200px chỉ hiện icon, chữ vẫn được trình đọc màn hình đọc -->
+          <a class="account__login" id="account-guest" href="/login" hidden>
+            <i class="bi bi-person-circle" aria-hidden="true"></i><span>Đăng nhập</span>
+          </a>
+
+          <details class="account-menu" id="account-user" hidden>
+            <summary aria-label="Menu tài khoản">
+              <span class="avatar" data-user="initial" aria-hidden="true"></span>
+              <span class="account-menu__dot" data-order-dot hidden></span>
+              <span class="account-menu__name" data-user="name"></span>
+            </summary>
+            <ul class="account-menu__list">
+              <li class="account-menu__header">
+                <strong data-user="name"></strong>
+                <span data-user="email"></span>
+              </li>
+              <li data-role="admin" hidden>
+                <a class="account-menu__item" href="/admin/"><i class="bi bi-speedometer2" aria-hidden="true"></i> Trang
+                  quản trị</a>
+              </li>
+              <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list" aria-hidden="true"></i>
+                  Tin đăng của tôi</a></li>
+              <li><a class="account-menu__item" id="menu-orders" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
+                  hàng <span class="account-menu__count" data-order-count hidden></span></a></li>
+              <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart" aria-hidden="true"></i> Tin yêu
+                  thích</a></li>
+              <li>
+                <button type="button" class="account-menu__item account-menu__item--danger" data-action="logout">
+                  <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Đăng xuất
+                </button>
+              </li>
+            </ul>
+          </details>
+        </div>
+
+        <a class="btn btn--white header-actions__sell" href="/sell">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Đăng tin</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- =====================================================
+       NỘI DUNG TRANG ĐƠN HÀNG
+       ===================================================== -->
+  <main class="site-main">
+    <div class="container my-page">
+      <header class="my-page__head">
+        <h1 class="my-page__title">Đơn hàng</h1>
+      </header>
+
+      <!-- Đơn mua / Đơn bán -->
+      <nav class="role-tabs" id="role-tabs" aria-label="Loại đơn hàng">
+        <button type="button" class="role-tabs__tab" data-role-tab="buyer" aria-pressed="true">
+          <i class="bi bi-bag" aria-hidden="true"></i> Đơn mua
+          <span class="role-tabs__badge" data-role-badge hidden></span>
+        </button>
+        <button type="button" class="role-tabs__tab" data-role-tab="seller" aria-pressed="false">
+          <i class="bi bi-shop" aria-hidden="true"></i> Đơn bán
+          <span class="role-tabs__badge" data-role-badge hidden></span>
+        </button>
+      </nav>
+
+      <nav class="status-tabs" id="status-tabs" aria-label="Lọc theo trạng thái đơn">
+        <button type="button" class="status-tabs__tab" data-status-tab="" aria-pressed="false">
+          Tất cả <span class="status-tabs__count" data-tab-count>0</span>
+        </button>
+        <button type="button" class="status-tabs__tab" data-status-tab="pending" aria-pressed="false">
+          Chờ xác nhận <span class="status-tabs__count" data-tab-count>0</span>
+        </button>
+        <button type="button" class="status-tabs__tab" data-status-tab="confirmed" aria-pressed="false">
+          Đã xác nhận <span class="status-tabs__count" data-tab-count>0</span>
+        </button>
+        <button type="button" class="status-tabs__tab" data-status-tab="shipping" aria-pressed="false">
+          Đang giao <span class="status-tabs__count" data-tab-count>0</span>
+        </button>
+        <button type="button" class="status-tabs__tab" data-status-tab="completed" aria-pressed="false">
+          Hoàn thành <span class="status-tabs__count" data-tab-count>0</span>
+        </button>
+        <button type="button" class="status-tabs__tab" data-status-tab="cancelled" aria-pressed="false">
+          Đã hủy <span class="status-tabs__count" data-tab-count>0</span>
+        </button>
+      </nav>
+
+      <div class="my-list" id="order-loading" aria-busy="true" aria-label="Đang tải">
+        <div class="skeleton my-list__skeleton"></div>
+        <div class="skeleton my-list__skeleton"></div>
+      </div>
+
+      <div class="my-list" id="order-list" aria-live="polite" hidden></div>
+
+      <div class="state" id="order-empty" hidden>
+        <i class="bi bi-receipt" aria-hidden="true"></i>
+        <p class="state__title">Chưa có đơn hàng</p>
+        <p class="state__text" id="order-empty-text"></p>
+        <a class="btn btn--primary" href="/">Khám phá tin đăng</a>
+      </div>
+
+      <div class="state state--error" id="order-error" role="alert" hidden>
+        <i class="bi bi-wifi-off" aria-hidden="true"></i>
+        <p class="state__title">Không tải được đơn hàng</p>
+        <p class="state__text" id="order-error-message"></p>
+        <button type="button" class="btn btn--primary" id="order-retry">
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Thử lại
+        </button>
+      </div>
+
+      <nav class="pagination" id="pagination" aria-label="Phân trang" hidden>
+        <button type="button" class="pagination__btn" data-nav="prev" aria-label="Trang trước">
+          <i class="bi bi-chevron-left" aria-hidden="true"></i>
+        </button>
+        <span class="pagination__pages" data-pages></span>
+        <button type="button" class="pagination__btn" data-nav="next" aria-label="Trang sau">
+          <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </button>
+      </nav>
+    </div>
+  </main>
+
+  <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-title">
+    <form method="dialog">
+      <h2 class="confirm-dialog__title" id="confirm-title" data-confirm-title></h2>
+      <p class="confirm-dialog__message" data-confirm-message></p>
+      <div class="confirm-dialog__actions">
+        <button class="btn btn--ghost" value="cancel">Quay lại</button>
+        <button class="btn btn--primary" value="confirm" data-confirm-ok>Đồng ý</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- =====================================================
+       FOOTER (dùng chung)
+       ===================================================== -->
+  <footer class="site-footer">
+    <div class="container site-footer__grid">
+      <section>
+        <a class="site-footer__logo" href="/" aria-label="Market C2C - Trang chủ">
+          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296"
+            alt="Market C2C" loading="lazy">
+          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117"
+            alt="Market C2C" loading="lazy">
+        </a>
+        <p>Sàn mua bán giữa người với người. Đồ án môn Lập trình Web: HTML5, SCSS, JavaScript thuần.</p>
+      </section>
+      <nav aria-labelledby="footer-nav-title">
+        <h2 id="footer-nav-title">Khám phá</h2>
+        <ul>
+          <li><a href="/">Trang chủ</a></li>
+          <li><a href="/sell">Đăng tin bán</a></li>
+          <li><a href="/favorites">Tin yêu thích</a></li>
+          <li><a href="/cart">Giỏ hàng</a></li>
+        </ul>
+      </nav>
+      <section aria-labelledby="footer-help-title">
+        <h2 id="footer-help-title">Hỗ trợ</h2>
+        <ul>
+          <li><i class="bi bi-envelope" aria-hidden="true"></i> hotro@marketc2c.vn</li>
+          <li><i class="bi bi-telephone" aria-hidden="true"></i> 1900 0000</li>
+          <li><i class="bi bi-shield-check" aria-hidden="true"></i> Giao dịch an toàn, gặp mặt trực tiếp</li>
+        </ul>
+      </section>
+    </div>
+    <p class="site-footer__bottom">© <span id="year">2026</span> Market C2C. Dữ liệu tỉnh thành: provinces.open-api.vn ·
+      Tỷ giá: open.er-api.com</p>
+  </footer>
+
+  <!-- Vùng hiện thông báo (toast) -->
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+  <!-- =====================================================
+       TEMPLATE DÙNG CHUNG (header, toast) - copy sang các trang khác
+       <template> không hiển thị, JS nhân bản rồi điền dữ liệu.
+       ===================================================== -->
+  <template id="tpl-history-item">
+    <li class="search__history-item" role="option" aria-selected="false">
+      <button type="button" class="search__history-term" data-term>
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span data-field="term"></span>
+      </button>
+      <button type="button" class="toast__close" data-remove aria-label="Xóa khỏi lịch sử">
+        <i class="bi bi-x" aria-hidden="true"></i>
+      </button>
+    </li>
+  </template>
+
+  <template id="tpl-toast">
+    <div class="toast">
+      <i class="bi toast__icon" aria-hidden="true"></i>
+      <p class="toast__message"></p>
+      <button type="button" class="toast__close" aria-label="Đóng thông báo">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+  </template>
+
+  <!-- =====================================================
+       TEMPLATE CỦA TRANG ĐƠN HÀNG
+       ===================================================== -->
+  <template id="tpl-order">
+    <article class="order-card">
+      <header class="order-card__head">
+        <span>Đơn <strong data-field="code"></strong></span>
+        <time class="order-card__date" data-field="date"></time>
+        <span class="badge" data-field="status"></span>
+      </header>
+
+      <div class="order-card__main">
+        <a class="order-card__thumb" href="#" tabindex="-1" aria-hidden="true">
+          <img alt="" loading="lazy" hidden>
+          <span class="order-card__placeholder"><i class="bi bi-box-seam"></i></span>
+        </a>
+        <div class="order-card__info">
+          <a class="order-card__title" href="#" data-field="title"></a>
+          <p class="order-card__price" data-field="price"></p>
+          <p class="order-card__party">
+            <i class="bi bi-person" aria-hidden="true"></i>
+            <span data-field="partyLabel"></span>: <strong data-field="partyName"></strong>
+            <a class="order-card__phone" data-field="partyPhone" href="#"></a>
+          </p>
+        </div>
+      </div>
+
+      <!-- Tiến trình đơn: CSS tô màu theo class is-done / is-current -->
+      <ol class="order-steps" aria-label="Tiến trình đơn hàng">
+        <li data-step="pending"><span>Chờ xác nhận</span></li>
+        <li data-step="confirmed"><span>Đã xác nhận</span></li>
+        <li data-step="shipping"><span>Đang giao</span></li>
+        <li data-step="completed"><span>Hoàn thành</span></li>
+      </ol>
+      <p class="order-card__cancelled" hidden><i class="bi bi-x-circle" aria-hidden="true"></i> Đơn hàng đã bị hủy</p>
+
+      <!-- <details>: bấm để xem / ẩn thông tin nhận hàng, không cần JS -->
+      <details class="order-card__receiver">
+        <summary>Thông tin nhận hàng</summary>
+        <dl>
+          <div><dt>Người nhận</dt><dd data-field="receiverName"></dd></div>
+          <div><dt>Điện thoại</dt><dd data-field="receiverPhone"></dd></div>
+          <div><dt>Địa chỉ</dt><dd data-field="receiverAddress"></dd></div>
+          <div><dt>Ghi chú</dt><dd data-field="note"></dd></div>
+        </dl>
+      </details>
+
+      <footer class="order-card__actions">
+        <button type="button" class="btn btn--primary btn--sm" data-order-action="confirm">
+          <i class="bi bi-check2" aria-hidden="true"></i> Xác nhận đơn
+        </button>
+        <button type="button" class="btn btn--primary btn--sm" data-order-action="ship">
+          <i class="bi bi-truck" aria-hidden="true"></i> Bắt đầu giao
+        </button>
+        <button type="button" class="btn btn--primary btn--sm" data-order-action="complete">
+          <i class="bi bi-check2-all" aria-hidden="true"></i> Hoàn thành
+        </button>
+        <button type="button" class="btn btn--primary btn--sm" data-order-action="received">
+          <i class="bi bi-box2-heart" aria-hidden="true"></i> Đã nhận hàng
+        </button>
+        <button type="button" class="btn btn--ghost btn--sm order-card__cancel" data-order-action="cancel">
+          <i class="bi bi-x-lg" aria-hidden="true"></i> Hủy đơn
+        </button>
+      </footer>
+    </article>
+  </template>
+
+  <template id="tpl-page-number">
+    <button type="button" class="pagination__btn"></button>
+  </template>
+  <template id="tpl-page-gap">
+    <span class="pagination__gap" aria-hidden="true">…</span>
+  </template>
+
+  <script type="module" src="/js/pages/orders.js"></script>
+</body>
+</html>

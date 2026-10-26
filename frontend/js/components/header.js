@@ -10,6 +10,7 @@ import { $, $$, debounce } from '../utils/dom.js';
 import { cloneTemplate } from '../utils/template.js';
 import { getCurrentUser, logout, loginUrl } from '../services/auth.js';
 import { consumeFlash } from '../services/flash.js';
+import { getOrderSummary } from '../services/orders.js';
 import { cart, favorites, searchHistory } from '../services/stores.js';
 import { initThemeToggle } from './theme.js';
 import { showToast } from './toast.js';
@@ -58,13 +59,36 @@ function showGuest() {
   $('#account-user').hidden = true;
 }
 
+/**
+ * Báo đơn cần xử lý: chấm đỏ trên avatar + số ở mục "Đơn hàng".
+ * Bấm vào mở thẳng tab đang có việc (ưu tiên đơn bán vì người bán cần xác nhận sớm).
+ */
+export async function showOrderBadge() {
+  try {
+    const { seller, buyer } = await getOrderSummary();
+    const total = seller + buyer;
+    $('[data-order-dot]').hidden = total === 0;
+    const count = $('[data-order-count]');
+    count.textContent = total > 99 ? '99+' : total;
+    count.hidden = total === 0;
+    if (total > 0) $('#menu-orders').href = `/orders?role=${seller > 0 ? 'seller' : 'buyer'}`;
+  } catch {
+    /* không lấy được số đơn thì thôi, không ảnh hưởng trang */
+  }
+}
+
 async function initAccount() {
   const area = $('#account-area');
   if (!area) return;
 
   try {
     const user = await getCurrentUser();
-    user ? showUser(user) : showGuest();
+    if (user) {
+      showUser(user);
+      showOrderBadge();
+    } else {
+      showGuest();
+    }
   } catch {
     showGuest(); // lỗi mạng: vẫn cho người dùng bấm đăng nhập
   }
