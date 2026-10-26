@@ -1,8 +1,8 @@
 /**
- * Bộ validate đơn giản, không cần thư viện ngoài.
- * Mỗi rule là một hàm (value, data) => chuỗi lỗi | null.
+ * Minimal validator, no external library.
+ * Each rule is a function (value, data) => error string | null.
  *
- * Ví dụ:
+ * Example:
  *   validate(req.body, {
  *     email: [rules.required(), rules.email()],
  *     price: [rules.required(), rules.integer(), rules.min(0)],
@@ -12,7 +12,7 @@ import { HttpError } from './HttpError.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Giá trị rỗng: undefined, null hoặc chuỗi toàn khoảng trắng */
+/** Empty value: undefined, null or a whitespace-only string */
 const isEmpty = (v) => v === undefined || v === null || String(v).trim() === '';
 
 export const rules = {
@@ -42,8 +42,8 @@ export const rules = {
 };
 
 /**
- * Validate object dữ liệu theo schema. Mỗi trường dừng ở lỗi đầu tiên.
- * Có lỗi -> ném HttpError 422 kèm object `errors` để frontend hiện dưới từng ô input.
+ * Validate a data object against a schema. Each field stops at its first error.
+ * On errors -> throws HttpError 422 with an `errors` object so the frontend shows them under each input.
  */
 export function validate(data, schema) {
   const errors = {};

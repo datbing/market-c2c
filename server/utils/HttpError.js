@@ -1,12 +1,12 @@
 /**
- * Lỗi HTTP có kèm mã trạng thái.
- * Controller chỉ cần `throw HttpError.notFound(...)`, errorHandler sẽ trả JSON phù hợp.
+ * HTTP error with a status code.
+ * Controllers only need `throw HttpError.notFound(...)`, errorHandler returns the right JSON.
  */
 export class HttpError extends Error {
   /**
-   * @param {number} status   Mã HTTP (400, 401, 404...)
-   * @param {string} message  Thông báo hiển thị cho người dùng
-   * @param {object|null} errors Lỗi chi tiết theo từng trường (dùng cho form)
+   * @param {number} status   HTTP status (400, 401, 404...)
+   * @param {string} message  Message shown to the user
+   * @param {object|null} errors Detailed per-field errors (for forms)
    */
   constructor(status, message, errors = null) {
     super(message);

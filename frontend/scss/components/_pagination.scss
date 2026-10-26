@@ -1,5 +1,5 @@
 // =========================================================
-//  PHÂN TRANG
+//  PAGINATION
 // =========================================================
 @use '../abstracts' as *;
 
@@ -38,7 +38,7 @@
     }
   }
 
-  // Vùng chứa nút số trang: "trong suốt" với flexbox để các nút xếp chung hàng
+  // Page number container: "transparent" to flexbox so the buttons share one row
   &__pages {
     display: contents;
   }

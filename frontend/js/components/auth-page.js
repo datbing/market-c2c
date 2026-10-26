@@ -1,14 +1,14 @@
 /**
- * Phần dùng chung của trang đăng nhập và đăng ký.
+ * Shared parts of the login and register pages.
  */
 import { $$ } from '../utils/dom.js';
 import { getCurrentUser, getRedirectTarget } from '../services/auth.js';
 
 /**
- * Đã đăng nhập rồi thì không cần ở trang này nữa -> chuyển đi luôn.
- * Gọi TRƯỚC initHeader() để header không hiện (và xóa mất) thông báo flash
- * của một trang sắp bị rời đi.
- * @returns {Promise<boolean>} true nếu đang chuyển trang
+ * Already logged in -> no reason to stay on this page, redirect right away.
+ * Call BEFORE initHeader() so the header does not show (and consume) the flash message
+ * of a page that is about to be left.
+ * @returns {Promise<boolean>} true while redirecting
  */
 export async function redirectIfLoggedIn() {
   try {
@@ -18,14 +18,14 @@ export async function redirectIfLoggedIn() {
       return true;
     }
   } catch {
-    /* lỗi mạng: cứ để người dùng thấy form */
+    /* network error: just let the user see the form */
   }
   return false;
 }
 
 /**
- * Giữ nguyên ?redirect= khi chuyển qua lại giữa trang đăng nhập và đăng ký.
- * Áp dụng cho các link có thuộc tính data-keep-redirect.
+ * Keep ?redirect= when switching between the login and register pages.
+ * Applies to links with the data-keep-redirect attribute.
  */
 export function keepRedirectOnLinks() {
   const redirect = new URLSearchParams(window.location.search).get('redirect');

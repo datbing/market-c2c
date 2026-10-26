@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
+  <meta name="theme-color" content="#ee4d2d">
+
+  <title>Duyệt tin | Quản trị Market C2C</title>
+
+  <!-- Apply the light/dark theme before the page paints to avoid a color flash -->
+  <script src="/js/theme-init.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+
+<body class="admin-body">
+  <!-- =====================================================
+       ADMIN SHELL (shared: copy this whole block to every page in /admin/)
+       ===================================================== -->
+  <div class="admin-shell">
+    <aside class="admin-sidebar" id="admin-sidebar" aria-label="Menu quản trị">
+      <a class="admin-sidebar__brand" href="/admin/">
+        <img class="admin-sidebar__logo" src="/assets/images/logo.png" width="493" height="493" alt="">
+        <span>Quản trị <strong>Market C2C</strong></span>
+      </a>
+
+      <nav class="admin-nav" aria-label="Chức năng quản trị">
+        <a class="admin-nav__link" data-admin-nav href="/admin/">
+          <i class="bi bi-speedometer2" aria-hidden="true"></i> Tổng quan
+        </a>
+        <a class="admin-nav__link" data-admin-nav href="/admin/listings">
+          <i class="bi bi-card-checklist" aria-hidden="true"></i> Duyệt tin
+          <span class="admin-nav__badge" data-admin-badge="pending" title="Tin chờ duyệt" hidden></span>
+        </a>
+        <a class="admin-nav__link" data-admin-nav href="/admin/users">
+          <i class="bi bi-people" aria-hidden="true"></i> Người dùng
+        </a>
+        <a class="admin-nav__link" data-admin-nav href="/admin/categories">
+          <i class="bi bi-tags" aria-hidden="true"></i> Danh mục
+        </a>
+        <a class="admin-nav__link" data-admin-nav href="/admin/reports">
+          <i class="bi bi-flag" aria-hidden="true"></i> Báo cáo vi phạm
+          <span class="admin-nav__badge" data-admin-badge="reports" title="Báo cáo chưa xử lý" hidden></span>
+        </a>
+      </nav>
+
+      <a class="admin-nav__link admin-sidebar__back" href="/">
+        <i class="bi bi-box-arrow-up-left" aria-hidden="true"></i> Về trang mua bán
+      </a>
+    </aside>
+    <div class="admin-backdrop" id="admin-backdrop" hidden></div>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <button type="button" class="icon-btn admin-topbar__menu" id="admin-menu-toggle"
+                aria-controls="admin-sidebar" aria-expanded="false" aria-label="Mở menu quản trị">
+          <i class="bi bi-list" aria-hidden="true"></i>
+        </button>
+        <h1 class="admin-topbar__title">Duyệt tin đăng</h1>
+        <div class="admin-topbar__actions">
+          <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
+            <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
+            <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
+          </button>
+          <span class="admin-user">
+            <span class="avatar" data-admin-initial aria-hidden="true"></span>
+            <span class="admin-user__name" data-admin-name></span>
+          </span>
+          <button type="button" class="btn btn--ghost btn--sm" id="admin-logout">
+            <i class="bi bi-box-arrow-right" aria-hidden="true"></i><span class="admin-topbar__label">Đăng xuất</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="admin-content">
+        <nav class="status-tabs" id="status-tabs" aria-label="Lọc theo trạng thái">
+          <button type="button" class="status-tabs__tab" data-status-tab="pending" aria-pressed="false">
+            Chờ duyệt <span class="status-tabs__count" data-tab-count>0</span>
+          </button>
+          <button type="button" class="status-tabs__tab" data-status-tab="active" aria-pressed="false">
+            Đang bán <span class="status-tabs__count" data-tab-count>0</span>
+          </button>
+          <button type="button" class="status-tabs__tab" data-status-tab="rejected" aria-pressed="false">
+            Bị từ chối <span class="status-tabs__count" data-tab-count>0</span>
+          </button>
+          <button type="button" class="status-tabs__tab" data-status-tab="hidden" aria-pressed="false">
+            Đang ẩn <span class="status-tabs__count" data-tab-count>0</span>
+          </button>
+          <button type="button" class="status-tabs__tab" data-status-tab="sold" aria-pressed="false">
+            Đã bán <span class="status-tabs__count" data-tab-count>0</span>
+          </button>
+          <button type="button" class="status-tabs__tab" data-status-tab="" aria-pressed="false">
+            Tất cả <span class="status-tabs__count" data-tab-count>0</span>
+          </button>
+        </nav>
+
+        <form class="my-search" id="admin-search-form" role="search">
+          <label for="admin-search" class="visually-hidden">Tìm tin đăng</label>
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <input class="form-control" id="admin-search" type="search" maxlength="100" autocomplete="off"
+                 placeholder="Tìm theo tiêu đề, tên hoặc email người bán...">
+        </form>
+
+        <div class="my-list" id="admin-loading" aria-busy="true" aria-label="Đang tải">
+          <div class="skeleton my-list__skeleton"></div>
+          <div class="skeleton my-list__skeleton"></div>
+        </div>
+        <div class="my-list" id="admin-list" aria-live="polite" hidden></div>
+
+        <div class="state" id="admin-empty" hidden>
+          <i class="bi bi-check2-circle" aria-hidden="true"></i>
+          <p class="state__title">Không có tin nào</p>
+          <p class="state__text">Không có tin đăng nào ở mục này.</p>
+        </div>
+
+        <div class="state state--error" id="admin-error" role="alert" hidden>
+          <i class="bi bi-wifi-off" aria-hidden="true"></i>
+          <p class="state__title">Không tải được danh sách</p>
+          <p class="state__text" id="admin-error-message"></p>
+          <button type="button" class="btn btn--primary" id="admin-retry">Thử lại</button>
+        </div>
+
+        <nav class="pagination" id="pagination" aria-label="Phân trang" hidden>
+          <button type="button" class="pagination__btn" data-nav="prev" aria-label="Trang trước">
+            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+          </button>
+          <span class="pagination__pages" data-pages></span>
+          <button type="button" class="pagination__btn" data-nav="next" aria-label="Trang sau">
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+          </button>
+        </nav>
+      </main>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       SHARED ADMIN PARTS: toast, confirm dialog, reason prompt, templates
+       ===================================================== -->
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+  <!-- Confirm dialog (components/confirm-dialog.js) -->
+  <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-title">
+    <form method="dialog">
+      <h2 class="confirm-dialog__title" id="confirm-title" data-confirm-title></h2>
+      <p class="confirm-dialog__message" data-confirm-message></p>
+      <div class="confirm-dialog__actions">
+        <button class="btn btn--ghost" value="cancel">Hủy</button>
+        <button class="btn btn--primary" value="confirm" data-confirm-ok>Đồng ý</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Reason prompt (components/prompt-dialog.js) -->
+  <dialog class="confirm-dialog" id="prompt-dialog" aria-labelledby="prompt-title">
+    <form method="dialog">
+      <h2 class="confirm-dialog__title" id="prompt-title" data-prompt-title></h2>
+      <p class="confirm-dialog__message" data-prompt-message></p>
+      <div class="prompt-suggestions" data-prompt-suggestions></div>
+      <label class="visually-hidden" for="prompt-input">Lý do</label>
+      <textarea class="form-control" id="prompt-input" name="reason" rows="3" maxlength="255" data-prompt-input></textarea>
+      <p class="form-hint form-hint--error" data-prompt-error hidden>Vui lòng nhập lý do</p>
+      <div class="confirm-dialog__actions">
+        <button class="btn btn--ghost" value="cancel" formnovalidate>Hủy</button>
+        <button class="btn btn--primary" value="confirm" data-prompt-ok>Xác nhận</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="tpl-toast">
+    <div class="toast">
+      <i class="bi toast__icon" aria-hidden="true"></i>
+      <p class="toast__message"></p>
+      <button type="button" class="toast__close" aria-label="Đóng thông báo">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+  </template>
+
+  <template id="tpl-suggestion">
+    <button type="button" class="chip prompt-suggestions__item" data-suggestion></button>
+  </template>
+
+  <template id="tpl-page-number">
+    <button type="button" class="pagination__btn"></button>
+  </template>
+  <template id="tpl-page-gap">
+    <span class="pagination__gap" aria-hidden="true">…</span>
+  </template>
+
+  <!-- One listing in the review list (reuses the .my-listing style from the My listings page) -->
+  <template id="tpl-admin-listing">
+    <article class="my-listing">
+      <a class="my-listing__thumb" data-link="listing" href="#" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
+        <img alt="" loading="lazy" hidden>
+        <span class="my-listing__placeholder"><i class="bi bi-box-seam"></i></span>
+      </a>
+      <div class="my-listing__body">
+        <div class="my-listing__top">
+          <span class="badge" data-field="status"></span>
+          <span class="my-listing__category" data-field="category"></span>
+          <span class="badge badge--status-rejected" data-field="reports" hidden></span>
+        </div>
+        <h2 class="my-listing__heading">
+          <a class="my-listing__title" data-link="listing" href="#" target="_blank" rel="noopener" data-field="title"></a>
+        </h2>
+        <p class="my-listing__price" data-field="price"></p>
+        <p class="my-listing__meta">
+          <span><i class="bi bi-person" aria-hidden="true"></i> <span data-field="seller"></span> (<span data-field="email"></span>)</span>
+          <span class="badge badge--status-hidden" data-seller-locked hidden>Người bán bị khóa</span>
+          <time data-field="created"></time>
+          <span data-field="views"></span>
+        </p>
+        <p class="my-listing__note" hidden></p>
+      </div>
+      <div class="my-listing__actions">
+        <a class="btn btn--ghost btn--sm" data-link="listing" href="#" target="_blank" rel="noopener">
+          <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Xem tin
+        </a>
+        <button type="button" class="btn btn--primary btn--sm" data-action="approve">
+          <i class="bi bi-check2" aria-hidden="true"></i> Duyệt
+        </button>
+        <button type="button" class="btn btn--ghost btn--sm my-listing__delete" data-action="reject">
+          <i class="bi bi-x-lg" aria-hidden="true"></i> Từ chối
+        </button>
+        <button type="button" class="btn btn--ghost btn--sm my-listing__delete" data-action="takedown">
+          <i class="bi bi-slash-circle" aria-hidden="true"></i> Gỡ tin
+        </button>
+      </div>
+    </article>
+  </template>
+
+  <script type="module" src="/js/pages/admin/listings.js"></script>
+</body>
+</html>

@@ -1,15 +1,15 @@
 /**
- * Model Order: bảng `orders`.
- * Mỗi đơn = 1 món (1 tin đăng) của 1 người bán. Đơn lưu "ảnh chụp" tiêu đề + giá lúc đặt.
+ * Order model: `orders` table.
+ * Each order = one item (one listing) from one seller. The order stores a "snapshot" of the title + price at order time.
  */
 import { query, queryOne } from '../config/db.js';
 import { toImageUrl } from './listing.model.js';
 
 export const ORDER_STATUSES = ['pending', 'confirmed', 'shipping', 'completed', 'cancelled'];
-/** Đơn còn đang xử lý: món đồ đang được "giữ" cho người đặt */
+/** Orders still in progress: the item is being "held" for the buyer */
 export const OPEN_STATUSES = ['pending', 'confirmed', 'shipping'];
 
-/** Cột + JOIN dùng chung khi đọc đơn */
+/** Columns + JOINs shared when reading orders */
 const SELECT_ORDER = `
   SELECT o.*,
          l.status AS listing_status,
@@ -23,9 +23,9 @@ const SELECT_ORDER = `
     JOIN users s    ON s.id = o.seller_id`;
 
 /**
- * Dòng DB -> JSON.
+ * DB row -> JSON.
  * @param {object} row
- * @param {number} viewerId  người đang xem -> biết mình là người mua hay người bán
+ * @param {number} viewerId  current viewer -> tells whether they are the buyer or the seller
  */
 export function toOrder(row, viewerId) {
   const myRole = row.buyer_id === viewerId ? 'buyer' : row.seller_id === viewerId ? 'seller' : 'admin';
@@ -40,7 +40,7 @@ export function toOrder(row, viewerId) {
     myRole,
     listing: {
       id: row.listing_id,
-      title: row.listing_title, // tiêu đề lúc đặt (không đổi khi người bán sửa tin)
+      title: row.listing_title, // title at order time (unchanged when the seller edits the listing)
       thumbnail: toImageUrl(row.thumbnail),
       status: row.listing_status,
     },
@@ -56,13 +56,13 @@ export function toOrder(row, viewerId) {
 }
 
 // ---------------------------------------------------------
-//  Đặt hàng (chạy trong transaction)
+//  Placing orders (inside a transaction)
 // ---------------------------------------------------------
 
 /**
- * Đọc + KHÓA các tin cần đặt (SELECT ... FOR UPDATE).
- * 2 người cùng bấm đặt 1 món: người thứ 2 phải đợi người thứ 1 xong transaction,
- * lúc đó sẽ thấy món đã có đơn -> không bị đặt trùng.
+ * Read + LOCK the listings being ordered (SELECT ... FOR UPDATE).
+ * When two people order the same item at once, the second waits for the first transaction to finish,
+ * then sees the item already has an order -> no double orders.
  */
 export async function lockListings(conn, listingIds) {
   const [rows] = await conn.query(
@@ -76,7 +76,7 @@ export async function lockListings(conn, listingIds) {
   return rows;
 }
 
-/** Trong các tin này, tin nào đang có đơn chưa xong */
+/** Which of these listings currently have an unfinished order */
 export async function findListingsWithOpenOrder(conn, listingIds) {
   const [rows] = await conn.query(
     'SELECT DISTINCT listing_id FROM orders WHERE listing_id IN (?) AND status IN (?)',
@@ -85,7 +85,7 @@ export async function findListingsWithOpenOrder(conn, listingIds) {
   return new Set(rows.map((r) => r.listing_id));
 }
 
-/** Tạo 1 đơn, trả về id */
+/** Create one order, returns its id */
 export async function create(conn, data) {
   const [result] = await conn.query(
     `INSERT INTO orders
@@ -101,10 +101,10 @@ export async function create(conn, data) {
 }
 
 // ---------------------------------------------------------
-//  Đọc đơn
+//  Reading orders
 // ---------------------------------------------------------
 
-/** role 'buyer' -> đơn mua của tôi, 'seller' -> đơn bán của tôi */
+/** role 'buyer' -> my purchases, 'seller' -> my sales */
 const roleColumn = (role) => (role === 'seller' ? 'o.seller_id' : 'o.buyer_id');
 
 export async function findForUser(userId, role, { status, page = 1, limit = 10 } = {}) {
@@ -127,7 +127,7 @@ export async function findForUser(userId, role, { status, page = 1, limit = 10 }
   return { rows, total: Number(countRow.total) };
 }
 
-/** Số đơn theo từng trạng thái: { all, pending, confirmed, shipping, completed, cancelled } */
+/** Order count per status: { all, pending, confirmed, shipping, completed, cancelled } */
 export async function countByStatus(userId, role) {
   const rows = await query(
     `SELECT o.status, COUNT(*) AS total FROM orders o WHERE ${roleColumn(role)} = ? GROUP BY o.status`,
@@ -145,7 +145,7 @@ export function findById(id) {
   return queryOne(`${SELECT_ORDER} WHERE o.id = ?`, [id]);
 }
 
-/** Tin này có đơn đang xử lý không (dùng khi người bán đổi trạng thái tin) */
+/** Whether this listing has an order in progress (used when the seller changes the listing status) */
 export async function hasOpenOrder(listingId) {
   const row = await queryOne(
     'SELECT COUNT(*) AS total FROM orders WHERE listing_id = ? AND status IN (?)',
@@ -155,10 +155,10 @@ export async function hasOpenOrder(listingId) {
 }
 
 // ---------------------------------------------------------
-//  Đổi trạng thái (chạy trong transaction)
+//  Status changes (inside a transaction)
 // ---------------------------------------------------------
 
-/** Khóa 1 đơn để đổi trạng thái (tránh 2 thao tác cùng lúc trên 1 đơn) */
+/** Lock one order to change its status (prevents two concurrent actions on the same order) */
 export async function lockById(conn, id) {
   const [rows] = await conn.query('SELECT * FROM orders WHERE id = ? FOR UPDATE', [id]);
   return rows[0] ?? null;
@@ -173,15 +173,15 @@ export async function updateStatus(conn, id, status) {
   );
 }
 
-/** Đơn hoàn thành -> tin chuyển "đã bán" */
+/** Completed order -> the listing becomes "sold" */
 export async function markListingSold(conn, listingId) {
   await conn.query("UPDATE listings SET status = 'sold', sold_at = NOW() WHERE id = ?", [listingId]);
 }
 
 /**
- * Số đơn đang chờ người dùng xử lý:
- *  - seller: đơn chờ xác nhận + đã xác nhận nhưng chưa giao
- *  - buyer : đơn đang giao (chờ bấm "đã nhận hàng")
+ * Number of orders waiting for the user:
+ *  - seller: pending orders + confirmed orders not shipped yet
+ *  - buyer : orders being shipped (waiting for "received")
  * @returns {Promise<{ seller: number, buyer: number }>}
  */
 export async function countNeedAction(userId) {

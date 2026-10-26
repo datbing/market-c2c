@@ -1,7 +1,7 @@
 /**
- * Chạy ĐỒNG BỘ trong <head> (không phải module) để đặt theme trước khi trình duyệt vẽ trang,
- * tránh hiện tượng trang trắng chớp rồi mới chuyển tối.
- * Ưu tiên: cookie mc2c_theme -> cài đặt của hệ điều hành.
+ * Runs SYNCHRONOUSLY in <head> (not a module) to set the theme before the browser paints,
+ * avoiding a white flash before switching to dark.
+ * Priority: mc2c_theme cookie -> operating system setting.
  */
 (function applyInitialTheme() {
   var match = document.cookie.match(/(?:^|;\s*)mc2c_theme=(dark|light)/);

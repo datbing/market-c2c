@@ -1,12 +1,12 @@
 // =========================================================
-//  FORM: ô nhập, select, nhóm radio
+//  FORMS: inputs, selects, radio groups
 // =========================================================
 @use '../abstracts' as *;
 
 .form-group {
   display: grid;
-  // Dồn nhãn + ô nhập lên trên. Không có dòng này, khi nhóm bị kéo cao
-  // (đứng cạnh nhóm có thêm dòng gợi ý) phần dư sẽ chia cho các hàng -> ô nhập bị lệch
+  // Push the label + input to the top. Without this, when the group is stretched taller
+  // (next to a group with an extra hint line) the extra space is split between rows -> misaligned inputs
   align-content: start;
   gap: $space-2;
 
@@ -40,7 +40,7 @@
   }
 }
 
-// Hai ô giá "từ - đến" nằm cùng hàng
+// The two "from - to" price inputs on the same row
 .form-range {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -49,7 +49,7 @@
   color: var(--color-text-muted);
 }
 
-// Nhóm lựa chọn dạng "viên thuốc" (radio ẩn, label làm nút)
+// "Pill" choice group (hidden radio, the label acts as the button)
 .choice-group {
   display: flex;
   flex-wrap: wrap;
@@ -94,7 +94,7 @@
   }
 }
 
-// ---------- Trạng thái lỗi của ô nhập ----------
+// ---------- Input error state ----------
 .form-control.is-invalid {
   border-color: var(--color-danger);
 
@@ -103,16 +103,16 @@
   }
 }
 
-// Dấu * của trường bắt buộc
+// The * of required fields
 .form-label abbr {
   color: var(--color-danger);
   text-decoration: none;
 }
 
-// 2 ô trên 1 hàng từ 576px (vd: email + số điện thoại)
+// Two fields per row from 576px (e.g. email + phone number)
 .form-row {
   display: grid;
-  align-items: start; // mỗi cột cao theo nội dung của nó, các ô nhập thẳng hàng
+  align-items: start; // each column is as tall as its content, the inputs line up
   gap: $space-4;
   margin-top: $space-4;
 
@@ -129,14 +129,14 @@
   }
 }
 
-// ---------- Ô mật khẩu có nút ẩn/hiện ----------
+// ---------- Password field with a show/hide button ----------
 .password-field {
   position: relative;
 
   .form-control {
     padding-right: 44px;
 
-    // Ẩn nút "con mắt" / nút xóa có sẵn của trình duyệt (Edge) -> chỉ dùng nút riêng của trang
+    // Hide the browser's built-in reveal / clear buttons (Edge) -> only use the page's own button
     &::-ms-reveal,
     &::-ms-clear {
       display: none;
@@ -160,7 +160,7 @@
       color: var(--color-text);
     }
 
-    // Icon mắt đóng chỉ hiện khi đang hiện mật khẩu (aria-pressed=true)
+    // The closed eye icon only shows while the password is visible (aria-pressed=true)
     .bi-eye-slash {
       display: none;
     }
@@ -177,7 +177,7 @@
   }
 }
 
-// ---------- Thanh độ mạnh mật khẩu (<meter>) ----------
+// ---------- Password strength meter (<meter>) ----------
 .strength {
   display: flex;
   align-items: center;
@@ -190,7 +190,7 @@
     border: 0;
     border-radius: $radius-pill;
     background: var(--color-surface-2);
-    // Màu theo vùng low / high / optimum do trình duyệt tự chọn
+    // Colors by the low / high / optimum ranges chosen by the browser
     &::-webkit-meter-bar {
       height: 6px;
       border: 0;
@@ -217,14 +217,14 @@
     color: var(--color-text-muted);
     text-align: right;
 
-    // Chưa gõ mật khẩu -> không chiếm chỗ, thanh đo dài hết cỡ
+    // No password typed yet -> takes no space, the meter spans the full width
     &:empty {
       min-width: 0;
     }
   }
 }
 
-// ---------- Checkbox kèm chữ ----------
+// ---------- Checkbox with a label ----------
 .checkbox {
   display: inline-flex;
   align-items: flex-start;
@@ -242,7 +242,7 @@
   }
 }
 
-// ---------- Nhãn + bộ đếm ký tự cùng 1 hàng ----------
+// ---------- Label + character counter on one row ----------
 .form-label-row {
   display: flex;
   align-items: baseline;
@@ -253,7 +253,7 @@
 .char-counter {
   font-size: 0.75rem;
   color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums; // số không nhảy chiều rộng khi đếm
+  font-variant-numeric: tabular-nums; // digits keep the same width while counting
 
   &.is-near-limit {
     color: var(--color-warning);
@@ -267,7 +267,7 @@ textarea.form-control {
   line-height: 1.6;
 }
 
-// Ô nhập có chữ đơn vị ở cuối (vd: ₫)
+// Input with a unit suffix at the end (e.g. the currency sign)
 .input-affix {
   position: relative;
 

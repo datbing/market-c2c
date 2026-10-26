@@ -1,5 +1,5 @@
 // =========================================================
-//  KHUNG CHỌN ẢNH (đăng tin / sửa tin)
+//  IMAGE PICKER (post / edit listing)
 // =========================================================
 @use '../abstracts' as *;
 
@@ -7,7 +7,7 @@
   display: grid;
   gap: $space-3;
 
-  // Khung bấm / kéo thả file
+  // Click / drag-and-drop area
   &__drop {
     display: grid;
     justify-items: center;
@@ -40,7 +40,7 @@
       background: var(--color-primary-soft);
     }
 
-    // Input file bị ẩn -> hiện viền focus lên khung khi dùng bàn phím
+    // The file input is hidden -> show the focus outline on the box for keyboard users
     &:focus-within {
       outline: 2px solid var(--color-primary);
       outline-offset: 2px;
@@ -56,7 +56,7 @@
     }
   }
 
-  // Lưới ảnh xem trước: 3 cột mobile, 4 cột từ tablet
+  // Preview grid: 3 columns on mobile, 4 from tablet up
   &__list {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -84,10 +84,10 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      pointer-events: none; // để kéo cả ô, không kéo riêng ảnh
+      pointer-events: none; // drag the whole tile, not just the image
     }
 
-    // Ảnh đầu tiên (ảnh bìa) có viền cam
+    // The first image (cover) gets an orange border
     &:first-child {
       border: 2px solid var(--color-primary);
     }

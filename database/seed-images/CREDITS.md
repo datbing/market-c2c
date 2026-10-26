@@ -1,0 +1,69 @@
+# Nguồn ảnh dữ liệu mẫu
+
+Ảnh lấy từ [Unsplash](https://unsplash.com) (Unsplash License, dùng miễn phí), chỉ dùng cho dữ liệu mẫu của đồ án.
+
+| File | Ảnh gốc |
+|---|---|
+| `iphone13pro-1.webp` | https://images.unsplash.com/photo-1686657377704-3a888b5473d8 |
+| `iphone13pro-2.webp` | https://images.unsplash.com/photo-1632661674596-df8be070a5c5 |
+| `iphone13pro-3.webp` | https://images.unsplash.com/photo-1604194868790-e98f6e9c5ed4 |
+| `iphone13-1.webp` | https://images.unsplash.com/photo-1711967299865-c88350fddb70 |
+| `iphone13-2.webp` | https://images.unsplash.com/photo-1647503380147-e075b24f4cbe |
+| `iphone13-3.webp` | https://images.unsplash.com/photo-1636032204197-ec38e279afb6 |
+| `ipad-1.webp` | https://images.unsplash.com/photo-1623126908029-58cb08a2b272 |
+| `ipad-2.webp` | https://images.unsplash.com/photo-1561154464-82e9adf32764 |
+| `galaxy-1.webp` | https://images.unsplash.com/photo-1610945415295-d9bbf067e59c |
+| `galaxy-2.webp` | https://images.unsplash.com/photo-1709744722656-9b850470293f |
+| `galaxy-3.webp` | https://images.unsplash.com/photo-1707438095940-1eee18e85400 |
+| `airpods-1.webp` | https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb |
+| `airpods-2.webp` | https://images.unsplash.com/photo-1606741965326-cb990ae01bb2 |
+| `xps-1.webp` | https://images.unsplash.com/photo-1593642702821-c8da6771f0c6 |
+| `xps-2.webp` | https://images.unsplash.com/photo-1593642632823-8f785ba67e45 |
+| `xps-3.webp` | https://images.unsplash.com/photo-1593642532744-d377ab507dc8 |
+| `latitude-1.webp` | https://images.unsplash.com/photo-1588872657578-7efd1f1555ed |
+| `latitude-2.webp` | https://images.unsplash.com/photo-1558864559-ed673ba3610b |
+| `macbook-1.webp` | https://images.unsplash.com/photo-1651241680016-cc9e407e7dc3 |
+| `macbook-2.webp` | https://images.unsplash.com/photo-1778157781167-07e0a5d5c82f |
+| `macbook-3.webp` | https://images.unsplash.com/photo-1778157772414-427d5604a8d6 |
+| `keyboard-1.webp` | https://images.unsplash.com/photo-1618384887929-16ec33fab9ef |
+| `keyboard-2.webp` | https://images.unsplash.com/photo-1632079003110-d694908500da |
+| `keyboard-3.webp` | https://images.unsplash.com/photo-1635987391914-cb84b567e68f |
+| `monitor-1.webp` | https://images.unsplash.com/photo-1764588037085-a78240016f8b |
+| `monitor-2.webp` | https://images.unsplash.com/photo-1766642793344-34196c406643 |
+| `leather-jacket-1.webp` | https://images.unsplash.com/photo-1675877879221-871aa9f7c314 |
+| `leather-jacket-2.webp` | https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504 |
+| `leather-jacket-3.webp` | https://images.unsplash.com/photo-1553591589-2e96ef7eca65 |
+| `puffer-1.webp` | https://images.unsplash.com/photo-1614031679232-0dae776a72ee |
+| `sneakers-1.webp` | https://images.unsplash.com/photo-1695073621086-aa692bc32a3d |
+| `sneakers-2.webp` | https://images.unsplash.com/photo-1597350584914-55bb62285896 |
+| `sneakers-3.webp` | https://images.unsplash.com/photo-1600269452121-4f2416e55c28 |
+| `satchel-1.webp` | https://images.unsplash.com/photo-1605733513597-a8f8341084e6 |
+| `messenger-1.webp` | https://images.unsplash.com/photo-1473188588951-666fce8e7c68 |
+| `airfryer-1.webp` | https://images.unsplash.com/photo-1695089028114-ce28248f0ab9 |
+| `airfryer-2.webp` | https://images.unsplash.com/photo-1669385184491-8ab70b39324e |
+| `espresso-1.webp` | https://images.unsplash.com/photo-1620807773206-49c1f2957417 |
+| `espresso-2.webp` | https://images.unsplash.com/photo-1583165278997-0250ea5d72e2 |
+| `lamp-1.webp` | https://images.unsplash.com/photo-1621447980929-6638614633c8 |
+| `bike-1.webp` | https://images.unsplash.com/photo-1604850613811-b50ad1aeeecd |
+| `bike-2.webp` | https://images.unsplash.com/photo-1785711930095-7a6fb14b2492 |
+| `vespa-1.webp` | https://images.unsplash.com/photo-1666275898279-29e7b777bafb |
+| `primavera-1.webp` | https://images.unsplash.com/photo-1770026430843-256135686eab |
+| `primavera-2.webp` | https://images.unsplash.com/photo-1663330082092-11fa01e1ee8e |
+| `helmet-1.webp` | https://images.unsplash.com/photo-1649027421785-6827863f0891 |
+| `helmet-2.webp` | https://images.unsplash.com/photo-1611004061856-ccc3cbe944b2 |
+| `jsbooks-1.webp` | https://images.unsplash.com/photo-1579468118864-1b9ea3c0db4a |
+| `jsbooks-2.webp` | https://images.unsplash.com/photo-1672309558498-cfcc89afff25 |
+| `novels-1.webp` | https://images.unsplash.com/photo-1781629784120-3c0cc98b233f |
+| `novels-2.webp` | https://images.unsplash.com/photo-1610116306796-6fea9f4fae38 |
+| `tent-1.webp` | https://images.unsplash.com/photo-1537905569824-f89f14cceb68 |
+| `tent-2.webp` | https://images.unsplash.com/photo-1576176539998-0237d1ac6a85 |
+| `tent-3.webp` | https://images.unsplash.com/photo-1631635589499-afd87d52bf64 |
+| `racket-1.webp` | https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67 |
+| `racket-2.webp` | https://images.unsplash.com/photo-1770681371006-fa3646d7e1b4 |
+| `racket-3.webp` | https://images.unsplash.com/photo-1542144582-1ba00456b5e3 |
+| `dumbbell-1.webp` | https://images.unsplash.com/photo-1638536532686-d610adfc8e5c |
+| `dumbbell-2.webp` | https://images.unsplash.com/photo-1638536534984-0d98ccdb6af5 |
+| `stroller-1.webp` | https://images.unsplash.com/photo-1559135141-2bea6465fccf |
+| `stroller-2.webp` | https://images.unsplash.com/photo-1714392512700-4cab9e51710b |
+| `toys-1.webp` | https://images.unsplash.com/photo-1536293182766-c9c0c4133b55 |
+| `toys-2.webp` | https://images.unsplash.com/photo-1611957082141-c449bb2b4ada |

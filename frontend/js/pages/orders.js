@@ -1,11 +1,11 @@
 /**
- * TRANG ĐƠN HÀNG: /orders?role=buyer|seller&status=&page= (bắt buộc đăng nhập)
- *  - Tab "Đơn mua" / "Đơn bán", lọc theo trạng thái kèm số đếm
- *  - Thanh tiến trình: Chờ xác nhận -> Đã xác nhận -> Đang giao -> Hoàn thành (CSS vẽ theo class)
- *  - Nút thao tác theo vai trò + trạng thái (khớp bảng TRANSITIONS ở server/controllers/order.controller.js):
- *      người bán: xác nhận, giao hàng, hoàn thành, hủy
- *      người mua: hủy (khi chờ xác nhận), đã nhận hàng (khi đang giao)
- *  - Hoàn thành đơn -> tin tự chuyển "Đã bán" (đánh dấu hoàn thành của đề)
+ * ORDERS PAGE: /orders?role=buyer|seller&status=&page= (login required)
+ *  - "Purchases" / "Sales" tabs, status filter with counts
+ *  - Progress bar: Pending -> Confirmed -> Shipping -> Completed (drawn by CSS from classes)
+ *  - Action buttons by role + status (matches the TRANSITIONS table in server/controllers/order.controller.js):
+ *      seller: confirm, ship, complete, cancel
+ *      buyer: cancel (while pending), received (while shipping)
+ *  - Completing an order -> the listing automatically becomes "Sold" (the assignment's "mark as completed")
  */
 import { $, $$ } from '../utils/dom.js';
 import { cloneTemplate, fillFields } from '../utils/template.js';
@@ -23,13 +23,13 @@ import { listingUrl } from '../components/listing-card.js';
 const PAGE_SIZE = 10;
 const STEPS = ['pending', 'confirmed', 'shipping', 'completed'];
 
-/** Nút được hiện theo vai trò + trạng thái đơn */
+/** Buttons shown for each role + order status */
 const ACTIONS = {
   seller: { pending: ['confirm', 'cancel'], confirmed: ['ship', 'cancel'], shipping: ['complete'] },
   buyer: { pending: ['cancel'], shipping: ['received'] },
 };
 
-/** Nút -> trạng thái mới + hộp xác nhận (nếu cần) */
+/** Button -> new status + confirmation dialog (if needed) */
 const ACTION_CONFIG = {
   confirm: { status: 'confirmed' },
   ship: { status: 'shipping' },
@@ -151,7 +151,7 @@ class OrdersPage {
   }
 
   // =======================================================
-  //  HIỂN THỊ
+  //  RENDERING
   // =======================================================
   renderRoleTabs() {
     $$('[data-role-tab]', this.el.roleTabs).forEach((tab) => {
@@ -161,7 +161,7 @@ class OrdersPage {
     });
   }
 
-  /** Số đỏ trên tab Đơn mua / Đơn bán = số đơn đang chờ mình xử lý */
+  /** Red number on the Purchases / Sales tabs = orders waiting for you */
   renderRoleBadges(needAction = {}) {
     $('[data-role-tab]', this.el.roleTabs).forEach((tab) => {
       const n = needAction[tab.dataset.roleTab] ?? 0;
@@ -218,7 +218,7 @@ class OrdersPage {
     card.querySelector('[data-field="date"]').title = formatDate(order.createdAt);
     card.querySelector('.badge').classList.add(`badge--order-${order.status}`);
 
-    // Liên hệ: số điện thoại của bên kia (gọi trực tiếp bằng link tel:)
+    // Contact: the other party's phone number (call directly via a tel: link)
     const phone = isSeller ? order.receiver.phone : party.phone;
     const phoneLink = card.querySelector('[data-field="partyPhone"]');
     phoneLink.hidden = !phone;
@@ -227,7 +227,7 @@ class OrdersPage {
       phoneLink.href = `tel:${phone}`;
     }
 
-    // Ảnh + link tới tin
+    // Image + link to the listing
     card.querySelectorAll('a.order-card__thumb, a.order-card__title').forEach((a) => {
       a.href = listingUrl(order.listing.id);
     });
@@ -241,7 +241,7 @@ class OrdersPage {
 
     this.renderSteps(card, order.status);
 
-    // Nút theo vai trò + trạng thái
+    // Buttons by role + status
     const allowed = new Set(ACTIONS[order.myRole]?.[order.status] ?? []);
     card.querySelectorAll('[data-order-action]').forEach((btn) => {
       btn.hidden = !allowed.has(btn.dataset.orderAction);
@@ -250,7 +250,7 @@ class OrdersPage {
     return card;
   }
 
-  /** Thanh tiến trình: bước đã qua = is-done, bước hiện tại = is-current */
+  /** Progress bar: past steps = is-done, current step = is-current */
   renderSteps(card, status) {
     const steps = card.querySelector('.order-steps');
     const cancelled = card.querySelector('.order-card__cancelled');
@@ -269,7 +269,7 @@ class OrdersPage {
   }
 
   // =======================================================
-  //  HÀNH ĐỘNG
+  //  ACTIONS
   // =======================================================
   async runAction(order, action, button) {
     const { status, confirm } = ACTION_CONFIG[action];
@@ -280,7 +280,7 @@ class OrdersPage {
       const { message } = await updateOrderStatus(order.id, status);
       showToast(message, 'success');
       this.load();
-      showOrderBadge(); // cập nhật số đơn cần xử lý trên header
+      showOrderBadge(); // update the orders-needing-action count in the header
     } catch (err) {
       showToast(err.message, 'error');
       button.disabled = false;

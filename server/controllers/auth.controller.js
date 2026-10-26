@@ -1,5 +1,5 @@
 /**
- * Controller xác thực: đăng ký, đăng nhập, đăng xuất, lấy thông tin tài khoản.
+ * Authentication controller: register, login, logout, current account info.
  */
 import bcrypt from 'bcryptjs';
 import { config } from '../config/env.js';
@@ -8,10 +8,10 @@ import { validate, rules } from '../utils/validate.js';
 import { regenerateSession, saveSession, destroySession } from '../utils/session.js';
 import * as User from '../models/user.model.js';
 
-const PHONE_RE = /^0\d{9}$/; // 10 số, bắt đầu bằng 0
+const PHONE_RE = /^0\d{9}$/; // 10 digits starting with 0
 const SALT_ROUNDS = 10;
 
-/** Tạo session mới cho user sau khi đăng ký/đăng nhập thành công */
+/** Create a new session for the user after a successful register/login */
 async function startSession(req, userId) {
   await regenerateSession(req);
   req.session.userId = userId;
@@ -39,7 +39,7 @@ export async function register(req, res) {
     throw HttpError.conflict('Email đã được sử dụng', { email: 'Email đã được sử dụng' });
   }
 
-  // Không bao giờ lưu mật khẩu gốc, chỉ lưu chuỗi băm bcrypt
+  // Never store the plain password, only the bcrypt hash
   const passwordHash = await bcrypt.hash(String(body.password), SALT_ROUNDS);
 
   const user = await User.createUser({
@@ -70,7 +70,7 @@ export async function login(req, res) {
   const email = String(body.email).trim().toLowerCase();
   const user = await User.findByEmailWithPassword(email);
 
-  // Báo chung một thông báo để không lộ email nào đã tồn tại
+  // Use one generic message so it does not reveal which emails exist
   const isMatch = user && (await bcrypt.compare(String(body.password), user.password_hash));
   if (!isMatch) throw HttpError.unauthorized('Email hoặc mật khẩu không đúng');
 
@@ -95,7 +95,7 @@ export async function logout(req, res) {
   res.json({ success: true, message: 'Đã đăng xuất' });
 }
 
-/** GET /api/auth/me (cần đăng nhập) */
+/** GET /api/auth/me (login required) */
 export function me(req, res) {
   res.json({ success: true, data: User.toPublicUser(req.user) });
 }

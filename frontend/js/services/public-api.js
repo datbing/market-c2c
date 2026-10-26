@@ -1,10 +1,10 @@
 /**
- * Gọi API CÔNG KHAI bên ngoài (khác origin, đều cho phép CORS):
- *  1. Tỉnh/thành Việt Nam: https://provinces.open-api.vn/api/v2/
- *     -> lỗi thì dùng file dự phòng /data/provinces.json
- *  2. Tỷ giá USD:        https://open.er-api.com/v6/latest/USD
- *     -> lỗi thì trả null, giao diện tự ẩn phần quy đổi
- * Cả hai đều cache trong LocalStorage để không gọi lại mỗi lần tải trang.
+ * Calls to external PUBLIC APIs (different origin, both allow CORS):
+ *  1. Vietnamese provinces: https://provinces.open-api.vn/api/v2/
+ *     -> on error use the fallback file /data/provinces.json
+ *  2. USD exchange rate:    https://open.er-api.com/v6/latest/USD
+ *     -> on error return null, the UI hides the conversion
+ * Both are cached in LocalStorage so they are not refetched on every page load.
  */
 import { cached } from './storage.js';
 
@@ -12,11 +12,11 @@ const PROVINCES_URL = 'https://provinces.open-api.vn/api/v2/?depth=1';
 const PROVINCES_FALLBACK_URL = '/data/provinces.json';
 const EXCHANGE_URL = 'https://open.er-api.com/v6/latest/USD';
 
-const PROVINCES_TTL = 7 * 24 * 60 * 60 * 1000; // 7 ngày
-const EXCHANGE_TTL = 6 * 60 * 60 * 1000; // 6 giờ
+const PROVINCES_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+const EXCHANGE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 const TIMEOUT_MS = 8000;
 
-/** fetch JSON có giới hạn thời gian chờ (API ngoài có thể chậm) */
+/** fetch JSON with a timeout (external APIs can be slow) */
 async function fetchJson(url, timeout = TIMEOUT_MS) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
@@ -36,7 +36,7 @@ async function fetchJson(url, timeout = TIMEOUT_MS) {
 const shortProvinceName = (name) => name.replace(/^(Thành phố|Tỉnh)\s+/u, '').trim();
 
 /**
- * Danh sách tỉnh/thành: [{ code, name }], sắp xếp theo tên.
+ * Province list: [{ code, name }], sorted by name.
  * @returns {Promise<{ provinces: object[], source: 'api'|'fallback' }>}
  */
 export async function getProvinces() {
@@ -50,7 +50,7 @@ export async function getProvinces() {
     });
     return { provinces, source: 'api' };
   } catch (err) {
-    console.warn('[provinces] API lỗi, dùng file dự phòng:', err.message);
+    console.warn('[provinces] API failed, using the fallback file:', err.message);
     const provinces = await fetchJson(PROVINCES_FALLBACK_URL);
     return {
       provinces: [...provinces].sort((a, b) => a.name.localeCompare(b.name, 'vi')),
@@ -60,7 +60,7 @@ export async function getProvinces() {
 }
 
 /**
- * Tỷ giá: 1 USD = ? VND. Lỗi thì trả null (không ném lỗi để không làm hỏng trang).
+ * Exchange rate: 1 USD = ? VND. Returns null on error (never throws, so the page does not break).
  * @returns {Promise<number|null>}
  */
 export async function getUsdRate() {
@@ -72,7 +72,7 @@ export async function getUsdRate() {
       return rate;
     });
   } catch (err) {
-    console.warn('[exchange] Không lấy được tỷ giá:', err.message);
+    console.warn('[exchange] Could not get the exchange rate:', err.message);
     return null;
   }
 }

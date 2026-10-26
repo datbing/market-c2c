@@ -11,7 +11,7 @@
 
   <title>Tin đăng của tôi | Market C2C</title>
 
-  <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
+  <!-- Apply the light/dark theme before the page paints to avoid a color flash -->
   <script src="/js/theme-init.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/css/main.css">
@@ -19,13 +19,13 @@
 
 <body>
   <!-- =====================================================
-       HEADER (dùng chung: copy nguyên khối này sang các trang khác)
+       HEADER (shared: copy this whole block to the other pages)
        ===================================================== -->
   <header class="site-header">
     <div class="container site-header__inner">
       <a class="logo" href="/" aria-label="Market C2C - Trang chủ">
-        <!-- Responsive bằng HTML: màn hình < 576px dùng logo vuông, lớn hơn dùng logo có chữ.
-             Có 2 bản: chữ navy cho nền sáng, chữ sáng cho nền tối (CSS chọn theo [data-theme]) -->
+        <!-- Responsive via HTML: screens < 576px use the square logo, larger ones the text logo.
+             Two versions: navy text for light backgrounds, light text for dark ones (CSS picks by [data-theme]) -->
         <picture class="logo__picture logo__picture--light">
           <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
           <img class="logo__img" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C">
@@ -45,7 +45,7 @@
           <i class="bi bi-search" aria-hidden="true"></i>
         </button>
 
-        <!-- Lịch sử tìm kiếm (LocalStorage) -->
+        <!-- Search history (LocalStorage) -->
         <div class="search__dropdown" id="search-history" hidden>
           <div class="search__dropdown-head">
             <span>Tìm kiếm gần đây</span>
@@ -56,7 +56,7 @@
       </form>
 
       <nav class="header-actions" aria-label="Tiện ích và tài khoản">
-        <!-- CSS tự hiện mặt trăng (sáng) hoặc mặt trời (tối) theo [data-theme] -->
+        <!-- CSS shows the moon (light) or the sun (dark) based on [data-theme] -->
         <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
           <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
           <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
@@ -70,9 +70,9 @@
           <span class="icon-btn__badge" data-count="cart" hidden>0</span>
         </a>
 
-        <!-- Tài khoản: JS bật 1 trong 2 khối sau khi gọi /api/auth/me -->
+        <!-- Account: JS shows one of the two blocks after calling /api/auth/me -->
         <div class="account" id="account-area">
-          <!-- Dưới 1200px chỉ hiện icon, chữ vẫn được trình đọc màn hình đọc -->
+          <!-- Below 1200px only the icon is visible; the text is still read by screen readers -->
           <a class="account__login" id="account-guest" href="/login" hidden>
             <i class="bi bi-person-circle" aria-hidden="true"></i><span>Đăng nhập</span>
           </a>
@@ -115,7 +115,7 @@
   </header>
 
   <!-- =====================================================
-       NỘI DUNG TRANG TIN ĐĂNG CỦA TÔI
+       MY LISTINGS PAGE CONTENT
        ===================================================== -->
   <main class="site-main">
     <div class="container my-page">
@@ -127,7 +127,7 @@
         <a class="btn btn--primary" href="/sell"><i class="bi bi-plus-lg" aria-hidden="true"></i> Đăng tin mới</a>
       </header>
 
-      <!-- Tab lọc theo trạng thái: số đếm do JS điền -->
+      <!-- Status tabs: counts are filled in by JS -->
       <nav class="status-tabs" id="status-tabs" aria-label="Lọc theo trạng thái">
         <button type="button" class="status-tabs__tab" data-status-tab="" aria-pressed="false">
           Tất cả <span class="status-tabs__count" data-tab-count>0</span>
@@ -156,17 +156,17 @@
                placeholder="Tìm trong tin của bạn..." autocomplete="off">
       </form>
 
-      <!-- Đang tải -->
+      <!-- Loading -->
       <div class="my-list" id="my-loading" aria-busy="true" aria-label="Đang tải">
         <div class="skeleton my-list__skeleton"></div>
         <div class="skeleton my-list__skeleton"></div>
         <div class="skeleton my-list__skeleton"></div>
       </div>
 
-      <!-- Danh sách tin -->
+      <!-- Listing list -->
       <div class="my-list" id="my-list" aria-live="polite" hidden></div>
 
-      <!-- Không có tin -->
+      <!-- No listings -->
       <div class="state" id="my-empty" hidden>
         <i class="bi bi-inbox" aria-hidden="true"></i>
         <p class="state__title">Chưa có tin đăng</p>
@@ -176,7 +176,7 @@
         </a>
       </div>
 
-      <!-- Lỗi tải -->
+      <!-- Loading error -->
       <div class="state state--error" id="my-error" role="alert" hidden>
         <i class="bi bi-wifi-off" aria-hidden="true"></i>
         <p class="state__title">Không tải được tin đăng</p>
@@ -198,8 +198,8 @@
     </div>
   </main>
 
-  <!-- Hộp xác nhận (components/confirm-dialog.js). form method="dialog": bấm nút tự đóng,
-       dialog.returnValue = value của nút đã bấm -->
+  <!-- Confirm dialog (components/confirm-dialog.js). form method="dialog": buttons close it automatically,
+       dialog.returnValue = value of the clicked button -->
   <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-title">
     <form method="dialog">
       <h2 class="confirm-dialog__title" id="confirm-title" data-confirm-title></h2>
@@ -212,7 +212,7 @@
   </dialog>
 
   <!-- =====================================================
-       FOOTER (dùng chung)
+       FOOTER (shared)
        ===================================================== -->
   <footer class="site-footer">
     <div class="container site-footer__grid">
@@ -247,12 +247,12 @@
       Tỷ giá: open.er-api.com</p>
   </footer>
 
-  <!-- Vùng hiện thông báo (toast) -->
+  <!-- Toast notification area -->
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
   <!-- =====================================================
-       TEMPLATE DÙNG CHUNG (header, toast) - copy sang các trang khác
-       <template> không hiển thị, JS nhân bản rồi điền dữ liệu.
+       SHARED TEMPLATES (header, toast) - copy to the other pages
+       <template> is not rendered; JS clones it and fills in the data.
        ===================================================== -->
   <template id="tpl-history-item">
     <li class="search__history-item" role="option" aria-selected="false">
@@ -277,7 +277,7 @@
   </template>
 
   <!-- =====================================================
-       TEMPLATE CỦA TRANG TIN ĐĂNG CỦA TÔI
+       MY LISTINGS PAGE TEMPLATES
        ===================================================== -->
   <template id="tpl-my-listing">
     <article class="my-listing">
@@ -300,7 +300,7 @@
         </p>
         <p class="my-listing__note" hidden></p>
       </div>
-      <!-- JS ẩn bớt các nút không hợp với trạng thái tin -->
+      <!-- JS hides the buttons that do not fit the listing status -->
       <div class="my-listing__actions">
         <a class="btn btn--ghost btn--sm" data-action="edit" href="#">
           <i class="bi bi-pencil" aria-hidden="true"></i> Sửa

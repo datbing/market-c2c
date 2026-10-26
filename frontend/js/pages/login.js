@@ -1,8 +1,8 @@
 /**
- * TRANG ĐĂNG NHẬP
- *  - Validate phía trình duyệt (cùng quy tắc với server) + hiện lỗi server
- *  - "Ghi nhớ email": lưu email vào LocalStorage, lần sau điền sẵn
- *  - Thành công: để lại thông báo flash (SessionStorage) rồi quay về trang trước (?redirect=)
+ * LOGIN PAGE
+ *  - Browser-side validation (same rules as the server) + server errors
+ *  - "Remember email": saves the email in LocalStorage and prefills it next time
+ *  - Success: leaves a flash message (SessionStorage) and goes back to the previous page (?redirect=)
  */
 import { $ } from '../utils/dom.js';
 import { rules } from '../utils/validators.js';
@@ -17,14 +17,14 @@ import { redirectIfLoggedIn, keepRedirectOnLinks } from '../components/auth-page
 const REMEMBER_KEY = 'rememberEmail';
 
 async function main() {
-  // Đã đăng nhập -> chuyển trang luôn, không khởi tạo gì thêm
+  // Already logged in -> redirect right away, nothing else to initialize
   if (await redirectIfLoggedIn()) return;
 
   initHeader();
   keepRedirectOnLinks();
   initPasswordToggles($('#login-form'));
 
-  // Điền sẵn email đã ghi nhớ
+  // Prefill the remembered email
   const rememberedEmail = local.get(REMEMBER_KEY);
   if (rememberedEmail) {
     $('#login-email').value = rememberedEmail;
@@ -48,18 +48,18 @@ async function main() {
         setFlash(`Xin chào ${user.name}, bạn đã đăng nhập thành công`, 'success');
         window.location.assign(getRedirectTarget());
       } catch (err) {
-        // Sai mật khẩu: xóa ô mật khẩu cho người dùng gõ lại
+        // Wrong password: clear the password field so the user can retype it
         if (err.status === 401) {
           const password = $('#login-password');
           password.value = '';
           password.focus();
         }
-        throw err; // FormHandler hiện thông báo lỗi
+        throw err; // FormHandler shows the error
       }
     },
   });
 
-  // Thông báo khi bị chuyển tới đây vì trang trước yêu cầu đăng nhập
+  // Message shown when redirected here because the previous page requires login
   if (new URLSearchParams(window.location.search).has('redirect')) {
     form.showAlert('Vui lòng đăng nhập để tiếp tục', 'info');
   }

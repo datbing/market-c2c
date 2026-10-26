@@ -1,13 +1,13 @@
 /**
- * TRANG ĐĂNG TIN: /sell (bắt buộc đăng nhập)
- * TRANG SỬA TIN: /sell?edit=<id> (dùng chung trang, chỉ chủ tin)
- *  - Danh mục (API của mình) + tỉnh thành (API công khai) tải song song bằng Promise.allSettled
- *  - Ảnh: chọn / kéo thả, nén bằng Canvas, xem trước, sắp xếp (components/image-picker.js).
- *    Ảnh chỉ gửi lên server khi bấm "Đăng tin" (1 request FormData).
- *  - Nháp: phần chữ tự lưu vào LocalStorage (listingDraft), F5 không mất. Ảnh không lưu trong nháp.
- *  - Ô giá tự thêm dấu chấm phân cách hàng nghìn khi gõ
- *  - Thẻ xem trước cập nhật trực tiếp theo nội dung đang nhập
- *  - Sửa tin: nạp sẵn dữ liệu + ảnh đã đăng; không dùng nháp; gửi PUT kèm thứ tự ảnh
+ * POST A LISTING PAGE: /sell (login required)
+ * EDIT A LISTING PAGE: /sell?edit=<id> (same page, owner only)
+ *  - Categories (our API) + provinces (public API) load in parallel with Promise.allSettled
+ *  - Images: pick / drag and drop, compress with Canvas, preview, reorder (components/image-picker.js).
+ *    Images are only sent to the server when "Post" is clicked (one FormData request).
+ *  - Draft: the text fields are saved to LocalStorage (listingDraft) automatically, F5 keeps them. Images are not part of the draft.
+ *  - The price field adds thousands separators (dots) while typing
+ *  - The preview card updates live from the form contents
+ *  - Edit: preloads the data + existing images; no draft; sends PUT with the image order
  */
 import { $, debounce } from '../utils/dom.js';
 import { rules } from '../utils/validators.js';
@@ -28,11 +28,11 @@ const DRAFT_FIELDS = ['title', 'categoryId', 'condition', 'price', 'province', '
 const MAX_PRICE = 2_000_000_000;
 
 // ---------------------------------------------------------
-//  Ô giá: chỉ giữ chữ số, hiển thị có dấu chấm "9.500.000"
+//  Price field: keep digits only, display with dots "9.500.000"
 // ---------------------------------------------------------
 const priceDigits = (value = '') => value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
 
-/** 9500000 -> "khoảng 9,5 triệu đồng" (giúp người bán đỡ gõ nhầm số 0) */
+/** 9500000 -> "khoảng 9,5 triệu đồng" (helps sellers avoid typing a wrong number of zeros) */
 function priceInWords(amount) {
   const units = [
     [1e9, 'tỷ'],
@@ -48,7 +48,7 @@ function priceInWords(amount) {
 class SellPage {
   submitted = false;
   categories = new Map();
-  /** id tin đang sửa (null = đăng tin mới) */
+  /** id of the listing being edited (null = new listing) */
   editId = null;
 
   constructor() {
@@ -66,7 +66,7 @@ class SellPage {
   }
 
   async init() {
-    // Chưa đăng nhập -> sang trang đăng nhập, xong quay lại đây
+    // Not logged in -> go to the login page, then come back here
     const user = await getCurrentUser().catch(() => null);
     if (!user) {
       window.location.replace(loginUrl());
@@ -87,7 +87,7 @@ class SellPage {
   }
 
   // =======================================================
-  //  CHẾ ĐỘ SỬA TIN
+  //  EDIT MODE
   // =======================================================
   async loadForEdit() {
     $('#sell-heading').textContent = 'Sửa tin đăng';
@@ -112,7 +112,7 @@ class SellPage {
         ? `Tin bị từ chối${listing.rejectReason ? ` (${listing.rejectReason})` : ''}. Sửa xong tin sẽ được gửi duyệt lại.`
         : `Đang sửa: ${listing.title}`;
 
-    // Điền dữ liệu cũ vào form
+    // Fill the form with the existing data
     const set = (name, value) => {
       const field = this.form.elements.namedItem(name);
       field.value = value;
@@ -124,7 +124,7 @@ class SellPage {
     set('price', String(listing.price));
     this.formatPrice();
 
-    // Khu vực cũ có thể không có trong danh sách tỉnh mới (vd "TP. Hồ Chí Minh") -> thêm option
+    // The old area may not be in the new province list (e.g. "TP. Hồ Chí Minh") -> add an option
     const { province } = this.el;
     if (!province.querySelector(`option[value="${CSS.escape(listing.province)}"]`)) {
       province.add(new Option(listing.province, listing.province), 1);
@@ -137,7 +137,7 @@ class SellPage {
     this.picker.addExisting(listing.images);
   }
 
-  /** Không sửa được (không phải chủ tin, tin đã bán...) -> báo lỗi và khóa form */
+  /** Cannot edit (not the owner, listing sold...) -> show an error and lock the form */
   lockForm(message) {
     this.formHandler.showAlert(message);
     this.form.querySelectorAll('input, select, textarea, button').forEach((el) => {
@@ -146,7 +146,7 @@ class SellPage {
   }
 
   // =======================================================
-  //  DỮ LIỆU CHỌN: DANH MỤC + TỈNH THÀNH
+  //  CHOICE DATA: CATEGORIES + PROVINCES
   // =======================================================
   async loadOptions() {
     const [categories, provinces] = await Promise.allSettled([getCategories(), getProvinces()]);
@@ -168,7 +168,7 @@ class SellPage {
       const names = provinces.value.provinces.map((p) => p.name);
       province.replaceChildren(new Option('-- Chọn tỉnh / thành --', ''), ...names.map((n) => new Option(n, n)));
       province.disabled = false;
-      // Mặc định theo khu vực trong hồ sơ người dùng (vd "TP. Hồ Chí Minh" khớp "Hồ Chí Minh")
+      // Default to the area in the user's profile (e.g. "TP. Hồ Chí Minh" matches "Hồ Chí Minh")
       const mine = names.find((n) => this.user.province?.includes(n));
       if (mine) province.value = mine;
     } else {
@@ -221,18 +221,18 @@ class SellPage {
       ? await updateListing(this.editId, fields, this.picker.images)
       : await createListing(fields, this.picker.blobs);
 
-    this.submitted = true; // không hỏi "rời trang?" nữa
+    this.submitted = true; // no more "leave page?" prompt
     if (!this.editId) local.remove(DRAFT_KEY);
     setFlash(message, 'success');
     window.location.assign(`/product?id=${listing.id}`);
   }
 
   // =======================================================
-  //  NHÁP (LocalStorage) - chỉ phần chữ
+  //  DRAFT (LocalStorage) - text fields only
   // =======================================================
   saveDraft() {
-    if (this.editId) return; // đang sửa tin: không ghi đè nháp của tin mới
-    // namedItem('condition') là RadioNodeList -> .value là giá trị radio đang chọn
+    if (this.editId) return; // editing: do not overwrite the new-listing draft
+    // namedItem('condition') is a RadioNodeList -> .value is the selected radio's value
     const data = Object.fromEntries(
       DRAFT_FIELDS.map((name) => [name, this.form.elements.namedItem(name)?.value ?? '']),
     );
@@ -255,7 +255,7 @@ class SellPage {
         return;
       }
       const field = this.form.elements.namedItem(name);
-      // Danh mục / tỉnh trong nháp có thể không còn trong danh sách -> bỏ qua
+      // The draft's category / province may no longer be in the list -> skip it
       if (field && (field.tagName !== 'SELECT' || field.querySelector(`option[value="${CSS.escape(value)}"]`))) {
         field.value = value;
         field.dispatchEvent(new Event('counter:refresh'));
@@ -282,7 +282,7 @@ class SellPage {
   }
 
   // =======================================================
-  //  GIÁ + XEM TRƯỚC
+  //  PRICE + PREVIEW
   // =======================================================
   formatPrice() {
     const { price, priceWords } = this.el;
@@ -291,7 +291,7 @@ class SellPage {
     priceWords.textContent = digits ? priceInWords(Number(digits)) : '';
   }
 
-  /** Thẻ tin xem trước: dùng chính component thẻ tin của trang chủ */
+  /** Preview card: reuses the home page's listing card component */
   renderPreview() {
     const values = this.formHandler.values();
     const category = this.categories.get(values.categoryId);
@@ -305,7 +305,7 @@ class SellPage {
       thumbnail: this.picker.coverUrl,
       category: { icon: category?.icon ?? 'bi-image' },
     });
-    card.inert = true; // chỉ để xem, không bấm/focus được
+    card.inert = true; // display only, cannot be clicked/focused
     this.el.preview.replaceChildren(card);
   }
 
@@ -324,14 +324,14 @@ class SellPage {
     });
     $('#draft-discard').addEventListener('click', () => this.discardDraft());
 
-    // Ảnh thay đổi -> cập nhật xem trước + bỏ lỗi "chưa có ảnh" nếu đang hiện
+    // Images changed -> update the preview + clear the "no images" error if shown
     $('#image-picker').addEventListener('images:change', () => {
       previewLater();
       const errorSlot = this.form.querySelector('[data-error-for="images"]');
       if (!errorSlot.hidden && this.picker.count > 0) this.formHandler.setFieldError('images', null);
     });
 
-    // Rời trang khi đã chọn ảnh mà chưa đăng -> trình duyệt hỏi lại (ảnh không lưu trong nháp)
+    // Leaving with picked but unposted images -> the browser asks for confirmation (images are not in the draft)
     window.addEventListener('beforeunload', (e) => {
       if (this.picker.hasNewImages && !this.submitted) e.preventDefault();
     });

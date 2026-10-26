@@ -1,5 +1,5 @@
 /**
- * Controller tin đăng.
+ * Listing controller.
  */
 import { withTransaction } from '../config/db.js';
 import { HttpError } from '../utils/HttpError.js';
@@ -14,13 +14,13 @@ import * as Order from '../models/order.model.js';
 const MAX_LIMIT = 48;
 const DEFAULT_LIMIT = 12;
 
-// Giới hạn ảnh khi đăng tin (frontend đã nén ảnh nên thực tế mỗi ảnh chỉ vài trăm KB)
+// Image limits when posting (the frontend already compresses images, so each one is only a few hundred KB)
 const MAX_IMAGES = 6;
-const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // 3MB / ảnh
-const MAX_REQUEST_BYTES = MAX_IMAGES * MAX_IMAGE_BYTES + 512 * 1024; // + phần chữ
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // 3MB per image
+const MAX_REQUEST_BYTES = MAX_IMAGES * MAX_IMAGE_BYTES + 512 * 1024; // + the text fields
 const MAX_PRICE = 2_000_000_000;
 
-/** Quy tắc dữ liệu tin đăng (dùng chung cho tạo và sửa tin) */
+/** Listing data rules (shared by create and edit) */
 const LISTING_SCHEMA = {
   title: [
     rules.required('Vui lòng nhập tiêu đề'),
@@ -46,13 +46,13 @@ const LISTING_SCHEMA = {
   ],
 };
 
-/** Chuyển query string sang số nguyên dương, sai thì dùng giá trị mặc định */
+/** Parse a query string value as a positive integer, falling back to the default */
 const toPositiveInt = (value, fallback) => {
   const n = Number.parseInt(value, 10);
   return Number.isInteger(n) && n > 0 ? n : fallback;
 };
 
-/** Chuỗi rỗng / không có -> undefined, ngược lại -> chuỗi đã trim */
+/** Empty / missing string -> undefined, otherwise the trimmed string */
 const optionalString = (value) => {
   const str = typeof value === 'string' ? value.trim() : '';
   return str || undefined;
@@ -61,7 +61,7 @@ const optionalString = (value) => {
 /**
  * GET /api/listings
  * Query: q, category (id|slug), province, condition, minPrice, maxPrice, sort, page, limit,
- *        exclude (id tin cần bỏ ra, dùng cho "tin cùng danh mục")
+ *        exclude (listing id to leave out, used for "related listings")
  */
 export async function listListings(req, res) {
   const qs = req.query;
@@ -77,7 +77,7 @@ export async function listListings(req, res) {
   const minPrice = optionalString(qs.minPrice) && Number(qs.minPrice);
   const maxPrice = optionalString(qs.maxPrice) && Number(qs.maxPrice);
 
-  // Từ khóa -> bỏ dấu, tách thành từng từ (tối đa 5 từ cho nhẹ truy vấn)
+  // Keyword -> strip diacritics, split into words (at most 5 words to keep the query light)
   const keywords = toSearchText(optionalString(qs.q) ?? '')
     .split(' ')
     .filter(Boolean)
@@ -108,11 +108,11 @@ export async function listListings(req, res) {
 
 /**
  * GET /api/listings/:id
- * - Tin đang bán (active) của người bán chưa bị khóa: ai cũng xem được, tăng lượt xem
- *   (trừ khi chính chủ tin xem).
- * - Tin đã bán (sold): ai cũng xem được để biết là đã bán, không tăng lượt xem.
- * - Tin chờ duyệt / ẩn / bị từ chối: chỉ chủ tin và admin xem được.
- *   Người khác nhận 404 như tin không tồn tại -> không lộ thông tin.
+ * - Active listings of sellers who are not locked: visible to everyone, the view count increases
+ *   (except when the owner is viewing).
+ * - Sold listings: visible to everyone so they know it is sold, no view count increase.
+ * - Pending / hidden / rejected listings: only the owner and admins can see them.
+ *   Everyone else gets a 404 as if it did not exist -> nothing is leaked.
  */
 export async function getListing(req, res) {
   const id = toPositiveInt(req.params.id, null);
@@ -125,7 +125,7 @@ export async function getListing(req, res) {
   const isAdmin = req.user?.role === 'admin';
   const isPublic = row.status === 'active' && row.seller_status === 'active';
 
-  // Tin đã bán vẫn cho người khác xem (biết là "đã bán"), các trạng thái còn lại thì không
+  // Sold listings are still visible to others (shown as "sold"), the other statuses are not
   const visibleToPublic = isPublic || (row.status === 'sold' && row.seller_status === 'active');
   if (!visibleToPublic && !isOwner && !isAdmin) {
     throw HttpError.notFound('Không tìm thấy tin đăng');
@@ -141,8 +141,8 @@ export async function getListing(req, res) {
 }
 
 /**
- * Đọc + kiểm tra các trường chữ của tin đăng từ FormData (dùng cho tạo và sửa tin).
- * @returns {Promise<object>} dữ liệu đã chuẩn hóa để lưu DB
+ * Read + validate a listing's text fields from FormData (used for create and edit).
+ * @returns {Promise<object>} normalized data ready to save
  */
 async function readListingFields(form) {
   const body = Object.fromEntries(Object.keys(LISTING_SCHEMA).map((name) => [name, getText(form, name)]));
@@ -165,7 +165,7 @@ async function readListingFields(form) {
 }
 
 /**
- * Kiểm tra danh sách file ảnh: số lượng, dung lượng, đúng là ảnh JPG/PNG/WebP.
+ * Validate the image files: count, size, really a JPG/PNG/WebP image.
  * @returns {Promise<{ buffer: Buffer, ext: string }[]>}
  */
 async function readImageFiles(files, { allowEmpty = false } = {}) {
@@ -190,10 +190,10 @@ async function readImageFiles(files, { allowEmpty = false } = {}) {
 }
 
 /**
- * POST /api/listings  (đăng nhập)
- * Body: FormData gồm title, categoryId, condition, price, province, description
- *       và nhiều file "images" (thứ tự = thứ tự hiển thị, ảnh đầu là ảnh bìa).
- * Ảnh chỉ được ghi ra đĩa khi dữ liệu hợp lệ; lưu DB lỗi thì xóa các ảnh vừa ghi.
+ * POST /api/listings  (logged in)
+ * Body: FormData with title, categoryId, condition, price, province, description
+ *       and several "images" files (order = display order, the first one is the cover).
+ * Images are only written to disk once the data is valid; if saving to the DB fails, the written images are deleted.
  */
 export async function createListing(req, res) {
   const form = await parseMultipart(req, { maxBytes: MAX_REQUEST_BYTES });
@@ -208,7 +208,7 @@ export async function createListing(req, res) {
       Listing.createWithImages(conn, { ...fields, userId: req.user.id }, imagePaths),
     );
   } catch (err) {
-    await removeImages(imagePaths); // DB lỗi -> không để ảnh mồ côi trong uploads/
+    await removeImages(imagePaths); // DB error -> leave no orphaned images in uploads/
     throw err;
   }
 
@@ -225,15 +225,15 @@ export async function createListing(req, res) {
 }
 
 // =========================================================
-//  QUẢN LÝ TIN CỦA TÔI (chỉ chủ tin)
+//  MY LISTINGS MANAGEMENT (owner only)
 // =========================================================
 
 /**
- * Chủ tin được chuyển trạng thái theo bảng này (admin có API riêng để duyệt / từ chối):
- *   active  -> sold (đã bán), hidden (tạm ẩn)
- *   hidden  -> active (hiện lại), sold
- *   sold    -> active (đăng bán lại, vd người mua không lấy nữa)
- *   pending / rejected: chờ admin, chủ tin không tự đổi được
+ * Status changes allowed for the owner (admins have their own API to approve / reject):
+ *   active  -> sold, hidden (temporarily hidden)
+ *   hidden  -> active (shown again), sold
+ *   sold    -> active (relisted, e.g. the buyer backed out)
+ *   pending / rejected: waiting for an admin, the owner cannot change them
  */
 const OWNER_TRANSITIONS = {
   active: ['sold', 'hidden'],
@@ -249,7 +249,7 @@ const STATUS_MESSAGES = {
   active: 'Tin đã hiển thị trở lại',
 };
 
-/** Lấy tin theo :id và chắc chắn người đang đăng nhập là chủ tin */
+/** Load the listing by :id and make sure the logged in user owns it */
 async function getOwnedListing(req) {
   const id = toPositiveInt(req.params.id, null);
   const row = id ? await Listing.findDetailById(id) : null;
@@ -259,8 +259,8 @@ async function getOwnedListing(req) {
 }
 
 /**
- * GET /api/me/listings?status=&q=&page=&limit=  (đăng nhập)
- * Trả thêm meta.counts = số tin theo từng trạng thái (để hiện trên các tab lọc).
+ * GET /api/me/listings?status=&q=&page=&limit=  (logged in)
+ * Also returns meta.counts = number of listings per status (shown on the filter tabs).
  */
 export async function listMyListings(req, res) {
   const qs = req.query;
@@ -286,8 +286,8 @@ export async function listMyListings(req, res) {
 }
 
 /**
- * PATCH /api/listings/:id/status  { status }  (chủ tin)
- * Dùng cho: đánh dấu đã bán, ẩn tin, hiện lại, đăng bán lại.
+ * PATCH /api/listings/:id/status  { status }  (owner)
+ * Used for: mark as sold, hide, show again, relist.
  */
 export async function updateListingStatus(req, res) {
   const row = await getOwnedListing(req);
@@ -319,9 +319,9 @@ export async function updateListingStatus(req, res) {
 }
 
 /**
- * Đọc thứ tự ảnh khi sửa tin.
- * FormData gửi "imageOrder" là JSON, vd ["existing:12", "new:0", "existing:13"]:
- *   existing:<id> = giữ ảnh cũ có id đó, new:<n> = file thứ n trong các file "images" gửi kèm.
+ * Read the image order when editing a listing.
+ * FormData sends "imageOrder" as JSON, e.g. ["existing:12", "new:0", "existing:13"]:
+ *   existing:<id> = keep the existing image with that id, new:<n> = the n-th file in the uploaded "images".
  */
 function parseImageOrder(raw, { existingIds, newCount }) {
   let order;
@@ -352,10 +352,10 @@ function parseImageOrder(raw, { existingIds, newCount }) {
 }
 
 /**
- * PUT /api/listings/:id  (chủ tin) - FormData giống lúc đăng + "imageOrder" (xem parseImageOrder)
- * - Tin đã bán không sửa được (đăng bán lại trước)
- * - Tin bị từ chối: sửa xong tự gửi duyệt lại (chuyển "pending", xóa lý do từ chối)
- * - Ảnh mới chỉ ghi ra đĩa khi dữ liệu hợp lệ; ảnh cũ bị bỏ được xóa khỏi đĩa SAU khi lưu DB thành công
+ * PUT /api/listings/:id  (owner) - FormData like posting + "imageOrder" (see parseImageOrder)
+ * - Sold listings cannot be edited (relist first)
+ * - Rejected listings: editing resubmits them for review ("pending", reject reason cleared)
+ * - New images are only written once the data is valid; removed old images are deleted from disk AFTER the DB save succeeds
  */
 export async function updateListing(req, res) {
   const row = await getOwnedListing(req);
@@ -368,8 +368,8 @@ export async function updateListing(req, res) {
   const existingIds = new Set((await Listing.findImages(row.id)).map((img) => img.id));
   const order = parseImageOrder(getText(form, 'imageOrder'), { existingIds, newCount: files.length });
 
-  // Chỉ ghi ra đĩa những file mới thực sự có trong thứ tự ảnh.
-  // savedPaths[i] ứng với file thứ usedIndexes[i] (theo thứ tự gửi lên, KHÔNG phải thứ tự hiển thị)
+  // Only write the new files that actually appear in the image order.
+  // savedPaths[i] corresponds to file usedIndexes[i] (upload order, NOT display order)
   const usedIndexes = files.map((_, i) => i).filter((i) => order.some((o) => o.kind === 'new' && o.value === i));
   const savedPaths = await saveListingImages(usedIndexes.map((i) => files[i]));
   const pathOfNew = new Map(usedIndexes.map((fileIndex, i) => [fileIndex, savedPaths[i]]));
@@ -384,10 +384,10 @@ export async function updateListing(req, res) {
       Listing.updateWithImages(conn, row.id, { ...fields, status }, finalImages),
     );
   } catch (err) {
-    await removeImages(savedPaths); // DB lỗi -> bỏ ảnh mới vừa ghi
+    await removeImages(savedPaths); // DB error -> drop the newly written images
     throw err;
   }
-  await removeImages(removedPaths); // DB đã lưu xong mới xóa file ảnh cũ bị bỏ
+  await removeImages(removedPaths); // delete removed old images only after the DB save succeeded
 
   const [updated, images] = await Promise.all([Listing.findDetailById(row.id), Listing.findImages(row.id)]);
   res.json({
@@ -398,8 +398,8 @@ export async function updateListing(req, res) {
 }
 
 /**
- * DELETE /api/listings/:id  (chủ tin)
- * Tin đã có đơn hàng thì không xóa (đơn còn cần thông tin tin) -> gợi ý ẩn tin.
+ * DELETE /api/listings/:id  (owner)
+ * Listings with orders cannot be deleted (the orders still need the listing) -> suggest hiding it.
  */
 export async function deleteListing(req, res) {
   const row = await getOwnedListing(req);
@@ -408,7 +408,7 @@ export async function deleteListing(req, res) {
   }
 
   const imagePaths = await withTransaction((conn) => Listing.deleteById(conn, row.id));
-  await removeImages(imagePaths); // DB đã xóa xong mới xóa file
+  await removeImages(imagePaths); // delete the files only after the DB delete succeeded
 
   res.json({ success: true, message: 'Đã xóa tin đăng' });
 }

@@ -1,12 +1,12 @@
 /**
- * Làm việc với thẻ <template> của HTML5.
- * Cấu trúc HTML của component nằm sẵn trong file .html, JS chỉ:
- *   1. Nhân bản template (cloneNode)
- *   2. Điền dữ liệu bằng textContent / thuộc tính (an toàn XSS, không cần escape)
+ * Helpers for the HTML5 <template> element.
+ * The component HTML is written in the .html file, JS only:
+ *   1. Clones the template (cloneNode)
+ *   2. Fills in data with textContent / attributes (XSS safe, no escaping needed)
  */
 
 /**
- * Nhân bản phần tử gốc đầu tiên bên trong <template id="...">.
+ * Clone the first root element inside <template id="...">.
  * @param {string} id
  * @returns {HTMLElement}
  */
@@ -19,7 +19,7 @@ export function cloneTemplate(id) {
 }
 
 /**
- * Điền chữ vào các phần tử có data-field="tên" trong root.
+ * Fill text into the elements with data-field="name" inside root.
  *   fillFields(card, { title: 'iPhone', price: '9.500.000 ₫' })
  */
 export function fillFields(root, data) {

@@ -1,5 +1,5 @@
 // =========================================================
-//  THẺ TIN ĐĂNG (dùng ở trang chủ, yêu thích, tin đã xem...)
+//  LISTING CARD (used on the home page, favorites, recently viewed...)
 // =========================================================
 @use '../abstracts' as *;
 
@@ -8,7 +8,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $space-2;
 
-  // Số cột theo màn hình: 2 (mobile) -> 3 (từ 576px) -> 4 (desktop)
+  // Columns by screen size: 2 (mobile) -> 3 (from 576px) -> 4 (desktop)
   @include respond-to(sm) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: $space-3;
@@ -18,8 +18,8 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  // Biến thể cuộn ngang (tin vừa xem): nhìn thấy ~2,2 / 3,3 / 4,3 / 6 thẻ
-  // (để lộ một phần thẻ kế tiếp -> người dùng biết là cuộn được)
+  // Horizontal scroll variant (recently viewed): about 2.2 / 3.3 / 4.3 / 6 cards visible
+  // (part of the next card peeks out -> users know it scrolls)
   &--scroll {
     grid-auto-flow: column;
     grid-template-columns: none;
@@ -32,7 +32,7 @@
       scroll-snap-align: start;
     }
 
-    // Thẻ trong dải cuộn luôn hẹp -> tỉnh thành / thời gian luôn 2 dòng
+    // Cards in the strip are always narrow -> province / time always on 2 lines
     .listing-card__meta {
       flex-direction: column;
     }
@@ -69,7 +69,29 @@
     box-shadow: var(--shadow-md);
   }
 
-  // Cả thẻ bấm được nhờ link phủ toàn bộ (::after)
+  // Listing no longer available (favorites page): faded + label taken from data-unavailable="Đã bán"
+  &[data-unavailable] {
+    .listing-card__media,
+    .listing-card__body {
+      opacity: 0.55;
+    }
+
+    &::before {
+      content: attr(data-unavailable);
+      position: absolute;
+      top: $space-2;
+      left: $space-2;
+      z-index: 1;
+      padding: 2px $space-2;
+      border-radius: $radius-sm;
+      background: var(--color-danger);
+      color: #fff;
+      font-size: 0.6875rem;
+      font-weight: 700;
+    }
+  }
+
+  // The whole card is clickable thanks to a full-cover link (::after)
   &__link {
     &::after {
       content: '';
@@ -81,16 +103,19 @@
   &__media {
     position: relative;
     aspect-ratio: 1 / 1;
+    overflow: hidden; // portrait images must not stretch the box beyond 1:1
     background: var(--color-surface-2);
 
     img {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
   }
 
-  // Khi tin chưa có ảnh: hiện icon danh mục
+  // Listing without images: show the category icon
   &__placeholder {
     @include flex-center;
     width: 100%;
@@ -106,7 +131,7 @@
     bottom: $space-2;
   }
 
-  // Nút tim nằm trên link phủ nên phải có z-index cao hơn
+  // The heart button sits above the cover link so it needs a higher z-index
   &__favorite {
     position: absolute;
     top: $space-2;
@@ -129,7 +154,7 @@
       color: var(--color-primary);
     }
 
-    // Tim rỗng / tim đặc: CSS đổi theo aria-pressed, JS chỉ cần set thuộc tính
+    // Empty / filled heart: CSS switches on aria-pressed, JS only sets the attribute
     .bi-heart-fill {
       display: none;
     }
@@ -179,13 +204,13 @@
     font-size: 0.75rem;
     font-weight: 400;
 
-    // Không có tỷ giá -> chuỗi rỗng -> ẩn
+    // No exchange rate -> empty string -> hidden
     &:empty {
       display: none;
     }
   }
 
-  // Thẻ hẹp (< 768px) -> tỉnh thành và thời gian xếp 2 dòng; tablet trở lên: cùng 1 dòng
+  // Narrow cards (< 768px) -> province and time on 2 lines; tablet and up: same line
   &__meta {
     display: flex;
     flex-direction: column;
@@ -198,7 +223,7 @@
       justify-content: space-between;
     }
 
-    // Tỉnh thành dài thì cắt "...", thời gian luôn giữ trên 1 dòng
+    // Long province names are truncated with "...", the time always stays on one line
     > span {
       min-width: 0;
       overflow: hidden;

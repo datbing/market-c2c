@@ -1,12 +1,12 @@
 /**
- * TRANG CHỦ
- *  - HTML của mọi thành phần nằm trong index.html (phần tĩnh + <template>);
- *    file này chỉ lấy dữ liệu, nhân bản template, điền chữ và bật/tắt `hidden`.
- *  - Tải song song (Promise.allSettled): danh mục (backend), tỉnh thành + tỷ giá (API công khai)
- *  - Danh sách tin: tìm kiếm, lọc (danh mục, khu vực, tình trạng, giá), sắp xếp, phân trang
- *  - Trạng thái bộ lọc lưu SessionStorage + URL (F5 / quay lại trang vẫn giữ)
- *  - Yêu thích (LocalStorage), tin vừa xem (LocalStorage)
- *  - AbortController hủy request cũ khi người dùng đổi bộ lọc liên tục
+ * HOME PAGE
+ *  - The HTML of every part lives in index.html (static markup + <template>);
+ *    this file only fetches data, clones templates, fills in text and toggles `hidden`.
+ *  - Loads in parallel (Promise.allSettled): categories (backend), provinces + exchange rate (public APIs)
+ *  - Listing grid: search, filters (category, area, condition, price), sorting, pagination
+ *  - Filter state is kept in SessionStorage + the URL (survives F5 / going back)
+ *  - Favorites (LocalStorage), recently viewed (LocalStorage)
+ *  - AbortController cancels the previous request when the user changes filters quickly
  */
 import { $, $$, debounce } from '../utils/dom.js';
 import { cloneTemplate, fillFields } from '../utils/template.js';
@@ -25,7 +25,7 @@ import { createListingCard, createSkeletonCards, applyUsdRate } from '../compone
 const PAGE_SIZE = 12;
 const SESSION_KEY = 'homeFilters';
 
-/** Giá trị mặc định của bộ lọc; key cũng chính là tên query param gửi lên API */
+/** Default filter values; the keys are also the query param names sent to the API */
 const DEFAULT_FILTERS = Object.freeze({
   q: '',
   category: '',
@@ -39,14 +39,14 @@ const DEFAULT_FILTERS = Object.freeze({
 const FILTER_KEYS = Object.keys(DEFAULT_FILTERS);
 
 class HomePage {
-  /** Trạng thái bộ lọc hiện tại */
+  /** Current filter state */
   filters = { ...DEFAULT_FILTERS };
-  /** Map slug -> danh mục (để hiện tên trên chip, tiêu đề) */
+  /** Map slug -> category (to show names on chips and the title) */
   categories = new Map();
-  /** Map id -> tin đang hiển thị (để lưu snapshot khi bấm yêu thích) */
+  /** Map id -> listing on screen (to save a snapshot when favoriting) */
   listings = new Map();
   usdRate = null;
-  /** AbortController của request danh sách đang chạy */
+  /** AbortController of the running list request */
   controller = null;
 
   constructor() {
@@ -82,7 +82,7 @@ class HomePage {
   }
 
   // =======================================================
-  //  KHỞI TẠO
+  //  INITIALIZATION
   // =======================================================
   init() {
     this.filters = this.readInitialFilters();
@@ -100,12 +100,12 @@ class HomePage {
     this.renderRecent();
     this.bindEvents();
 
-    // Danh sách tin tải ngay, không chờ dữ liệu phụ
+    // Load the listings right away, without waiting for the extra data
     this.loadListings();
     this.loadSideData();
   }
 
-  /** Ưu tiên bộ lọc trên URL (link chia sẻ), không có thì lấy từ SessionStorage */
+  /** Prefer filters from the URL (shared links), otherwise from SessionStorage */
   readInitialFilters() {
     const params = new URLSearchParams(window.location.search);
     const fromUrl = FILTER_KEYS.some((key) => params.has(key));
@@ -113,7 +113,7 @@ class HomePage {
     return this.sanitize({ ...DEFAULT_FILTERS, ...source });
   }
 
-  /** Chuẩn hóa dữ liệu bộ lọc (dữ liệu từ URL/Storage có thể bị sửa tay) */
+  /** Normalize filter data (URL/Storage data may have been edited by hand) */
   sanitize(raw) {
     const clean = {};
     for (const key of FILTER_KEYS) clean[key] = String(raw[key] ?? DEFAULT_FILTERS[key]).trim();
@@ -127,7 +127,7 @@ class HomePage {
     return clean;
   }
 
-  /** Dữ liệu phụ gọi song song, cái nào lỗi không ảnh hưởng cái khác */
+  /** Extra data loaded in parallel; one failing does not affect the others */
   async loadSideData() {
     const [categories, provinces, rate] = await Promise.allSettled([
       getCategories(),
@@ -141,16 +141,16 @@ class HomePage {
     if (provinces.status === 'fulfilled') this.renderProvinces(provinces.value);
     else this.renderProvinceError();
 
-    // getUsdRate không bao giờ reject, lỗi thì trả null
+    // getUsdRate never rejects, it returns null on error
     if (rate.status === 'fulfilled') this.applyRate(rate.value);
   }
 
   // =======================================================
-  //  CẬP NHẬT BỘ LỌC
+  //  UPDATING FILTERS
   // =======================================================
   /**
-   * Đổi một phần bộ lọc rồi tải lại danh sách.
-   * Đổi bất kỳ điều kiện nào (trừ page) đều quay về trang 1.
+   * Change part of the filters and reload the list.
+   * Changing any condition (except page) goes back to page 1.
    */
   setFilters(patch) {
     const next = this.sanitize({ ...this.filters, page: 1, ...patch });
@@ -165,7 +165,7 @@ class HomePage {
     this.loadListings();
   }
 
-  /** Lưu bộ lọc vào SessionStorage và URL (chỉ ghi các giá trị khác mặc định) */
+  /** Save the filters to SessionStorage and the URL (only non-default values) */
   persistFilters() {
     session.set(SESSION_KEY, this.filters);
 
@@ -179,7 +179,7 @@ class HomePage {
     history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
   }
 
-  /** Đưa giá trị bộ lọc lên các ô trong form */
+  /** Push the filter values into the form controls */
   syncForm() {
     const { province, condition, minPrice, maxPrice, sort } = this.filters;
     const { form } = this.el;
@@ -190,7 +190,7 @@ class HomePage {
     const radio = form.querySelector(`input[name="condition"][value="${CSS.escape(condition)}"]`);
     if (radio) radio.checked = true;
 
-    // Không ghi đè khi người dùng đang gõ trong ô giá
+    // Do not overwrite while the user is typing in a price field
     if (document.activeElement !== this.el.minPrice) this.el.minPrice.value = minPrice;
     if (document.activeElement !== this.el.maxPrice) this.el.maxPrice.value = maxPrice;
     this.el.sort.value = sort;
@@ -199,18 +199,18 @@ class HomePage {
       btn.classList.toggle('is-active', btn.dataset.min === minPrice && btn.dataset.max === maxPrice);
     });
 
-    // Số bộ lọc đang áp dụng (hiện trên nút "Bộ lọc" ở mobile)
+    // Number of active filters (shown on the "Filters" button on mobile)
     const activeCount = [province, condition, minPrice || maxPrice].filter(Boolean).length;
     this.el.filterCount.textContent = activeCount;
     this.el.filterCount.hidden = activeCount === 0;
   }
 
   // =======================================================
-  //  DANH SÁCH TIN
+  //  LISTING GRID
   // =======================================================
   /**
-   * Chọn khối hiển thị: 'list' (lưới tin) | 'empty' (không có kết quả) | 'error'.
-   * Các khối đều viết sẵn trong HTML, ở đây chỉ bật/tắt `hidden`.
+   * Pick the visible block: 'list' (grid) | 'empty' (no results) | 'error'.
+   * Every block is written in the HTML, this only toggles `hidden`.
    */
   showListingState(state) {
     const { grid, empty, error, pagination } = this.el;
@@ -221,14 +221,14 @@ class HomePage {
   }
 
   async loadListings() {
-    // Hủy request trước (nếu chưa xong) để kết quả cũ không đè kết quả mới
+    // Cancel the previous request (if still running) so old results do not overwrite new ones
     this.controller?.abort();
     const controller = new AbortController();
     this.controller = controller;
 
     const { grid, count } = this.el;
     grid.setAttribute('aria-busy', 'true');
-    // Đang có kết quả cũ -> làm mờ; chưa có -> hiện thẻ skeleton
+    // Existing results -> fade them; none yet -> show skeleton cards
     if (!grid.hidden && grid.querySelector('.listing-card[data-id]')) {
       grid.classList.add('is-loading');
     } else {
@@ -240,7 +240,7 @@ class HomePage {
     try {
       const { data, meta } = await getListings({ ...this.filters, limit: PAGE_SIZE }, controller.signal);
 
-      // Trang lưu trong session vượt quá tổng số trang (vd: tin đã bị bán bớt) -> về trang cuối
+      // The page saved in the session is past the last page (e.g. some listings were sold) -> go to the last page
       if (meta.total > 0 && this.filters.page > meta.totalPages) {
         this.setFilters({ page: meta.totalPages });
         return;
@@ -248,7 +248,7 @@ class HomePage {
 
       this.renderListings(data, meta);
     } catch (err) {
-      if (isAbortError(err)) return; // bị hủy chủ động, bỏ qua
+      if (isAbortError(err)) return; // cancelled on purpose, ignore
       this.renderListingError(err);
     } finally {
       if (this.controller === controller) {
@@ -288,7 +288,7 @@ class HomePage {
     this.showListingState('error');
   }
 
-  /** Tiêu đề khu kết quả: theo từ khóa > danh mục > mặc định */
+  /** Results heading: keyword > category > default */
   renderTitle() {
     const { q, category } = this.filters;
     const categoryName = this.categories.get(category)?.name;
@@ -296,19 +296,19 @@ class HomePage {
   }
 
   // =======================================================
-  //  DANH MỤC
+  //  CATEGORIES
   // =======================================================
   renderCategories(categories) {
     const { categoryList, categoryError } = this.el;
     this.categories = new Map(categories.map((c) => [c.slug, c]));
 
-    // Thống kê bằng reduce
+    // Totals with reduce
     const totalActive = categories.reduce((sum, c) => sum + c.listingCount, 0);
     $('#stat-listings').textContent = formatCompact(totalActive);
     $('#stat-categories').textContent = categories.length;
     $('#category-all-count').textContent = `${totalActive} tin`;
 
-    // Xóa khung chờ + ô cũ (nếu tải lại), giữ ô "Tất cả" viết sẵn trong HTML
+    // Remove the skeletons + old tiles (when reloading), keep the "All" tile written in the HTML
     $$('[data-skeleton], [data-generated]', categoryList).forEach((li) => li.remove());
 
     const tiles = categories.map(({ slug, name, icon, listingCount }) => {
@@ -324,7 +324,7 @@ class HomePage {
     categoryList.setAttribute('aria-busy', 'false');
     categoryError.hidden = true;
     this.highlightCategory();
-    this.renderChips(); // chip danh mục cần tên -> vẽ lại
+    this.renderChips(); // category chips need names -> re-render
     this.renderTitle();
   }
 
@@ -358,17 +358,17 @@ class HomePage {
   }
 
   // =======================================================
-  //  TỈNH THÀNH + TỶ GIÁ (API công khai)
+  //  PROVINCES + EXCHANGE RATE (public APIs)
   // =======================================================
   renderProvinces({ provinces, source }) {
     const { province: select, provinceHint } = this.el;
     const current = this.filters.province;
     const names = provinces.map((p) => p.name);
 
-    // Nếu bộ lọc cũ có tỉnh không còn trong danh sách thì vẫn giữ lại 1 option
+    // If the saved filter has a province no longer in the list, still keep one option for it
     if (current && !names.includes(current)) names.unshift(current);
 
-    // new Option(text, value): tạo <option> bằng DOM API, không cần chuỗi HTML
+    // new Option(text, value): creates an <option> with the DOM API, no HTML string needed
     select.replaceChildren(new Option('Toàn quốc', ''), ...names.map((name) => new Option(name, name)));
     select.value = current;
     select.disabled = false;
@@ -390,7 +390,7 @@ class HomePage {
 
   applyRate(rate) {
     this.usdRate = rate;
-    if (!rate) return; // không có tỷ giá -> phần quy đổi để trống (CSS ẩn ô rỗng)
+    if (!rate) return; // no exchange rate -> the USD part stays empty (CSS hides empty elements)
 
     applyUsdRate(this.el.grid, rate);
     applyUsdRate(this.el.recentList, rate);
@@ -399,7 +399,7 @@ class HomePage {
   }
 
   // =======================================================
-  //  CHIP BỘ LỌC ĐANG ÁP DỤNG
+  //  ACTIVE FILTER CHIPS
   // =======================================================
   renderChips() {
     const { q, category, province, condition, minPrice, maxPrice } = this.filters;
@@ -410,7 +410,7 @@ class HomePage {
       return `Đến ${formatVND(maxPrice)}`;
     };
 
-    // Mảng [key cần xóa, nhãn] -> lọc bỏ các bộ lọc trống
+    // Array of [key to clear, label] -> drop the empty filters
     const chips = [
       q && ['q', `Từ khóa: ${q}`],
       category && ['category', this.categories.get(category)?.name ?? category],
@@ -434,7 +434,7 @@ class HomePage {
   }
 
   // =======================================================
-  //  TIN VỪA XEM
+  //  RECENTLY VIEWED
   // =======================================================
   renderRecent() {
     const items = recentlyViewed.getAll();
@@ -447,17 +447,17 @@ class HomePage {
   }
 
   // =======================================================
-  //  YÊU THÍCH
+  //  FAVORITES
   // =======================================================
   toggleFavorite(button) {
     const id = Number(button.closest('[data-id]').dataset.id);
     const listing = this.listings.get(id) ?? recentlyViewed.getAll().find((x) => x.id === id);
-    // Sự kiện favorites:change sẽ cập nhật mọi nút tim (cả danh sách chính và tin vừa xem)
+    // The favorites:change event updates every heart button (main grid and recently viewed)
     if (listing) toggleFavorite(listing);
   }
 
   // =======================================================
-  //  NGĂN KÉO BỘ LỌC (mobile/tablet)
+  //  FILTER DRAWER (mobile/tablet)
   // =======================================================
   openFilters() {
     this.el.filters.classList.add('is-open');
@@ -483,28 +483,28 @@ class HomePage {
   }
 
   // =======================================================
-  //  SỰ KIỆN (event delegation cho phần tử được nhân bản từ template)
+  //  EVENTS (event delegation for elements cloned from templates)
   // =======================================================
   bindEvents() {
     const { form, results, categoryList, presets, sort, recentList } = this.el;
 
-    // Danh mục
+    // Categories
     categoryList.addEventListener('click', (e) => {
       const tile = e.target.closest('[data-category]');
       if (!tile) return;
       const slug = tile.dataset.category;
-      // Bấm lại danh mục đang chọn -> bỏ chọn
+      // Clicking the selected category again -> deselect it
       this.setFilters({ category: slug === this.filters.category ? '' : slug });
     });
     $('#category-retry').addEventListener('click', () => this.retryCategories());
 
-    // Select khu vực + radio tình trạng: áp dụng ngay khi đổi
+    // Area select + condition radios: apply immediately on change
     form.addEventListener('change', (e) => {
       const { name, value } = e.target;
       if (name === 'province' || name === 'condition') this.setFilters({ [name]: value });
     });
 
-    // Ô giá: debounce để không gọi API mỗi phím gõ
+    // Price fields: debounced so the API is not called on every keystroke
     const applyPrice = debounce(() => {
       const min = this.el.minPrice.value.trim();
       const max = this.el.maxPrice.value.trim();
@@ -517,7 +517,7 @@ class HomePage {
       if (e.target === this.el.minPrice || e.target === this.el.maxPrice) applyPrice();
     });
 
-    // Mức giá có sẵn
+    // Preset price ranges
     presets.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-min]');
       if (!btn) return;
@@ -528,7 +528,7 @@ class HomePage {
       );
     });
 
-    // Nút reset của form
+    // Form reset button
     form.addEventListener('reset', (e) => {
       e.preventDefault();
       this.resetFilters();
@@ -536,7 +536,7 @@ class HomePage {
 
     sort.addEventListener('change', () => this.setFilters({ sort: sort.value }));
 
-    // Một listener cho cả khu kết quả: tim, chip, phân trang, thử lại, xóa bộ lọc
+    // One listener for the whole results area: hearts, chips, pagination, retry, clear filters
     results.addEventListener('click', (e) => {
       const target = e.target;
 
@@ -562,7 +562,7 @@ class HomePage {
       if (target.closest('[data-action="reset"]')) return this.resetFilters();
     });
 
-    // Tin vừa xem
+    // Recently viewed
     recentList.addEventListener('click', (e) => {
       const favBtn = e.target.closest('[data-action="favorite"]');
       if (favBtn) this.toggleFavorite(favBtn);
@@ -572,11 +572,11 @@ class HomePage {
       showToast('Đã xóa lịch sử xem', 'info');
     });
 
-    // CustomEvent từ stores.js (kể cả khi tab khác thay đổi)
+    // CustomEvent from stores.js (including changes from other tabs)
     watchFavorites();
     window.addEventListener('recentlyViewed:change', () => this.renderRecent());
 
-    // Ngăn kéo bộ lọc
+    // Filter drawer
     this.el.filterToggle.addEventListener('click', () => this.openFilters());
     document.addEventListener('click', (e) => {
       if (e.target.closest('[data-action="close-filters"]')) this.closeFilters();

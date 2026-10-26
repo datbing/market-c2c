@@ -1,6 +1,6 @@
 /**
- * Thông báo "flash": lưu tạm vào SessionStorage trước khi chuyển trang,
- * trang mới đọc ra hiển thị (toast) rồi xóa ngay -> chỉ hiện đúng 1 lần.
+ * "Flash" messages: stored in SessionStorage before navigating,
+ * the next page reads and shows it (toast) then deletes it right away -> shown exactly once.
  *   setFlash('Đăng nhập thành công', 'success'); location.href = '/';
  */
 import { session } from './storage.js';
@@ -11,7 +11,7 @@ export function setFlash(message, type = 'info') {
   session.set(KEY, { message, type });
 }
 
-/** Lấy và xóa thông báo đang chờ (null nếu không có) */
+/** Read and delete the pending message (null if none) */
 export function consumeFlash() {
   const flash = session.get(KEY);
   session.remove(KEY);

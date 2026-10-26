@@ -24,7 +24,7 @@
     margin-bottom: $space-2;
   }
 
-  // Logo ở footer (2 bản sáng/tối, CSS chọn theo theme - xem layout/_header.scss)
+  // Footer logo (light/dark versions, CSS picks by theme - see layout/_header.scss)
   &__logo {
     display: inline-flex;
     margin-bottom: $space-3;

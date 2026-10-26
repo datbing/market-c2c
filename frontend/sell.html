@@ -11,7 +11,7 @@
 
   <title>Đăng tin bán | Market C2C</title>
 
-  <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
+  <!-- Apply the light/dark theme before the page paints to avoid a color flash -->
   <script src="/js/theme-init.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/css/main.css">
@@ -19,13 +19,13 @@
 
 <body>
   <!-- =====================================================
-       HEADER (dùng chung: copy nguyên khối này sang các trang khác)
+       HEADER (shared: copy this whole block to the other pages)
        ===================================================== -->
   <header class="site-header">
     <div class="container site-header__inner">
       <a class="logo" href="/" aria-label="Market C2C - Trang chủ">
-        <!-- Responsive bằng HTML: màn hình < 576px dùng logo vuông, lớn hơn dùng logo có chữ.
-             Có 2 bản: chữ navy cho nền sáng, chữ sáng cho nền tối (CSS chọn theo [data-theme]) -->
+        <!-- Responsive via HTML: screens < 576px use the square logo, larger ones the text logo.
+             Two versions: navy text for light backgrounds, light text for dark ones (CSS picks by [data-theme]) -->
         <picture class="logo__picture logo__picture--light">
           <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
           <img class="logo__img" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C">
@@ -45,7 +45,7 @@
           <i class="bi bi-search" aria-hidden="true"></i>
         </button>
 
-        <!-- Lịch sử tìm kiếm (LocalStorage) -->
+        <!-- Search history (LocalStorage) -->
         <div class="search__dropdown" id="search-history" hidden>
           <div class="search__dropdown-head">
             <span>Tìm kiếm gần đây</span>
@@ -56,7 +56,7 @@
       </form>
 
       <nav class="header-actions" aria-label="Tiện ích và tài khoản">
-        <!-- CSS tự hiện mặt trăng (sáng) hoặc mặt trời (tối) theo [data-theme] -->
+        <!-- CSS shows the moon (light) or the sun (dark) based on [data-theme] -->
         <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
           <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
           <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
@@ -70,9 +70,9 @@
           <span class="icon-btn__badge" data-count="cart" hidden>0</span>
         </a>
 
-        <!-- Tài khoản: JS bật 1 trong 2 khối sau khi gọi /api/auth/me -->
+        <!-- Account: JS shows one of the two blocks after calling /api/auth/me -->
         <div class="account" id="account-area">
-          <!-- Dưới 1200px chỉ hiện icon, chữ vẫn được trình đọc màn hình đọc -->
+          <!-- Below 1200px only the icon is visible; the text is still read by screen readers -->
           <a class="account__login" id="account-guest" href="/login" hidden>
             <i class="bi bi-person-circle" aria-hidden="true"></i><span>Đăng nhập</span>
           </a>
@@ -115,7 +115,7 @@
   </header>
 
   <!-- =====================================================
-       NỘI DUNG TRANG ĐĂNG TIN
+       POST A LISTING PAGE CONTENT
        ===================================================== -->
   <main class="site-main">
     <div class="container sell">
@@ -124,7 +124,7 @@
         <p class="sell__subtitle" id="sell-subtitle">Tin của bạn sẽ hiển thị công khai sau khi quản trị viên duyệt.</p>
       </header>
 
-      <!-- Có bản nháp trong LocalStorage -->
+      <!-- A draft exists in LocalStorage -->
       <div class="alert alert--info" id="draft-notice" role="status" hidden>
         <i class="bi bi-journal-text" aria-hidden="true"></i>
         <span>
@@ -141,14 +141,14 @@
             <span data-alert-message></span>
           </div>
 
-          <!-- Bước 1: Ảnh -->
+          <!-- Step 1: Images -->
           <section class="sell-section" aria-labelledby="step-images">
             <h2 class="sell-section__title" id="step-images">
               <span class="sell-section__step" aria-hidden="true">1</span> Hình ảnh
             </h2>
 
             <div class="image-picker" id="image-picker">
-              <!-- Bấm vào label là mở hộp chọn file của hệ điều hành (HTML thuần, không cần JS) -->
+              <!-- Clicking the label opens the OS file picker (plain HTML, no JS needed) -->
               <label class="image-picker__drop">
                 <input class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/*" multiple
                        aria-describedby="images-status images-error">
@@ -162,7 +162,7 @@
             </div>
           </section>
 
-          <!-- Bước 2: Thông tin cơ bản -->
+          <!-- Step 2: Basic info -->
           <section class="sell-section" aria-labelledby="step-info">
             <h2 class="sell-section__title" id="step-info">
               <span class="sell-section__step" aria-hidden="true">2</span> Thông tin cơ bản
@@ -214,7 +214,7 @@
 
             <div class="form-group">
               <label class="form-label" for="sell-price">Giá bán (₫) <abbr title="bắt buộc">*</abbr></label>
-              <!-- type="text" để tự thêm dấu chấm hàng nghìn; inputmode="numeric" -> bàn phím số trên điện thoại -->
+              <!-- type="text" so thousands separators can be added; inputmode="numeric" -> numeric keyboard on phones -->
               <div class="input-affix">
                 <input class="form-control" id="sell-price" name="price" type="text" inputmode="numeric"
                        autocomplete="off" required placeholder="VD: 9.500.000"
@@ -226,7 +226,7 @@
             </div>
           </section>
 
-          <!-- Bước 3: Mô tả -->
+          <!-- Step 3: Description -->
           <section class="sell-section" aria-labelledby="step-description">
             <h2 class="sell-section__title" id="step-description">
               <span class="sell-section__step" aria-hidden="true">3</span> Mô tả chi tiết
@@ -254,7 +254,7 @@
           </div>
         </form>
 
-        <!-- Cột phụ: xem trước + mẹo -->
+        <!-- Side column: preview + tips -->
         <aside class="sell__aside" aria-labelledby="preview-title">
           <h2 class="sell__aside-title" id="preview-title">Xem trước</h2>
           <div class="sell__preview" id="sell-preview"></div>
@@ -273,7 +273,7 @@
   </main>
 
   <!-- =====================================================
-       FOOTER (dùng chung)
+       FOOTER (shared)
        ===================================================== -->
   <footer class="site-footer">
     <div class="container site-footer__grid">
@@ -308,12 +308,12 @@
       Tỷ giá: open.er-api.com</p>
   </footer>
 
-  <!-- Vùng hiện thông báo (toast) -->
+  <!-- Toast notification area -->
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
   <!-- =====================================================
-       TEMPLATE DÙNG CHUNG (header, toast) - copy sang các trang khác
-       <template> không hiển thị, JS nhân bản rồi điền dữ liệu.
+       SHARED TEMPLATES (header, toast) - copy to the other pages
+       <template> is not rendered; JS clones it and fills in the data.
        ===================================================== -->
   <template id="tpl-history-item">
     <li class="search__history-item" role="option" aria-selected="false">
@@ -338,9 +338,9 @@
   </template>
 
   <!-- =====================================================
-       TEMPLATE CỦA TRANG ĐĂNG TIN
+       POST A LISTING PAGE TEMPLATES
        ===================================================== -->
-  <!-- Ảnh đã chọn: kéo thả (draggable) để sắp xếp -->
+  <!-- Selected image: draggable to reorder -->
   <template id="tpl-image-item">
     <li class="image-picker__item" draggable="true">
       <img alt="">
@@ -357,7 +357,7 @@
     </li>
   </template>
 
-  <!-- Thẻ tin (khung xem trước) - giống trang chủ -->
+  <!-- Listing card (preview) - same as the home page -->
   <template id="tpl-listing-card">
     <article class="listing-card">
       <div class="listing-card__media">
@@ -365,7 +365,7 @@
         <span class="listing-card__placeholder"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
         <span class="badge listing-card__condition" hidden></span>
       </div>
-      <!-- CSS hiện tim rỗng / tim đặc theo aria-pressed -->
+      <!-- CSS shows an empty / filled heart based on aria-pressed -->
       <button type="button" class="listing-card__favorite" data-action="favorite" aria-pressed="false"
         aria-label="Thêm vào yêu thích">
         <i class="bi bi-heart" aria-hidden="true"></i>

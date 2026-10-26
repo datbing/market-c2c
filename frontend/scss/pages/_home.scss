@@ -1,12 +1,12 @@
 // =========================================================
-//  TRANG CHỦ: banner, danh mục, bộ lọc, danh sách tin
+//  HOME PAGE: banner, categories, filters, listing grid
 // =========================================================
 @use '../abstracts' as *;
 
 .home {
   display: grid;
-  // minmax(0, 1fr): cột không được nở theo nội dung rộng nhất
-  // (dải cuộn ngang) -> tránh tràn ngang trên mobile
+  // minmax(0, 1fr): the column must not grow to fit its widest content
+  // (horizontal scroll strips) -> prevents horizontal overflow on mobile
   grid-template-columns: minmax(0, 1fr);
   gap: $space-5;
 
@@ -37,7 +37,7 @@
     font-size: 1.5rem;
     line-height: 1.25;
 
-    // Mobile: bỏ ngắt dòng cố định, để chữ tự xuống dòng theo bề rộng
+    // Mobile: drop the fixed line break, let the text wrap with the width
     br {
       @include respond-below(sm) {
         display: none;
@@ -57,7 +57,7 @@
 
   &__actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)); // mobile: 2 nút chia đều
+    grid-template-columns: repeat(2, minmax(0, 1fr)); // mobile: 2 equal buttons
     gap: $space-2;
     margin-top: $space-4;
 
@@ -65,7 +65,7 @@
       white-space: normal;
       text-align: center;
 
-      // Mobile: bỏ icon cho chữ vừa 1 dòng
+      // Mobile: drop the icon so the text fits on one line
       .bi {
         @include respond-below(sm) {
           display: none;
@@ -80,7 +80,7 @@
     }
   }
 
-  // Nút viền trắng trên nền cam
+  // White outline button on an orange background
   &__secondary {
     border-color: currentColor;
     color: var(--hero-fg);
@@ -126,9 +126,9 @@
   }
 }
 
-// ---------- Danh mục ----------
-// Mobile + tablet: 1 hàng cuộn ngang. Desktop: mọi ô chia đều trên 1 hàng
-// (không dùng auto-fill để tránh 1 ô lẻ rớt xuống dòng dưới)
+// ---------- Categories ----------
+// Mobile + tablet: one horizontally scrolling row. Desktop: every tile shares one row equally
+// (no auto-fill, so a single tile never drops to the next line)
 .category-list {
   display: grid;
   grid-auto-flow: column;
@@ -209,7 +209,7 @@
     }
   }
 
-  // Skeleton khi đang tải danh mục
+  // Skeleton while the categories load
   &--loading {
     pointer-events: none;
 
@@ -219,9 +219,9 @@
   }
 }
 
-// ---------- Bố cục bộ lọc + kết quả ----------
+// ---------- Filters + results layout ----------
 .home-layout {
-  scroll-margin-top: calc(#{$header-height} + #{$space-6}); // tránh bị header sticky che khi cuộn tới
+  scroll-margin-top: calc(#{$header-height} + #{$space-6}); // keep the sticky header from covering it when scrolled into view
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: $space-5;
@@ -232,7 +232,7 @@
   }
 }
 
-// Bộ lọc: mobile/tablet là ngăn kéo trượt từ trái, desktop là cột cố định
+// Filters: a drawer sliding from the left on mobile/tablet, a fixed column on desktop
 .filters {
   @include surface($space-4);
 
@@ -284,7 +284,7 @@
     margin-top: $space-5;
   }
 
-  // Nút "Xem kết quả" chỉ cần trên mobile/tablet (ngăn kéo)
+  // The "Show results" button is only needed on mobile/tablet (drawer)
   &__apply {
     @include respond-to(xl) {
       display: none;
@@ -308,7 +308,7 @@
   }
 }
 
-// fieldset mặc định có viền và padding -> bỏ đi
+// fieldset has a border and padding by default -> remove them
 fieldset.form-group {
   margin-inline: 0;
   padding: 0;
@@ -331,12 +331,12 @@ fieldset.form-group {
   }
 }
 
-// Khóa cuộn trang khi ngăn kéo bộ lọc mở
+// Lock page scrolling while the filter drawer is open
 body.no-scroll {
   overflow: hidden;
 }
 
-// ---------- Khu kết quả ----------
+// ---------- Results area ----------
 .results {
   min-width: 0;
 
@@ -410,7 +410,7 @@ body.no-scroll {
   margin-top: $space-2;
 }
 
-// Danh sách mờ đi khi đang tải trang mới (giữ kết quả cũ để không giật)
+// Fade the list while a new page loads (keep the old results to avoid jumps)
 .listing-grid.is-loading {
   opacity: 0.5;
   pointer-events: none;

@@ -1,11 +1,11 @@
 /**
- * Ô mật khẩu:
- *  - Nút ẩn/hiện: <button data-toggle-password="id-ô-nhập" aria-pressed="false">
- *    (icon mắt mở/đóng do CSS đổi theo aria-pressed)
- *  - Đo độ mạnh mật khẩu, hiển thị bằng thẻ <meter> của HTML5
+ * Password field:
+ *  - Show/hide button: <button data-toggle-password="input-id" aria-pressed="false">
+ *    (the open/closed eye icon is switched by CSS based on aria-pressed)
+ *  - Measures password strength, displayed with the HTML5 <meter> element
  */
 
-/** Gắn hành vi cho mọi nút ẩn/hiện mật khẩu trong root (event delegation) */
+/** Add behavior to every show/hide password button inside root (event delegation) */
 export function initPasswordToggles(root = document) {
   root.addEventListener('click', (e) => {
     const button = e.target.closest('[data-toggle-password]');
@@ -23,8 +23,8 @@ export function initPasswordToggles(root = document) {
 const STRENGTH_LABELS = ['Rất yếu', 'Yếu', 'Trung bình', 'Mạnh', 'Rất mạnh'];
 
 /**
- * Chấm điểm mật khẩu 0–4: đủ dài, chữ hoa + thường, có số, có ký tự đặc biệt.
- * Dưới 6 ký tự (không qua được validate của server) luôn là 0.
+ * Score a password 0-4: long enough, upper + lower case, digits, special characters.
+ * Under 6 characters (fails the server validation) is always 0.
  */
 export function scorePassword(password = '') {
   if (password.length < 6) return 0;
@@ -38,7 +38,7 @@ export function scorePassword(password = '') {
 }
 
 /**
- * Cập nhật <meter> + nhãn chữ theo mật khẩu đang gõ.
+ * Update the <meter> + text label for the password being typed.
  * @param {HTMLInputElement} input
  * @param {HTMLMeterElement} meter
  * @param {HTMLElement} label
@@ -47,7 +47,7 @@ export function bindStrengthMeter(input, meter, label) {
   const update = () => {
     const empty = input.value.length === 0;
     const score = scorePassword(input.value);
-    meter.value = empty ? 0 : score + 1; // meter 0–5, có chữ thì tối thiểu 1 vạch
+    meter.value = empty ? 0 : score + 1; // meter 0-5, at least 1 bar once something is typed
     label.textContent = empty ? '' : `Độ mạnh: ${STRENGTH_LABELS[score]}`;
   };
   input.addEventListener('input', update);

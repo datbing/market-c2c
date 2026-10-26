@@ -10,12 +10,12 @@ import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
-// Mọi thao tác với đơn hàng đều cần đăng nhập
+// Every order action requires login
 router.use(requireAuth);
 
 router.post('/', createOrders);
 router.get('/', listOrders);
-// Đặt trước '/:id' để "summary" không bị hiểu là id đơn
+// Declared before '/:id' so "summary" is not treated as an order id
 router.get('/summary', orderSummary);
 router.get('/:id', getOrder);
 router.patch('/:id/status', updateOrderStatus);

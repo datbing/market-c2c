@@ -1,5 +1,5 @@
 // =========================================================
-//  HEADER: logo, ô tìm kiếm (+ lịch sử), nút tiện ích, tài khoản
+//  HEADER: logo, search box (+ history), utility buttons, account
 // =========================================================
 @use '../abstracts' as *;
 
@@ -22,7 +22,7 @@
     gap: $space-2 $space-3;
     padding-block: $space-2 $space-3;
 
-    // Tablet trở lên: 1 hàng logo | tìm kiếm | tiện ích
+    // Tablet and up: one row logo | search | utilities
     @include respond-to(md) {
       grid-template-columns: auto 1fr auto;
       grid-template-areas: 'logo search actions';
@@ -40,19 +40,19 @@
   align-items: center;
   flex-shrink: 0;
 
-  // 2 bản logo: chữ navy (nền sáng) / chữ sáng (nền tối)
+  // Two logo versions: navy text (light background) / light text (dark background)
   &__picture {
     display: flex;
   }
 
-  // Chỉ cố định chiều cao, chiều rộng tự theo tỉ lệ ảnh
+  // Only the height is fixed, the width follows the image ratio
   &__img {
     width: auto;
-    height: 36px; // mobile: logo vuông
+    height: 36px; // mobile: square logo
     border-radius: $radius-sm;
 
     @include respond-to(sm) {
-      height: 30px; // logo chữ (tỉ lệ ~5.5 : 1)
+      height: 30px; // text logo (ratio ~5.5 : 1)
     }
 
     @include respond-to(xl) {
@@ -61,7 +61,7 @@
   }
 }
 
-// Chọn bản logo theo theme (dùng chung cho header và footer)
+// Pick the logo version by theme (shared by header and footer)
 .logo__picture--dark {
   display: none !important;
 }
@@ -76,7 +76,7 @@
   }
 }
 
-// ---------- Ô tìm kiếm ----------
+// ---------- Search box ----------
 .search {
   grid-area: search;
   position: relative;
@@ -99,7 +99,7 @@
       color: var(--color-text-muted);
     }
 
-    // Ẩn nút "x" mặc định của input type=search trên Chrome
+    // Hide Chrome's default "x" button on input type=search
     &::-webkit-search-cancel-button {
       cursor: pointer;
     }
@@ -119,7 +119,7 @@
     }
   }
 
-  // Dropdown lịch sử tìm kiếm (LocalStorage)
+  // Search history dropdown (LocalStorage)
   &__dropdown {
     position: absolute;
     top: calc(100% + 6px);
@@ -172,7 +172,7 @@
   }
 }
 
-// ---------- Nút tiện ích bên phải ----------
+// ---------- Utility buttons on the right ----------
 .header-actions {
   grid-area: actions;
   display: flex;
@@ -184,7 +184,7 @@
     gap: $space-2;
   }
 
-  // Dưới 1200px chỉ hiện icon "+" (nút vuông) để nhường chỗ cho ô tìm kiếm
+  // Below 1200px only the "+" icon is shown (square button) to leave room for the search box
   &__sell {
     @include respond-below(xl) {
       width: 40px;
@@ -199,7 +199,7 @@
   }
 }
 
-// Nút tròn chỉ có icon (theme, yêu thích, giỏ hàng)
+// Round icon-only buttons (theme, favorites, cart)
 .icon-btn {
   position: relative;
   @include flex-center;
@@ -216,7 +216,7 @@
     background: var(--header-hover);
   }
 
-  // Số đếm nhỏ ở góc
+  // Small counter in the corner
   &__badge {
     position: absolute;
     top: 2px;
@@ -234,7 +234,7 @@
   }
 }
 
-// Nút theme: HTML có sẵn 2 icon, CSS chọn icon theo theme hiện tại
+// Theme button: the HTML has both icons, CSS picks one for the current theme
 .theme-toggle {
   &__light {
     display: none;
@@ -251,7 +251,7 @@
   }
 }
 
-// ---------- Tài khoản ----------
+// ---------- Account ----------
 .account {
   display: flex;
   align-items: center;
@@ -274,7 +274,7 @@
       background: var(--header-hover);
     }
 
-    // Dưới 1200px: chỉ icon
+    // Below 1200px: icon only
     span {
       @include respond-below(xl) {
         @include visually-hidden;
@@ -289,7 +289,7 @@
   }
 }
 
-// Menu tài khoản dùng <details>/<summary>: mở/đóng không cần JS
+// Account menu uses <details>/<summary>: opens/closes without JS
 .account-menu {
   position: relative;
 
@@ -391,12 +391,12 @@
   text-transform: uppercase;
 }
 
-// ---------- Báo đơn cần xử lý ----------
+// ---------- Orders needing action ----------
 .account-menu > summary {
   position: relative;
 }
 
-// Chấm đỏ góc avatar
+// Red dot on the avatar corner
 .account-menu__dot {
   position: absolute;
   top: 2px;
@@ -408,7 +408,7 @@
   background: var(--color-danger);
 }
 
-// Số trên mục "Đơn hàng" trong menu
+// Number on the "Orders" item in the menu
 .account-menu__count {
   min-width: 20px;
   margin-left: auto;

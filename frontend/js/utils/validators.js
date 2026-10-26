@@ -1,16 +1,16 @@
 /**
- * Validate form phía trình duyệt, cùng cách viết với server/utils/validate.js
- * để quy tắc 2 bên giống nhau. Mỗi rule là hàm (value, data) => chuỗi lỗi | null.
+ * Browser-side form validation, written the same way as server/utils/validate.js
+ * so both sides share the same rules. Each rule is a function (value, data) => error string | null.
  *
  *   const errors = validate(data, {
  *     email: [rules.required('Vui lòng nhập email'), rules.email()],
  *   });
- *   // -> {} nếu hợp lệ, { email: '...' } nếu có lỗi
+ *   // -> {} when valid, { email: '...' } when there are errors
  */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Giá trị rỗng: undefined, null hoặc chuỗi toàn khoảng trắng */
+/** Empty value: undefined, null or a whitespace-only string */
 const isEmpty = (v) => v === undefined || v === null || String(v).trim() === '';
 
 export const rules = {
@@ -28,15 +28,15 @@ export const rules = {
   pattern: (re, msg = 'Sai định dạng') => (v) =>
     isEmpty(v) || re.test(String(v).trim()) ? null : msg,
 
-  /** Phải trùng với trường khác (vd: nhập lại mật khẩu) */
+  /** Must equal another field (e.g. password confirmation) */
   matches: (field, msg = 'Giá trị không khớp') => (v, data) =>
     isEmpty(v) || v === data?.[field] ? null : msg,
 
-  /** Checkbox bắt buộc tích (FormData bỏ qua checkbox chưa tích -> undefined) */
+  /** Checkbox that must be checked (FormData skips unchecked checkboxes -> undefined) */
   checked: (msg = 'Vui lòng đồng ý để tiếp tục') => (v) => (v ? null : msg),
 };
 
-/** Lỗi đầu tiên của 1 trường, không lỗi thì null */
+/** First error of a field, null if none */
 export function validateField(name, data, schema) {
   for (const rule of schema[name] ?? []) {
     const message = rule(data?.[name], data);
@@ -45,7 +45,7 @@ export function validateField(name, data, schema) {
   return null;
 }
 
-/** Validate toàn bộ, trả về object lỗi theo từng trường (rỗng = hợp lệ) */
+/** Validate everything, returns an object of errors per field (empty = valid) */
 export function validate(data, schema) {
   return Object.keys(schema).reduce((errors, name) => {
     const message = validateField(name, data, schema);

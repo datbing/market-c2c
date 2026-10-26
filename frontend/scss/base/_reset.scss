@@ -1,5 +1,5 @@
 // =========================================================
-//  RESET + STYLE NỀN CHO THẺ HTML
+//  RESET + BASE STYLES FOR HTML ELEMENTS
 // =========================================================
 @use '../abstracts' as *;
 
@@ -76,7 +76,7 @@ button {
   @include visually-hidden;
 }
 
-// Tôn trọng cài đặt "giảm chuyển động" của hệ điều hành
+// Respect the operating system's "reduce motion" setting
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

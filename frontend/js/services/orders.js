@@ -1,14 +1,14 @@
 /**
- * Đơn hàng: đặt hàng, xem đơn mua / đơn bán, đổi trạng thái.
+ * Orders: checkout, purchases / sales, status changes.
  */
 import { api } from './api.js';
 
 /**
- * Đặt hàng: mỗi món -> 1 đơn.
+ * Checkout: one order per item.
  * @param {number[]} listingIds
  * @param {{ receiverName, receiverPhone, address, province, note }} receiver
  * @returns {Promise<{ orderIds: number[], message: string }>}
- *   Lỗi 409: err.errors.items = [{ listingId, title, reason }] -> món nào không đặt được
+ *   409 error: err.errors.items = [{ listingId, title, reason }] -> the items that could not be ordered
  */
 export async function createOrders(listingIds, receiver) {
   const { data, message } = await api.post('/api/orders', { listingIds, ...receiver });
@@ -17,7 +17,7 @@ export async function createOrders(listingIds, receiver) {
 
 /**
  * @param {{ role: 'buyer'|'seller', status?: string, page?: number, limit?: number }} filters
- * @returns {Promise<{ data: object[], meta: object }>} meta.counts = số đơn theo trạng thái
+ * @returns {Promise<{ data: object[], meta: object }>} meta.counts = number of orders per status
  */
 export async function getOrders(filters, signal) {
   const { data, meta } = await api.get('/api/orders', { params: filters, signal });
@@ -29,7 +29,7 @@ export async function updateOrderStatus(id, status) {
   return { order: data, message };
 }
 
-/** Số đơn cần xử lý: { seller, buyer } (header hiện chấm đỏ + số) */
+/** Orders needing action: { seller, buyer } (the header shows a red dot + number) */
 export async function getOrderSummary() {
   const { data } = await api.get('/api/orders/summary');
   return data.needAction;

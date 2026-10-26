@@ -1,28 +1,28 @@
 /**
- * FormHandler: gắn hành vi cho một <form> viết sẵn trong HTML.
- *  - Validate khi rời ô (blur) và khi gõ lại vào ô đang báo lỗi
- *  - Submit: validate toàn bộ -> lỗi thì focus ô sai đầu tiên; hợp lệ thì gọi onSubmit
- *  - Lỗi từ server (ApiError.errors) hiện vào đúng ô, message chung hiện ở khung cảnh báo
- *  - Khóa nút submit + hiện vòng xoay khi đang gửi (chống bấm 2 lần)
+ * FormHandler: adds behavior to a <form> written in the HTML.
+ *  - Validates on blur and while retyping into a field that shows an error
+ *  - Submit: validates everything -> on error focus the first invalid field; if valid call onSubmit
+ *  - Server errors (ApiError.errors) go to the matching field, the general message goes to the alert box
+ *  - Disables the submit button + shows a spinner while sending (prevents double submits)
  *
- * Quy ước HTML:
- *   <input name="email" aria-describedby="...">        ô nhập
- *   <p data-error-for="email" hidden></p>               chỗ hiện lỗi của ô
- *   <div data-form-alert hidden><span data-alert-message></span></div>  cảnh báo chung
- *   <button type="submit" data-submit>                  nút gửi
+ * HTML conventions:
+ *   <input name="email" aria-describedby="...">        input field
+ *   <p data-error-for="email" hidden></p>               where the field's error is shown
+ *   <div data-form-alert hidden><span data-alert-message></span></div>  general alert
+ *   <button type="submit" data-submit>                  submit button
  */
 import { validate, validateField } from '../utils/validators.js';
 
 export class FormHandler {
-  /** Các trường đã được người dùng chạm vào (chỉ báo lỗi sau khi rời ô lần đầu) */
+  /** Fields the user has touched (errors only show after leaving a field once) */
   #touched = new Set();
 
   /**
    * @param {HTMLFormElement} form
    * @param {object} options
-   * @param {object} options.schema  { tênTrường: [rule, ...] }
+   * @param {object} options.schema  { fieldName: [rule, ...] }
    * @param {(values: object) => Promise<void>} options.onSubmit
-   * @param {HTMLElement} [options.alert]  khung cảnh báo chung (mặc định tìm [data-form-alert])
+   * @param {HTMLElement} [options.alert]  general alert box (defaults to [data-form-alert])
    */
   constructor(form, { schema, onSubmit, alert }) {
     this.form = form;
@@ -31,15 +31,15 @@ export class FormHandler {
     this.alert = alert ?? document.querySelector('[data-form-alert]');
     this.submitButton = form.querySelector('[data-submit]');
 
-    form.noValidate = true; // tắt bong bóng lỗi mặc định, dùng giao diện riêng
+    form.noValidate = true; // disable the default error bubbles, use our own UI
     form.addEventListener('submit', (e) => this.#handleSubmit(e));
     form.addEventListener('focusout', (e) => this.#handleBlur(e));
     form.addEventListener('input', (e) => this.#handleInput(e));
-    // <select>, radio, checkbox báo thay đổi bằng "change" -> kiểm tra lại luôn
+    // <select>, radio and checkbox report changes via "change" -> revalidate right away
     form.addEventListener('change', (e) => this.#handleInput(e));
   }
 
-  /** Lấy dữ liệu form thành object, chuỗi được trim (riêng mật khẩu giữ nguyên) */
+  /** Read the form into an object, strings are trimmed (passwords are kept as is) */
   values() {
     const data = {};
     for (const [key, value] of new FormData(this.form)) {
@@ -49,7 +49,7 @@ export class FormHandler {
   }
 
   // ---------------------------------------------------------
-  //  Hiển thị lỗi
+  //  Showing errors
   // ---------------------------------------------------------
   setFieldError(name, message) {
     const input = this.form.elements.namedItem(name);
@@ -64,7 +64,7 @@ export class FormHandler {
     }
   }
 
-  /** Hiện nhiều lỗi cùng lúc, focus vào ô sai đầu tiên theo thứ tự trong form */
+  /** Show several errors at once, focus the first invalid field in form order */
   showErrors(errors = {}) {
     Object.keys(this.schema).forEach((name) => this.setFieldError(name, errors[name] ?? null));
     Object.entries(errors).forEach(([name, message]) => this.setFieldError(name, message));
@@ -74,7 +74,7 @@ export class FormHandler {
       firstInvalid.focus();
       return;
     }
-    // Lỗi không gắn với ô nhập nào (vd: chưa chọn ảnh) -> cuộn tới dòng báo lỗi
+    // Error not tied to an input (e.g. no image selected) -> scroll to the error line
     this.form.querySelector('[data-error-for]:not([hidden])')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
@@ -97,7 +97,7 @@ export class FormHandler {
   }
 
   // ---------------------------------------------------------
-  //  Sự kiện
+  //  Events
   // ---------------------------------------------------------
   #validateOne(name) {
     if (!(name in this.schema)) return;
@@ -114,11 +114,11 @@ export class FormHandler {
   #handleInput(e) {
     const { name, type } = e.target;
     if (!name) return;
-    // Ô chọn (checkbox, radio, select) hoặc ô đã từng rời khỏi: kiểm tra lại ngay khi thay đổi
+    // Choice inputs (checkbox, radio, select) or fields already left once: revalidate on every change
     const isChoice = type === 'checkbox' || type === 'radio' || e.target.tagName === 'SELECT';
     if (isChoice || this.#touched.has(name)) this.#validateOne(name);
 
-    // Đổi mật khẩu thì ô "nhập lại" (nếu đã chạm) cũng phải kiểm tra lại
+    // Changing the password also revalidates the "confirm" field (if touched)
     if (name === 'password' && this.#touched.has('confirmPassword')) this.#validateOne('confirmPassword');
   }
 
@@ -140,7 +140,7 @@ export class FormHandler {
     try {
       await this.onSubmit(values);
     } catch (err) {
-      // ApiError từ services/api.js: có message chung + errors theo trường (422/409)
+      // ApiError from services/api.js: a general message + per-field errors (422/409)
       if (err.errors) this.showErrors(err.errors);
       this.showAlert(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
@@ -150,8 +150,8 @@ export class FormHandler {
 }
 
 /**
- * Bộ đếm ký tự: <span data-counter-for="id-ô-nhập"></span> -> "23/150".
- * Giới hạn lấy từ thuộc tính maxlength của ô nhập; gần chạm giới hạn thì đổi màu.
+ * Character counter: <span data-counter-for="input-id"></span> -> "23/150".
+ * The limit comes from the input's maxlength attribute; the color changes near the limit.
  */
 export function initCharCounters(root = document) {
   root.querySelectorAll('[data-counter-for]').forEach((counter) => {
@@ -165,7 +165,7 @@ export function initCharCounters(root = document) {
     };
     input.addEventListener('input', update);
     update();
-    // Cho code khác (vd: khôi phục nháp) gọi lại khi tự đổi giá trị ô nhập
+    // Lets other code (e.g. draft restore) trigger it after changing the input value
     input.addEventListener('counter:refresh', update);
   });
 }

@@ -1,20 +1,20 @@
 /**
- * Cấu hình frontend.
+ * Frontend configuration.
  *
- * Frontend (https://market-c2c.test, Apache của Laragon) và backend
- * (https://market-c2c.test:3000, Node/Express) là 2 server riêng.
- * API dùng cùng tên miền với trang, chỉ khác cổng -> trình duyệt coi là
- * "cùng site" nên cookie đăng nhập (SameSite=Lax) vẫn được gửi kèm.
+ * The frontend (https://market-c2c.test, Laragon's Apache) and the backend
+ * (https://market-c2c.test:3000, Node/Express) are two separate servers.
+ * The API uses the same domain as the page, only the port differs -> the browser treats it
+ * as "same site", so the login cookie (SameSite=Lax) is still sent.
  *
- * Cả 2 đều chạy HTTPS (dùng chung chứng chỉ của Laragon). Trang https bắt buộc
- * gọi API https, nếu không trình duyệt chặn vì "mixed content".
+ * Both run over HTTPS (sharing Laragon's certificate). An https page must
+ * call an https API, otherwise the browser blocks it as "mixed content".
  */
 export const API_PORT = 3000;
 export const API_BASE = `https://${window.location.hostname}:${API_PORT}`;
 
 /**
- * Đường dẫn file từ backend (vd ảnh "/uploads/abc.jpg") -> URL đầy đủ.
- * URL tuyệt đối (http...) và ảnh xem trước tạm thời (blob:, data:) giữ nguyên.
+ * File path from the backend (e.g. image "/uploads/abc.jpg") -> full URL.
+ * Absolute URLs (http...) and temporary previews (blob:, data:) are returned unchanged.
  */
 export function assetUrl(path) {
   if (!path) return null;

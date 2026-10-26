@@ -1,5 +1,5 @@
 /**
- * Dữ liệu của chính người đang đăng nhập: /api/me/...
+ * Data of the logged in user: /api/me/...
  */
 import { Router } from 'express';
 import { listMyListings } from '../controllers/listing.controller.js';
@@ -7,7 +7,7 @@ import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
-// Mọi route trong file này đều cần đăng nhập
+// Every route in this file requires login
 router.use(requireAuth);
 
 router.get('/listings', listMyListings);
