@@ -54,3 +54,20 @@ export const SORT_LABELS = {
   price_desc: 'Giá cao → thấp',
   popular: 'Xem nhiều',
 };
+
+const dateFormatter = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+/** "2026-10-05T04:07:26Z" -> "05/10/2026" */
+export const formatDate = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date);
+};
+
+/** Nhãn trạng thái tin đăng (khớp ENUM listings.status) */
+export const LISTING_STATUS_LABELS = {
+  pending: 'Chờ duyệt',
+  active: 'Đang bán',
+  sold: 'Đã bán',
+  hidden: 'Đang ẩn',
+  rejected: 'Bị từ chối',
+};

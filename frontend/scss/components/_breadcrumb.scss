@@ -1,0 +1,48 @@
+// =========================================================
+//  ĐƯỜNG DẪN (breadcrumb): Trang chủ › Danh mục › Tên tin
+// =========================================================
+@use '../abstracts' as *;
+
+.breadcrumb {
+  margin-bottom: $space-4;
+  font-size: $font-size-sm;
+  color: var(--color-text-muted);
+
+  ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space-1 $space-2;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    min-width: 0;
+
+    // Dấu › giữa các mục, vẽ bằng CSS
+    & + li::before {
+      content: '›';
+      color: var(--color-border);
+      font-size: 1.1em;
+    }
+  }
+
+  a:hover {
+    color: var(--color-primary);
+  }
+
+  // Mục cuối (tên tin) dài thì cắt "..."
+  [aria-current='page'] {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text);
+
+    @include respond-below(md) {
+      max-width: 220px;
+    }
+  }
+}
