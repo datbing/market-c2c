@@ -96,12 +96,15 @@ uploads/                    # ảnh upload (gitignored)
 | POST | `/api/auth/register`, `/login`, `/logout` | công khai |
 | GET | `/api/auth/me` | đăng nhập |
 | GET | `/api/categories` | công khai |
-| GET | `/api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=` | công khai |
+| GET | `/api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=&exclude=` | công khai |
+| GET | `/api/listings/:id` | công khai (optionalAuth) |
 
-`/api/listings`: chỉ tin `active` của user chưa khóa. `category` nhận id hoặc slug, `province` so khớp một phần (LIKE), `sort` ∈ `newest|price_asc|price_desc|popular`, `limit` ≤ 48. Mỗi tin có `thumbnail` (ảnh đầu tiên hoặc null), `category{id,name,slug,icon}`, `seller{id,name}`.
+`/api/listings`: chỉ tin `active` của user chưa khóa. `category` nhận id hoặc slug, `province` so khớp một phần (LIKE), `sort` ∈ `newest|price_asc|price_desc|popular`, `limit` ≤ 48. Mỗi tin có `thumbnail` (ảnh đầu tiên hoặc null), `category{id,name,slug,icon}`, `seller{id,name}`. `exclude` = bỏ 1 id (tin cùng danh mục).
+
+`/api/listings/:id`: `active` + `sold` ai cũng xem; `pending|hidden|rejected` chỉ chủ tin/admin (người khác 404). Tăng `views` khi tin active và người xem không phải chủ. Trả thêm `description`, `images[{id,url}]`, `seller{id,name,avatar,province,joinedAt,activeCount,soldCount}`, `isOwner`, `rejectReason` (chỉ chủ/admin).
 
 Dự kiến:
-- Listings: `GET /api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=` (chỉ `active`), `GET /api/listings/:id` (tăng views), `GET /api/me/listings?status=`, `POST /api/listings` (FormData: thông tin + ảnh trong 1 request), `PUT /api/listings/:id`, `PATCH /api/listings/:id/status` (sold/hidden/active), `DELETE /api/listings/:id` (không cho xóa nếu đã có đơn, gợi ý ẩn).
+- Listings: `GET /api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=` (chỉ `active`), `GET /api/me/listings?status=`, `POST /api/listings` (FormData: thông tin + ảnh trong 1 request), `PUT /api/listings/:id`, `PATCH /api/listings/:id/status` (sold/hidden/active), `DELETE /api/listings/:id` (không cho xóa nếu đã có đơn, gợi ý ẩn).
 - Orders: tạo đơn từ tin `active`, người mua xem đơn mua, người bán xem đơn bán và chuyển trạng thái; hoàn thành đơn thì tin chuyển `sold`.
 - Reports: người dùng báo cáo tin.
 - Admin (`/api/admin`): thống kê dashboard, duyệt/từ chối tin, khóa/mở user, CRUD danh mục, xử lý báo cáo.
@@ -141,7 +144,8 @@ Dự kiến:
   - Phần tĩnh (header, footer, menu tài khoản, trạng thái trống/lỗi, nút phân trang trước/sau, option cố định) viết sẵn trong `.html`, JS chỉ bật/tắt `hidden` và điền chữ.
   - Phần lặp lại (thẻ tin, ô danh mục, chip, toast, mục lịch sử...) đặt trong `<template id="tpl-...">` của trang; JS dùng `cloneTemplate(id)` + `fillFields(root, data)` (`js/utils/template.js`) và gán bằng `textContent` → tự an toàn XSS. **Không dùng `innerHTML`** với dữ liệu.
   - Hiển thị theo trạng thái để CSS lo (vd icon tim theo `aria-pressed`, icon theme theo `[data-theme]`), JS chỉ đổi thuộc tính.
-  - Header, footer, `#toast-stack` và template dùng chung (`tpl-history-item`, `tpl-toast`) phải **copy sang mọi trang** (HTML thuần không có include); lấy `index.html` làm bản gốc.
+  - Header, footer, `#toast-stack` và template dùng chung (`tpl-history-item`, `tpl-toast`, `tpl-listing-card` nếu trang có thẻ tin) phải **copy sang mọi trang** (HTML thuần không có include); lấy `index.html` làm bản gốc.
+  - Nút yêu thích dùng `components/favorite.js` (`toggleFavorite`, `watchFavorites`); snapshot giỏ/yêu thích/đã xem tạo bằng `toListingSnapshot()` (có `sellerId`, `sellerName`).
 - Kỹ thuật JS nên thể hiện: class/module, event delegation, debounce tìm kiếm, `filter/map/reduce`, destructuring/spread, template literal, `CustomEvent` giữa các module, `Promise.all/allSettled`, `FormData` upload ảnh.
 
 ### LocalStorage / SessionStorage / Cookie
@@ -165,7 +169,8 @@ Prefix key `mc2c:`. Bọc trong `storage.js` có try/catch + JSON parse an toàn
 - [ ] Admin API
 - [x] Frontend: SCSS base + layout + components, header/footer dùng chung, trang chủ (`index.html` + `js/pages/home.js`)
 - [x] Frontend: đăng nhập / đăng ký (`login.html`, `register.html`): `FormHandler` (`components/form.js`) + `utils/validators.js` (cùng quy tắc với server), `?redirect=` chỉ nhận đường dẫn nội bộ (`getRedirectTarget`), trang cần đăng nhập thì chuyển tới `loginUrl()`
-- [ ] Frontend: chi tiết (`product.html?id=`, nhớ thêm vào `recentlyViewed`), đăng tin, giỏ hàng, yêu thích, đơn hàng
+- [x] Frontend: chi tiết tin `product.html?id=` (`js/pages/product.js`, `components/gallery.js` + `<dialog>` phóng to, giỏ hàng / mua ngay / yêu thích / chia sẻ, lưu `recentlyViewed`, tin cùng danh mục)
+- [ ] Frontend: đăng tin, giỏ hàng, yêu thích, đơn hàng
 - [ ] Frontend admin
 - [ ] README hoàn chỉnh + ảnh chụp màn hình cho báo cáo
 

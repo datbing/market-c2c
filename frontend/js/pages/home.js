@@ -12,19 +12,15 @@ import { $, $$, debounce } from '../utils/dom.js';
 import { cloneTemplate, fillFields } from '../utils/template.js';
 import { formatVND, formatCompact, CONDITION_LABELS, SORT_LABELS } from '../utils/format.js';
 import { session } from '../services/storage.js';
-import { favorites, recentlyViewed, toListingSnapshot } from '../services/stores.js';
+import { favorites, recentlyViewed } from '../services/stores.js';
 import { getCategories, getListings } from '../services/catalog.js';
 import { getProvinces, getUsdRate } from '../services/public-api.js';
 import { isAbortError } from '../services/api.js';
 import { initHeader, setSearchValue } from '../components/header.js';
 import { showToast } from '../components/toast.js';
+import { toggleFavorite, watchFavorites } from '../components/favorite.js';
 import { renderPagination } from '../components/pagination.js';
-import {
-  createListingCard,
-  createSkeletonCards,
-  applyUsdRate,
-  setFavoriteButton,
-} from '../components/listing-card.js';
+import { createListingCard, createSkeletonCards, applyUsdRate } from '../components/listing-card.js';
 
 const PAGE_SIZE = 12;
 const SESSION_KEY = 'homeFilters';
@@ -456,19 +452,8 @@ class HomePage {
   toggleFavorite(button) {
     const id = Number(button.closest('[data-id]').dataset.id);
     const listing = this.listings.get(id) ?? recentlyViewed.getAll().find((x) => x.id === id);
-    if (!listing) return;
-
-    const active = favorites.toggle(toListingSnapshot(listing));
-    showToast(active ? 'Đã thêm vào tin yêu thích' : 'Đã bỏ khỏi tin yêu thích', active ? 'success' : 'info');
     // Sự kiện favorites:change sẽ cập nhật mọi nút tim (cả danh sách chính và tin vừa xem)
-  }
-
-  /** Đồng bộ tất cả nút tim với LocalStorage */
-  refreshFavoriteButtons() {
-    $$('[data-action="favorite"]').forEach((btn) => {
-      const id = Number(btn.closest('[data-id]').dataset.id);
-      setFavoriteButton(btn, favorites.has(id));
-    });
+    if (listing) toggleFavorite(listing);
   }
 
   // =======================================================
@@ -588,7 +573,7 @@ class HomePage {
     });
 
     // CustomEvent từ stores.js (kể cả khi tab khác thay đổi)
-    window.addEventListener('favorites:change', () => this.refreshFavoriteButtons());
+    watchFavorites();
     window.addEventListener('recentlyViewed:change', () => this.renderRecent());
 
     // Ngăn kéo bộ lọc

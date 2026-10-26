@@ -53,9 +53,15 @@ const escapeLike = (str) => str.replace(/[\\%_]/g, (ch) => `\\${ch}`);
  * Chỉ lấy tin đang bán (active) của người bán chưa bị khóa.
  * @returns {{ where: string, params: any[] }}
  */
-function buildPublicWhere({ keywords = [], category, province, condition, minPrice, maxPrice }) {
+function buildPublicWhere({ keywords = [], category, province, condition, minPrice, maxPrice, excludeId }) {
   const conditions = ["l.status = 'active'", "u.status = 'active'"];
   const params = [];
+
+  // Bỏ 1 tin khỏi kết quả (vd: "tin cùng danh mục" không lặp lại tin đang xem)
+  if (excludeId) {
+    conditions.push('l.id <> ?');
+    params.push(excludeId);
+  }
 
   // Mỗi từ khóa phải xuất hiện trong search_text (đã bỏ dấu) -> tìm kiếm AND
   for (const word of keywords) {
@@ -134,4 +140,82 @@ export async function findPublic(filters, { sort = 'newest', page = 1, limit = 1
   ]);
 
   return { rows, total: Number(countRow.total) };
+}
+
+// ---------------------------------------------------------
+//  Chi tiết 1 tin
+// ---------------------------------------------------------
+
+/**
+ * Lấy 1 tin (mọi trạng thái) kèm danh mục + người bán.
+ * Controller tự quyết định ai được xem tin chưa/không còn bán.
+ */
+export function findDetailById(id) {
+  return queryOne(
+    `SELECT l.*,
+            c.name AS category_name, c.slug AS category_slug, c.icon AS category_icon,
+            u.name AS seller_name, u.avatar AS seller_avatar, u.province AS seller_province,
+            u.status AS seller_status, u.created_at AS seller_joined_at,
+            (SELECT COUNT(*) FROM listings x
+              WHERE x.user_id = u.id AND x.status = 'active') AS seller_active_count,
+            (SELECT COUNT(*) FROM listings x
+              WHERE x.user_id = u.id AND x.status = 'sold') AS seller_sold_count
+       ${FROM_JOIN}
+      WHERE l.id = ?`,
+    [id],
+  );
+}
+
+/** Ảnh của 1 tin theo thứ tự hiển thị */
+export function findImages(listingId) {
+  return query(
+    'SELECT id, path FROM listing_images WHERE listing_id = ? ORDER BY sort_order, id',
+    [listingId],
+  );
+}
+
+/** Tăng lượt xem (không cập nhật updated_at để không làm sai "ngày sửa tin") */
+export function incrementViews(id) {
+  return query('UPDATE listings SET views = views + 1, updated_at = updated_at WHERE id = ?', [id]);
+}
+
+/**
+ * Dòng DB -> JSON chi tiết.
+ * @param {object} row
+ * @param {object[]} images
+ * @param {{ isOwner: boolean, isAdmin: boolean }} viewer
+ *   chủ tin hoặc admin -> thấy thêm lý do bị từ chối
+ */
+export function toListingDetail(row, images, { isOwner = false, isAdmin = false } = {}) {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    price: row.price,
+    condition: row.item_condition,
+    province: row.province,
+    status: row.status,
+    views: row.views,
+    soldAt: row.sold_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...((isOwner || isAdmin) && { rejectReason: row.reject_reason }),
+    isOwner,
+    category: {
+      id: row.category_id,
+      name: row.category_name,
+      slug: row.category_slug,
+      icon: row.category_icon,
+    },
+    seller: {
+      id: row.user_id,
+      name: row.seller_name,
+      avatar: toImageUrl(row.seller_avatar),
+      province: row.seller_province,
+      joinedAt: row.seller_joined_at,
+      activeCount: Number(row.seller_active_count),
+      soldCount: Number(row.seller_sold_count),
+    },
+    images: images.map((img) => ({ id: img.id, url: toImageUrl(img.path) })),
+  };
 }

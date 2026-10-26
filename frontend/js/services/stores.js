@@ -24,14 +24,23 @@ export const searchHistory = new ListStore('searchHistory', {
   idKey: null,
 });
 
-/** Tạo snapshot gọn của 1 tin để lưu vào giỏ / yêu thích / đã xem */
-export const toListingSnapshot = ({ id, title, price, thumbnail, province, condition, category, categoryIcon }) => ({
-  id,
-  title,
-  price,
-  thumbnail,
-  province,
-  condition,
-  categoryIcon: category?.icon ?? categoryIcon ?? null,
-  savedAt: Date.now(),
-});
+/**
+ * Tạo snapshot gọn của 1 tin để lưu vào giỏ / yêu thích / đã xem.
+ * Nhận cả dữ liệu từ API (thumbnail hoặc images[], category, seller)
+ * lẫn snapshot cũ (categoryIcon, sellerId...) -> dùng lại được nhiều lần.
+ */
+export const toListingSnapshot = (listing) => {
+  const { id, title, price, province, condition, category, seller } = listing;
+  return {
+    id,
+    title,
+    price,
+    thumbnail: listing.thumbnail ?? listing.images?.[0]?.url ?? null,
+    province,
+    condition,
+    categoryIcon: category?.icon ?? listing.categoryIcon ?? null,
+    sellerId: seller?.id ?? listing.sellerId ?? null,
+    sellerName: seller?.name ?? listing.sellerName ?? null,
+    savedAt: Date.now(),
+  };
+};
