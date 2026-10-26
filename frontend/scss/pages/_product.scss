@@ -316,6 +316,12 @@
   font-size: 1.25rem;
 }
 
+// Avatar trong thẻ người bán: nền cam (avatar ở header dùng nền trắng vì nằm trên nền cam)
+.seller-card .avatar {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
 .related {
   min-width: 0;
 }

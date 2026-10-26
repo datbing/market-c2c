@@ -1,13 +1,49 @@
 /**
  * Controller tin đăng.
  */
+import { withTransaction } from '../config/db.js';
 import { HttpError } from '../utils/HttpError.js';
 import { validate, rules } from '../utils/validate.js';
 import { toSearchText } from '../utils/text.js';
+import { parseMultipart, getText, getFiles } from '../utils/multipart.js';
+import { detectImageType, saveListingImages, removeImages } from '../utils/image-store.js';
 import * as Listing from '../models/listing.model.js';
+import * as Category from '../models/category.model.js';
 
 const MAX_LIMIT = 48;
 const DEFAULT_LIMIT = 12;
+
+// Giới hạn ảnh khi đăng tin (frontend đã nén ảnh nên thực tế mỗi ảnh chỉ vài trăm KB)
+const MAX_IMAGES = 6;
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // 3MB / ảnh
+const MAX_REQUEST_BYTES = MAX_IMAGES * MAX_IMAGE_BYTES + 512 * 1024; // + phần chữ
+const MAX_PRICE = 2_000_000_000;
+
+/** Quy tắc dữ liệu tin đăng (dùng chung cho tạo và sửa tin) */
+const LISTING_SCHEMA = {
+  title: [
+    rules.required('Vui lòng nhập tiêu đề'),
+    rules.minLength(10, 'Tiêu đề tối thiểu 10 ký tự'),
+    rules.maxLength(150, 'Tiêu đề tối đa 150 ký tự'),
+  ],
+  categoryId: [rules.required('Vui lòng chọn danh mục'), rules.integer('Danh mục không hợp lệ')],
+  condition: [
+    rules.required('Vui lòng chọn tình trạng'),
+    rules.oneOf(Listing.CONDITIONS, 'Tình trạng không hợp lệ'),
+  ],
+  price: [
+    rules.required('Vui lòng nhập giá bán'),
+    rules.integer('Giá phải là số nguyên'),
+    rules.min(0, 'Giá không được âm'),
+    rules.max(MAX_PRICE, 'Giá tối đa 2 tỷ đồng'),
+  ],
+  province: [rules.required('Vui lòng chọn khu vực'), rules.maxLength(100)],
+  description: [
+    rules.required('Vui lòng nhập mô tả'),
+    rules.minLength(20, 'Mô tả tối thiểu 20 ký tự'),
+    rules.maxLength(3000, 'Mô tả tối đa 3000 ký tự'),
+  ],
+};
 
 /** Chuyển query string sang số nguyên dương, sai thì dùng giá trị mặc định */
 const toPositiveInt = (value, fallback) => {
@@ -101,4 +137,84 @@ export async function getListing(req, res) {
 
   const images = await Listing.findImages(id);
   res.json({ success: true, data: Listing.toListingDetail(row, images, { isOwner, isAdmin }) });
+}
+
+/**
+ * Kiểm tra danh sách file ảnh: số lượng, dung lượng, đúng là ảnh JPG/PNG/WebP.
+ * @returns {Promise<{ buffer: Buffer, ext: string }[]>}
+ */
+async function readImageFiles(files) {
+  if (files.length === 0) throw HttpError.unprocessable({ images: 'Vui lòng thêm ít nhất 1 ảnh' });
+  if (files.length > MAX_IMAGES) {
+    throw HttpError.unprocessable({ images: `Tối đa ${MAX_IMAGES} ảnh cho mỗi tin` });
+  }
+
+  return Promise.all(
+    files.map(async (file, index) => {
+      if (file.size > MAX_IMAGE_BYTES) {
+        throw HttpError.unprocessable({ images: `Ảnh thứ ${index + 1} vượt quá 3MB` });
+      }
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const ext = detectImageType(buffer);
+      if (!ext) {
+        throw HttpError.unprocessable({ images: `Ảnh thứ ${index + 1} không phải ảnh JPG, PNG hoặc WebP` });
+      }
+      return { buffer, ext };
+    }),
+  );
+}
+
+/**
+ * POST /api/listings  (đăng nhập)
+ * Body: FormData gồm title, categoryId, condition, price, province, description
+ *       và nhiều file "images" (thứ tự = thứ tự hiển thị, ảnh đầu là ảnh bìa).
+ * Ảnh chỉ được ghi ra đĩa khi dữ liệu hợp lệ; lưu DB lỗi thì xóa các ảnh vừa ghi.
+ */
+export async function createListing(req, res) {
+  const form = await parseMultipart(req, { maxBytes: MAX_REQUEST_BYTES });
+
+  const body = Object.fromEntries(Object.keys(LISTING_SCHEMA).map((name) => [name, getText(form, name)]));
+  validate(body, LISTING_SCHEMA);
+
+  const categoryId = Number(body.categoryId);
+  if (!(await Category.exists(categoryId))) {
+    throw HttpError.unprocessable({ categoryId: 'Danh mục không tồn tại' });
+  }
+
+  const images = await readImageFiles(getFiles(form, 'images'));
+  const imagePaths = await saveListingImages(images);
+
+  let listingId;
+  try {
+    listingId = await withTransaction((conn) =>
+      Listing.createWithImages(
+        conn,
+        {
+          userId: req.user.id,
+          categoryId,
+          title: body.title,
+          description: body.description,
+          price: Number(body.price),
+          condition: body.condition,
+          province: body.province,
+          searchText: toSearchText(body.title, body.description),
+        },
+        imagePaths,
+      ),
+    );
+  } catch (err) {
+    await removeImages(imagePaths); // DB lỗi -> không để ảnh mồ côi trong uploads/
+    throw err;
+  }
+
+  const [row, savedImages] = await Promise.all([
+    Listing.findDetailById(listingId),
+    Listing.findImages(listingId),
+  ]);
+
+  res.status(201).json({
+    success: true,
+    message: 'Đăng tin thành công! Tin của bạn đang chờ quản trị viên duyệt',
+    data: Listing.toListingDetail(row, savedImages, { isOwner: true }),
+  });
 }

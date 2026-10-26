@@ -14,10 +14,10 @@ export const API_BASE = `https://${window.location.hostname}:${API_PORT}`;
 
 /**
  * Đường dẫn file từ backend (vd ảnh "/uploads/abc.jpg") -> URL đầy đủ.
- * URL tuyệt đối (http...) giữ nguyên.
+ * URL tuyệt đối (http...) và ảnh xem trước tạm thời (blob:, data:) giữ nguyên.
  */
 export function assetUrl(path) {
   if (!path) return null;
-  if (/^https?:\/\//.test(path)) return path;
+  if (/^(https?:\/\/|blob:|data:)/.test(path)) return path;
   return `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
 }

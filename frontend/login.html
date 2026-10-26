@@ -9,7 +9,7 @@
   <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
   <meta name="theme-color" content="#ee4d2d">
 
-  <title>Đăng nhập - Market C2C</title>
+  <title>Đăng nhập | Market C2C</title>
 
   <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
   <script src="/js/theme-init.js"></script>
@@ -32,7 +32,8 @@
         </picture>
         <picture class="logo__picture logo__picture--dark">
           <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
-          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C" loading="lazy">
+          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C"
+            loading="lazy">
         </picture>
       </a>
 
@@ -145,9 +146,9 @@
         <form id="login-form" class="auth-card__form" novalidate>
           <div class="form-group">
             <label class="form-label" for="login-email">Email</label>
-            <input class="form-control" id="login-email" name="email" type="email"
-                   autocomplete="email" inputmode="email" maxlength="150" required
-                   placeholder="ban@example.com" aria-describedby="login-email-error">
+            <input class="form-control" id="login-email" name="email" type="email" autocomplete="email"
+              inputmode="email" maxlength="150" required placeholder="ban@example.com"
+              aria-describedby="login-email-error">
             <p class="form-hint form-hint--error" id="login-email-error" data-error-for="email" hidden></p>
           </div>
 
@@ -155,11 +156,10 @@
             <label class="form-label" for="login-password">Mật khẩu</label>
             <div class="password-field">
               <input class="form-control" id="login-password" name="password" type="password"
-                     autocomplete="current-password" maxlength="72" required
-                     aria-describedby="login-password-error">
+                autocomplete="current-password" maxlength="72" required aria-describedby="login-password-error">
               <!-- CSS đổi icon mắt mở/đóng theo aria-pressed -->
               <button type="button" class="password-field__toggle" data-toggle-password="login-password"
-                      aria-pressed="false" aria-label="Hiện mật khẩu">
+                aria-pressed="false" aria-label="Hiện mật khẩu">
                 <i class="bi bi-eye" aria-hidden="true"></i>
                 <i class="bi bi-eye-slash" aria-hidden="true"></i>
               </button>
@@ -194,8 +194,10 @@
     <div class="container site-footer__grid">
       <section>
         <a class="site-footer__logo" href="/" aria-label="Market C2C - Trang chủ">
-          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C" loading="lazy">
-          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C" loading="lazy">
+          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296"
+            alt="Market C2C" loading="lazy">
+          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117"
+            alt="Market C2C" loading="lazy">
         </a>
         <p>Sàn mua bán giữa người với người. Đồ án môn Lập trình Web: HTML5, SCSS, JavaScript thuần.</p>
       </section>
@@ -252,4 +254,5 @@
 
   <script type="module" src="/js/pages/login.js"></script>
 </body>
+
 </html>

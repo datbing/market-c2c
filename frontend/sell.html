@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Đăng tin bán đồ miễn phí trên Market C2C.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
+  <meta name="theme-color" content="#ee4d2d">
+
+  <title>Đăng tin bán | Market C2C</title>
+
+  <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
+  <script src="/js/theme-init.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+
+<body>
+  <!-- =====================================================
+       HEADER (dùng chung: copy nguyên khối này sang các trang khác)
+       ===================================================== -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="/" aria-label="Market C2C - Trang chủ">
+        <!-- Responsive bằng HTML: màn hình < 576px dùng logo vuông, lớn hơn dùng logo có chữ.
+             Có 2 bản: chữ navy cho nền sáng, chữ sáng cho nền tối (CSS chọn theo [data-theme]) -->
+        <picture class="logo__picture logo__picture--light">
+          <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
+          <img class="logo__img" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C">
+        </picture>
+        <picture class="logo__picture logo__picture--dark">
+          <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
+          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C"
+            loading="lazy">
+        </picture>
+      </a>
+
+      <form class="search" id="search-form" role="search" autocomplete="off">
+        <label for="search-input" class="visually-hidden">Tìm kiếm tin đăng</label>
+        <input class="search__input" id="search-input" name="q" type="search" placeholder="Tìm iPhone, xe đạp, sách..."
+          maxlength="100" aria-controls="search-history" aria-expanded="false" aria-autocomplete="list">
+        <button class="search__submit" type="submit" aria-label="Tìm kiếm">
+          <i class="bi bi-search" aria-hidden="true"></i>
+        </button>
+
+        <!-- Lịch sử tìm kiếm (LocalStorage) -->
+        <div class="search__dropdown" id="search-history" hidden>
+          <div class="search__dropdown-head">
+            <span>Tìm kiếm gần đây</span>
+            <button type="button" class="link-btn" data-clear>Xóa tất cả</button>
+          </div>
+          <ul id="search-history-list" role="listbox" aria-label="Lịch sử tìm kiếm"></ul>
+        </div>
+      </form>
+
+      <nav class="header-actions" aria-label="Tiện ích và tài khoản">
+        <!-- CSS tự hiện mặt trăng (sáng) hoặc mặt trời (tối) theo [data-theme] -->
+        <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
+          <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
+          <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
+        </button>
+        <a class="icon-btn" href="/favorites" aria-label="Tin yêu thích">
+          <i class="bi bi-heart" aria-hidden="true"></i>
+          <span class="icon-btn__badge" data-count="favorites" hidden>0</span>
+        </a>
+        <a class="icon-btn" href="/cart" aria-label="Giỏ hàng">
+          <i class="bi bi-cart3" aria-hidden="true"></i>
+          <span class="icon-btn__badge" data-count="cart" hidden>0</span>
+        </a>
+
+        <!-- Tài khoản: JS bật 1 trong 2 khối sau khi gọi /api/auth/me -->
+        <div class="account" id="account-area">
+          <!-- Dưới 1200px chỉ hiện icon, chữ vẫn được trình đọc màn hình đọc -->
+          <a class="account__login" id="account-guest" href="/login" hidden>
+            <i class="bi bi-person-circle" aria-hidden="true"></i><span>Đăng nhập</span>
+          </a>
+
+          <details class="account-menu" id="account-user" hidden>
+            <summary aria-label="Menu tài khoản">
+              <span class="avatar" data-user="initial" aria-hidden="true"></span>
+              <span class="account-menu__name" data-user="name"></span>
+            </summary>
+            <ul class="account-menu__list">
+              <li class="account-menu__header">
+                <strong data-user="name"></strong>
+                <span data-user="email"></span>
+              </li>
+              <li data-role="admin" hidden>
+                <a class="account-menu__item" href="/admin/"><i class="bi bi-speedometer2" aria-hidden="true"></i> Trang
+                  quản trị</a>
+              </li>
+              <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list" aria-hidden="true"></i>
+                  Tin đăng của tôi</a></li>
+              <li><a class="account-menu__item" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
+                  hàng</a></li>
+              <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart" aria-hidden="true"></i> Tin yêu
+                  thích</a></li>
+              <li>
+                <button type="button" class="account-menu__item account-menu__item--danger" data-action="logout">
+                  <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Đăng xuất
+                </button>
+              </li>
+            </ul>
+          </details>
+        </div>
+
+        <a class="btn btn--white header-actions__sell" href="/sell">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Đăng tin</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- =====================================================
+       NỘI DUNG TRANG ĐĂNG TIN
+       ===================================================== -->
+  <main class="site-main">
+    <div class="container sell">
+      <header class="sell__head">
+        <h1 class="sell__title">Đăng tin bán</h1>
+        <p class="sell__subtitle">Tin của bạn sẽ hiển thị công khai sau khi quản trị viên duyệt.</p>
+      </header>
+
+      <!-- Có bản nháp trong LocalStorage -->
+      <div class="alert alert--info" id="draft-notice" role="status" hidden>
+        <i class="bi bi-journal-text" aria-hidden="true"></i>
+        <span>
+          Đã khôi phục bản nháp lưu lúc <strong id="draft-time"></strong>.
+          Ảnh không được lưu trong nháp, vui lòng chọn lại ảnh.
+          <button type="button" class="link-btn" id="draft-discard">Xóa nháp</button>
+        </span>
+      </div>
+
+      <div class="sell__layout">
+        <form class="sell__form" id="sell-form" novalidate>
+          <div class="alert alert--error" data-form-alert role="alert" hidden>
+            <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+            <span data-alert-message></span>
+          </div>
+
+          <!-- Bước 1: Ảnh -->
+          <section class="sell-section" aria-labelledby="step-images">
+            <h2 class="sell-section__title" id="step-images">
+              <span class="sell-section__step" aria-hidden="true">1</span> Hình ảnh
+            </h2>
+
+            <div class="image-picker" id="image-picker">
+              <!-- Bấm vào label là mở hộp chọn file của hệ điều hành (HTML thuần, không cần JS) -->
+              <label class="image-picker__drop">
+                <input class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/*" multiple
+                       aria-describedby="images-status images-error">
+                <i class="bi bi-camera" aria-hidden="true"></i>
+                <strong>Chọn ảnh hoặc kéo thả ảnh vào đây</strong>
+                <span>JPG, PNG, WebP · tối đa 6 ảnh · ảnh tự được nén trước khi gửi</span>
+              </label>
+              <ul class="image-picker__list" aria-label="Ảnh đã chọn"></ul>
+              <p class="form-hint" id="images-status" data-picker-status aria-live="polite"></p>
+              <p class="form-hint form-hint--error" id="images-error" data-error-for="images" hidden></p>
+            </div>
+          </section>
+
+          <!-- Bước 2: Thông tin cơ bản -->
+          <section class="sell-section" aria-labelledby="step-info">
+            <h2 class="sell-section__title" id="step-info">
+              <span class="sell-section__step" aria-hidden="true">2</span> Thông tin cơ bản
+            </h2>
+
+            <div class="form-group">
+              <div class="form-label-row">
+                <label class="form-label" for="sell-title">Tiêu đề <abbr title="bắt buộc">*</abbr></label>
+                <span class="char-counter" data-counter-for="sell-title" aria-hidden="true"></span>
+              </div>
+              <input class="form-control" id="sell-title" name="title" type="text" maxlength="150" required
+                     placeholder="VD: iPhone 13 128GB xanh, pin 89%, máy zin"
+                     aria-describedby="sell-title-error">
+              <p class="form-hint form-hint--error" id="sell-title-error" data-error-for="title" hidden></p>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="sell-category">Danh mục <abbr title="bắt buộc">*</abbr></label>
+                <select class="form-control" id="sell-category" name="categoryId" required disabled
+                        aria-describedby="sell-category-error">
+                  <option value="">Đang tải danh mục...</option>
+                </select>
+                <p class="form-hint form-hint--error" id="sell-category-error" data-error-for="categoryId" hidden></p>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="sell-province">Khu vực <abbr title="bắt buộc">*</abbr></label>
+                <select class="form-control" id="sell-province" name="province" required disabled
+                        aria-describedby="sell-province-error">
+                  <option value="">Đang tải tỉnh thành...</option>
+                </select>
+                <p class="form-hint form-hint--error" id="sell-province-error" data-error-for="province" hidden></p>
+              </div>
+            </div>
+
+            <fieldset class="form-group">
+              <legend class="form-label">Tình trạng <abbr title="bắt buộc">*</abbr></legend>
+              <div class="choice-group">
+                <input type="radio" id="sell-cond-new" name="condition" value="new" aria-describedby="sell-condition-error">
+                <label for="sell-cond-new">Mới</label>
+                <input type="radio" id="sell-cond-like-new" name="condition" value="like_new">
+                <label for="sell-cond-like-new">Như mới</label>
+                <input type="radio" id="sell-cond-used" name="condition" value="used">
+                <label for="sell-cond-used">Đã dùng</label>
+              </div>
+              <p class="form-hint form-hint--error" id="sell-condition-error" data-error-for="condition" hidden></p>
+            </fieldset>
+
+            <div class="form-group">
+              <label class="form-label" for="sell-price">Giá bán (₫) <abbr title="bắt buộc">*</abbr></label>
+              <!-- type="text" để tự thêm dấu chấm hàng nghìn; inputmode="numeric" -> bàn phím số trên điện thoại -->
+              <div class="input-affix">
+                <input class="form-control" id="sell-price" name="price" type="text" inputmode="numeric"
+                       autocomplete="off" required placeholder="VD: 9.500.000"
+                       aria-describedby="sell-price-words sell-price-error">
+                <span class="input-affix__suffix" aria-hidden="true">₫</span>
+              </div>
+              <p class="form-hint" id="sell-price-words" aria-live="polite"></p>
+              <p class="form-hint form-hint--error" id="sell-price-error" data-error-for="price" hidden></p>
+            </div>
+          </section>
+
+          <!-- Bước 3: Mô tả -->
+          <section class="sell-section" aria-labelledby="step-description">
+            <h2 class="sell-section__title" id="step-description">
+              <span class="sell-section__step" aria-hidden="true">3</span> Mô tả chi tiết
+            </h2>
+
+            <div class="form-group">
+              <div class="form-label-row">
+                <label class="form-label" for="sell-description">Mô tả <abbr title="bắt buộc">*</abbr></label>
+                <span class="char-counter" data-counter-for="sell-description" aria-hidden="true"></span>
+              </div>
+              <textarea class="form-control" id="sell-description" name="description" rows="7" maxlength="3000" required
+                        placeholder="Tình trạng, thời gian đã dùng, phụ kiện kèm theo, lý do bán, bảo hành..."
+                        aria-describedby="sell-description-hint sell-description-error"></textarea>
+              <p class="form-hint" id="sell-description-hint">Mô tả càng rõ, người mua càng tin tưởng. Không ghi số tài khoản ngân hàng.</p>
+              <p class="form-hint form-hint--error" id="sell-description-error" data-error-for="description" hidden></p>
+            </div>
+          </section>
+
+          <div class="sell__submit">
+            <button type="submit" class="btn btn--primary btn--lg" data-submit>
+              <span class="btn__spinner" aria-hidden="true"></span>
+              <span>Đăng tin</span>
+            </button>
+            <p class="form-hint">Nội dung tự lưu nháp trên trình duyệt này khi bạn gõ.</p>
+          </div>
+        </form>
+
+        <!-- Cột phụ: xem trước + mẹo -->
+        <aside class="sell__aside" aria-labelledby="preview-title">
+          <h2 class="sell__aside-title" id="preview-title">Xem trước</h2>
+          <div class="sell__preview" id="sell-preview"></div>
+
+          <section class="sell-tips" aria-labelledby="tips-title">
+            <h3 id="tips-title"><i class="bi bi-lightbulb" aria-hidden="true"></i> Mẹo bán nhanh</h3>
+            <ul>
+              <li>Chụp ảnh đủ sáng, chụp cả chỗ trầy xước (nếu có).</li>
+              <li>Tiêu đề ghi rõ tên, dung lượng / kích cỡ, màu sắc.</li>
+              <li>Tham khảo giá các tin tương tự để đặt giá hợp lý.</li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- =====================================================
+       FOOTER (dùng chung)
+       ===================================================== -->
+  <footer class="site-footer">
+    <div class="container site-footer__grid">
+      <section>
+        <a class="site-footer__logo" href="/" aria-label="Market C2C - Trang chủ">
+          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296"
+            alt="Market C2C" loading="lazy">
+          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117"
+            alt="Market C2C" loading="lazy">
+        </a>
+        <p>Sàn mua bán giữa người với người. Đồ án môn Lập trình Web: HTML5, SCSS, JavaScript thuần.</p>
+      </section>
+      <nav aria-labelledby="footer-nav-title">
+        <h2 id="footer-nav-title">Khám phá</h2>
+        <ul>
+          <li><a href="/">Trang chủ</a></li>
+          <li><a href="/sell">Đăng tin bán</a></li>
+          <li><a href="/favorites">Tin yêu thích</a></li>
+          <li><a href="/cart">Giỏ hàng</a></li>
+        </ul>
+      </nav>
+      <section aria-labelledby="footer-help-title">
+        <h2 id="footer-help-title">Hỗ trợ</h2>
+        <ul>
+          <li><i class="bi bi-envelope" aria-hidden="true"></i> hotro@marketc2c.vn</li>
+          <li><i class="bi bi-telephone" aria-hidden="true"></i> 1900 0000</li>
+          <li><i class="bi bi-shield-check" aria-hidden="true"></i> Giao dịch an toàn, gặp mặt trực tiếp</li>
+        </ul>
+      </section>
+    </div>
+    <p class="site-footer__bottom">© <span id="year">2026</span> Market C2C. Dữ liệu tỉnh thành: provinces.open-api.vn ·
+      Tỷ giá: open.er-api.com</p>
+  </footer>
+
+  <!-- Vùng hiện thông báo (toast) -->
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+  <!-- =====================================================
+       TEMPLATE DÙNG CHUNG (header, toast) - copy sang các trang khác
+       <template> không hiển thị, JS nhân bản rồi điền dữ liệu.
+       ===================================================== -->
+  <template id="tpl-history-item">
+    <li class="search__history-item" role="option" aria-selected="false">
+      <button type="button" class="search__history-term" data-term>
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span data-field="term"></span>
+      </button>
+      <button type="button" class="toast__close" data-remove aria-label="Xóa khỏi lịch sử">
+        <i class="bi bi-x" aria-hidden="true"></i>
+      </button>
+    </li>
+  </template>
+
+  <template id="tpl-toast">
+    <div class="toast">
+      <i class="bi toast__icon" aria-hidden="true"></i>
+      <p class="toast__message"></p>
+      <button type="button" class="toast__close" aria-label="Đóng thông báo">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+  </template>
+
+  <!-- =====================================================
+       TEMPLATE CỦA TRANG ĐĂNG TIN
+       ===================================================== -->
+  <!-- Ảnh đã chọn: kéo thả (draggable) để sắp xếp -->
+  <template id="tpl-image-item">
+    <li class="image-picker__item" draggable="true">
+      <img alt="">
+      <span class="image-picker__cover">Ảnh bìa</span>
+      <span class="image-picker__size" data-field="size"></span>
+      <div class="image-picker__tools">
+        <button type="button" data-image-action="cover" aria-label="Đặt làm ảnh bìa" title="Đặt làm ảnh bìa">
+          <i class="bi bi-star" aria-hidden="true"></i>
+        </button>
+        <button type="button" data-image-action="remove" aria-label="Xóa ảnh" title="Xóa ảnh">
+          <i class="bi bi-trash3" aria-hidden="true"></i>
+        </button>
+      </div>
+    </li>
+  </template>
+
+  <!-- Thẻ tin (khung xem trước) - giống trang chủ -->
+  <template id="tpl-listing-card">
+    <article class="listing-card">
+      <div class="listing-card__media">
+        <img class="listing-card__img" alt="" loading="lazy" hidden>
+        <span class="listing-card__placeholder"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
+        <span class="badge listing-card__condition" hidden></span>
+      </div>
+      <!-- CSS hiện tim rỗng / tim đặc theo aria-pressed -->
+      <button type="button" class="listing-card__favorite" data-action="favorite" aria-pressed="false"
+        aria-label="Thêm vào yêu thích">
+        <i class="bi bi-heart" aria-hidden="true"></i>
+        <i class="bi bi-heart-fill" aria-hidden="true"></i>
+      </button>
+      <div class="listing-card__body">
+        <h3 class="listing-card__title">
+          <a class="listing-card__link" href="#" data-field="title"></a>
+        </h3>
+        <p class="listing-card__price">
+          <span data-field="price"></span>
+          <span class="listing-card__usd" data-field="usd"></span>
+        </p>
+        <p class="listing-card__meta">
+          <span><i class="bi bi-geo-alt" aria-hidden="true"></i> <span data-field="province"></span></span>
+          <time data-field="time"></time>
+        </p>
+      </div>
+    </article>
+  </template>
+
+  <script type="module" src="/js/pages/sell.js"></script>
+</body>
+</html>

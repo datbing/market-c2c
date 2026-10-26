@@ -35,6 +35,8 @@ export class FormHandler {
     form.addEventListener('submit', (e) => this.#handleSubmit(e));
     form.addEventListener('focusout', (e) => this.#handleBlur(e));
     form.addEventListener('input', (e) => this.#handleInput(e));
+    // <select>, radio, checkbox báo thay đổi bằng "change" -> kiểm tra lại luôn
+    form.addEventListener('change', (e) => this.#handleInput(e));
   }
 
   /** Lấy dữ liệu form thành object, chuỗi được trim (riêng mật khẩu giữ nguyên) */
@@ -68,7 +70,12 @@ export class FormHandler {
     Object.entries(errors).forEach(([name, message]) => this.setFieldError(name, message));
 
     const firstInvalid = this.form.querySelector('.is-invalid');
-    firstInvalid?.focus();
+    if (firstInvalid) {
+      firstInvalid.focus();
+      return;
+    }
+    // Lỗi không gắn với ô nhập nào (vd: chưa chọn ảnh) -> cuộn tới dòng báo lỗi
+    this.form.querySelector('[data-error-for]:not([hidden])')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   showAlert(message, type = 'error') {
@@ -107,8 +114,9 @@ export class FormHandler {
   #handleInput(e) {
     const { name, type } = e.target;
     if (!name) return;
-    // Checkbox / ô đã từng rời khỏi: kiểm tra lại ngay khi thay đổi
-    if (type === 'checkbox' || this.#touched.has(name)) this.#validateOne(name);
+    // Ô chọn (checkbox, radio, select) hoặc ô đã từng rời khỏi: kiểm tra lại ngay khi thay đổi
+    const isChoice = type === 'checkbox' || type === 'radio' || e.target.tagName === 'SELECT';
+    if (isChoice || this.#touched.has(name)) this.#validateOne(name);
 
     // Đổi mật khẩu thì ô "nhập lại" (nếu đã chạm) cũng phải kiểm tra lại
     if (name === 'password' && this.#touched.has('confirmPassword')) this.#validateOne('confirmPassword');
@@ -139,4 +147,25 @@ export class FormHandler {
       this.setLoading(false);
     }
   }
+}
+
+/**
+ * Bộ đếm ký tự: <span data-counter-for="id-ô-nhập"></span> -> "23/150".
+ * Giới hạn lấy từ thuộc tính maxlength của ô nhập; gần chạm giới hạn thì đổi màu.
+ */
+export function initCharCounters(root = document) {
+  root.querySelectorAll('[data-counter-for]').forEach((counter) => {
+    const input = document.getElementById(counter.dataset.counterFor);
+    const max = Number(input.maxLength) > 0 ? Number(input.maxLength) : null;
+
+    const update = () => {
+      const length = input.value.length;
+      counter.textContent = max ? `${length}/${max}` : String(length);
+      counter.classList.toggle('is-near-limit', Boolean(max) && length >= max * 0.9);
+    };
+    input.addEventListener('input', update);
+    update();
+    // Cho code khác (vd: khôi phục nháp) gọi lại khi tự đổi giá trị ô nhập
+    input.addEventListener('counter:refresh', update);
+  });
 }

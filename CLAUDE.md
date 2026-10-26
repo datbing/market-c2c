@@ -85,7 +85,7 @@ uploads/                    # ảnh upload (gitignored)
 - `orders` — lưu snapshot `listing_title`, `price`. `status`: `pending → confirmed → shipping → completed`, hoặc `cancelled`.
 - `reports` — báo cáo vi phạm, `open|resolved|dismissed`.
 
-> Vấn đề đang cân nhắc: có thể đổi `listings` → `products` (và thêm `stock`). **Chưa quyết, hỏi lại trước khi đổi tên.**
+> **Đã chốt (26/10/2026): mỗi tin = đúng 1 món, KHÔNG có số lượng / tồn kho, giữ tên `listings`** (kiểu Chợ Tốt). Giỏ hàng không có ô số lượng; đơn hàng hoàn thành thì tin chuyển `sold`. Không đổi sang `products`.
 
 ## API
 
@@ -98,13 +98,14 @@ uploads/                    # ảnh upload (gitignored)
 | GET | `/api/categories` | công khai |
 | GET | `/api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=&exclude=` | công khai |
 | GET | `/api/listings/:id` | công khai (optionalAuth) |
+| POST | `/api/listings` (FormData: `title, categoryId, condition, price, province, description` + `images` 1–6 file) | đăng nhập |
 
 `/api/listings`: chỉ tin `active` của user chưa khóa. `category` nhận id hoặc slug, `province` so khớp một phần (LIKE), `sort` ∈ `newest|price_asc|price_desc|popular`, `limit` ≤ 48. Mỗi tin có `thumbnail` (ảnh đầu tiên hoặc null), `category{id,name,slug,icon}`, `seller{id,name}`. `exclude` = bỏ 1 id (tin cùng danh mục).
 
 `/api/listings/:id`: `active` + `sold` ai cũng xem; `pending|hidden|rejected` chỉ chủ tin/admin (người khác 404). Tăng `views` khi tin active và người xem không phải chủ. Trả thêm `description`, `images[{id,url}]`, `seller{id,name,avatar,province,joinedAt,activeCount,soldCount}`, `isOwner`, `rejectReason` (chỉ chủ/admin).
 
 Dự kiến:
-- Listings: `GET /api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=` (chỉ `active`), `GET /api/me/listings?status=`, `POST /api/listings` (FormData: thông tin + ảnh trong 1 request), `PUT /api/listings/:id`, `PATCH /api/listings/:id/status` (sold/hidden/active), `DELETE /api/listings/:id` (không cho xóa nếu đã có đơn, gợi ý ẩn).
+- Listings: `GET /api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=` (chỉ `active`), `GET /api/me/listings?status=`, `PUT /api/listings/:id`, `PATCH /api/listings/:id/status` (sold/hidden/active), `DELETE /api/listings/:id` (không cho xóa nếu đã có đơn, gợi ý ẩn).
 - Orders: tạo đơn từ tin `active`, người mua xem đơn mua, người bán xem đơn bán và chuyển trạng thái; hoàn thành đơn thì tin chuyển `sold`.
 - Reports: người dùng báo cáo tin.
 - Admin (`/api/admin`): thống kê dashboard, duyệt/từ chối tin, khóa/mở user, CRUD danh mục, xử lý báo cáo.
@@ -163,14 +164,15 @@ Prefix key `mc2c:`. Bọc trong `storage.js` có try/catch + JSON parse an toàn
 
 - [x] Khung backend, kết nối MySQL, schema + seed
 - [x] Auth (session), categories
-- [ ] Module listings — đã có `GET /api/listings` (lọc/tìm kiếm/phân trang); còn chi tiết, CRUD, upload ảnh, đánh dấu đã bán
+- [ ] Module listings — đã có danh sách, chi tiết, **tạo tin + ảnh** (`utils/multipart.js` đọc FormData bằng Web API, `utils/image-store.js` kiểm tra magic bytes / lưu / xóa ảnh, tin mới `pending`); còn sửa, xóa, đổi trạng thái (đã bán / ẩn), tin của tôi
 - [ ] Orders
 - [ ] Reports
 - [ ] Admin API
 - [x] Frontend: SCSS base + layout + components, header/footer dùng chung, trang chủ (`index.html` + `js/pages/home.js`)
 - [x] Frontend: đăng nhập / đăng ký (`login.html`, `register.html`): `FormHandler` (`components/form.js`) + `utils/validators.js` (cùng quy tắc với server), `?redirect=` chỉ nhận đường dẫn nội bộ (`getRedirectTarget`), trang cần đăng nhập thì chuyển tới `loginUrl()`
 - [x] Frontend: chi tiết tin `product.html?id=` (`js/pages/product.js`, `components/gallery.js` + `<dialog>` phóng to, giỏ hàng / mua ngay / yêu thích / chia sẻ, lưu `recentlyViewed`, tin cùng danh mục)
-- [ ] Frontend: đăng tin, giỏ hàng, yêu thích, đơn hàng
+- [x] Frontend: đăng tin `sell.html` (`js/pages/sell.js`, `components/image-picker.js` nén ảnh bằng Canvas `utils/image.js`, kéo thả sắp xếp, nháp `listingDraft`, giá có dấu chấm, thẻ xem trước)
+- [ ] Frontend: tin đăng của tôi, giỏ hàng, yêu thích, đơn hàng
 - [ ] Frontend admin
 - [ ] README hoàn chỉnh + ảnh chụp màn hình cho báo cáo
 

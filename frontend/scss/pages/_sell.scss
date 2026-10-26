@@ -1,0 +1,135 @@
+// =========================================================
+//  TRANG ĐĂNG TIN
+//  Mobile/tablet: form 1 cột, phần xem trước nằm dưới.
+//  Desktop: form bên trái, xem trước + mẹo bên phải (dính khi cuộn).
+// =========================================================
+@use '../abstracts' as *;
+
+.sell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: $space-4;
+
+  &__title {
+    font-size: 1.5rem;
+  }
+
+  &__subtitle {
+    margin-top: $space-1;
+    color: var(--color-text-muted);
+  }
+
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: $space-5;
+    align-items: start;
+
+    @include respond-to(xl) {
+      grid-template-columns: minmax(0, 1fr) 300px;
+    }
+  }
+
+  &__form {
+    display: grid;
+    gap: $space-4;
+    min-width: 0;
+  }
+
+  &__submit {
+    display: grid;
+    gap: $space-2;
+
+    @include respond-to(sm) {
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: $space-4;
+    }
+
+    .btn {
+      min-width: 200px;
+    }
+  }
+
+  &__aside {
+    display: grid;
+    gap: $space-4;
+
+    @include respond-to(xl) {
+      position: sticky;
+      top: calc(#{$header-height} + #{$space-4});
+    }
+  }
+
+  &__aside-title {
+    font-size: $font-size-base;
+    color: var(--color-text-muted);
+  }
+
+  // Thẻ xem trước: cùng cỡ thẻ ở trang chủ, chỉ để xem
+  &__preview {
+    max-width: 280px;
+
+    .listing-card__favorite {
+      display: none;
+    }
+  }
+}
+
+// Mỗi bước của form là 1 khối
+.sell-section {
+  @include surface($space-4);
+
+  @include respond-to(sm) {
+    padding: $space-5;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    margin-bottom: $space-4;
+    font-size: $font-size-lg;
+  }
+
+  // Số thứ tự bước trong vòng tròn
+  &__step {
+    @include flex-center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: $font-size-sm;
+  }
+
+  // Chỉ áp cho con trực tiếp: 2 ô nằm chung 1 .form-row không được cách thêm (sẽ bị lệch hàng)
+  > .form-group + .form-group,
+  > .form-row + .form-group,
+  > .form-group + .form-row {
+    margin-top: $space-4;
+  }
+}
+
+.sell-tips {
+  @include surface($space-4);
+  font-size: $font-size-sm;
+  color: var(--color-text-muted);
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    margin-bottom: $space-2;
+    color: var(--color-warning);
+    font-size: $font-size-base;
+  }
+
+  ul {
+    display: grid;
+    gap: $space-1;
+    padding-left: $space-5;
+    list-style: disc;
+  }
+}

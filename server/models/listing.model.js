@@ -219,3 +219,35 @@ export function toListingDetail(row, images, { isOwner = false, isAdmin = false 
     images: images.map((img) => ({ id: img.id, url: toImageUrl(img.path) })),
   };
 }
+
+// ---------------------------------------------------------
+//  Tạo tin
+// ---------------------------------------------------------
+
+/**
+ * Thêm tin mới (trạng thái "pending" - chờ admin duyệt) kèm ảnh.
+ * Chạy trong transaction: truyền vào `conn` từ withTransaction().
+ * @param {import('mysql2/promise').PoolConnection} conn
+ * @param {object} data
+ * @param {string[]} imagePaths  đường dẫn ảnh theo thứ tự hiển thị (ảnh đầu = ảnh bìa)
+ * @returns {Promise<number>} id tin vừa tạo
+ */
+export async function createWithImages(conn, data, imagePaths) {
+  const { userId, categoryId, title, description, price, condition, province, searchText } = data;
+
+  const [result] = await conn.query(
+    `INSERT INTO listings
+       (user_id, category_id, title, description, price, item_condition, province, status, search_text)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+    [userId, categoryId, title, description, price, condition, province, searchText],
+  );
+  const listingId = result.insertId;
+
+  if (imagePaths.length > 0) {
+    // Thêm nhiều dòng 1 lần: VALUES ? với mảng 2 chiều (mysql2 tự escape từng giá trị)
+    await conn.query('INSERT INTO listing_images (listing_id, path, sort_order) VALUES ?', [
+      imagePaths.map((imagePath, index) => [listingId, imagePath, index]),
+    ]);
+  }
+  return listingId;
+}
