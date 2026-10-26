@@ -35,7 +35,8 @@
 
   // Nút trắng chữ cam, dùng trên nền cam (header, banner)
   &--white {
-    @include button-variant(#fff, $color-primary, #fff3ef, #fff);
+    // Giao diện tối tự thành nút cam (xem --btn-white-* trong base/_theme.scss)
+    @include button-variant(var(--btn-white-bg), var(--btn-white-fg), var(--btn-white-hover));
   }
 
   &--sm {
@@ -58,5 +59,35 @@
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+.btn--lg {
+  padding: $space-3 $space-5;
+  font-size: 1rem;
+}
+
+// ---------- Vòng xoay khi đang gửi (thêm class .is-loading vào nút) ----------
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.btn__spinner {
+  display: none;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.btn.is-loading {
+  cursor: progress;
+
+  .btn__spinner {
+    display: inline-block;
   }
 }

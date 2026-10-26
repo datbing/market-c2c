@@ -1,6 +1,6 @@
 /**
- * CORS: cho phép frontend (khác origin, vd http://market-c2c.test) gọi API
- * tại http://market-c2c.test:3000 và gửi kèm cookie session.
+ * CORS: cho phép frontend (khác origin, vd https://market-c2c.test) gọi API
+ * tại https://market-c2c.test:3000 và gửi kèm cookie session.
  *
  * Tự viết thay vì dùng thư viện `cors` để thấy rõ cơ chế:
  *  - Chỉ origin trong whitelist mới được trả header Access-Control-Allow-Origin

@@ -156,3 +156,27 @@
     }
   }
 }
+
+// ---------- Khung thông báo trong trang (lỗi form, gợi ý...) ----------
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-2;
+  padding: $space-3 $space-4;
+  border: 1px solid;
+  border-radius: $radius;
+  font-size: $font-size-sm;
+
+  > .bi {
+    margin-top: 1px;
+  }
+
+  // Sinh .alert--error / --success / --info / --warning bằng @each
+  @each $type, $color in (error: $color-danger, success: $color-success, info: $color-info, warning: $color-warning) {
+    &--#{$type} {
+      border-color: rgba($color, 0.35);
+      background: rgba($color, 0.08);
+      color: $color;
+    }
+  }
+}

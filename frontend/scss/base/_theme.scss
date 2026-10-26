@@ -1,12 +1,14 @@
 // =========================================================
 //  THEME SÁNG / TỐI bằng CSS custom properties.
 //  JS chỉ cần đổi <html data-theme="dark"> là toàn trang đổi màu.
+//  Component KHÔNG viết màu cứng, chỉ dùng các biến ở đây.
 // =========================================================
 @use '../abstracts' as *;
 
 :root {
   color-scheme: light;
 
+  // ---------- Nền & chữ ----------
   --color-bg: #f5f5f5;
   --color-surface: #ffffff;
   --color-surface-2: #fafafa;
@@ -14,6 +16,7 @@
   --color-text-muted: #757575;
   --color-border: #e8e8e8;
 
+  // ---------- Màu thương hiệu ----------
   --color-primary: #{$color-primary};
   --color-primary-hover: #{$color-primary-dark};
   --color-primary-soft: #{$color-primary-soft};
@@ -24,6 +27,36 @@
   --color-danger: #{$color-danger};
   --color-info: #{$color-info};
 
+  // ---------- Header ----------
+  --header-bg: linear-gradient(90deg, #{$color-primary}, #ff7337);
+  --header-fg: #ffffff;
+  --header-border: transparent;
+  --header-hover: rgb(255 255 255 / 18%);
+  --search-bg: #ffffff;
+  --search-fg: #222222;
+  --search-border: transparent;
+  --badge-bg: #ffffff;
+  --badge-fg: #{$color-primary};
+
+  // Nút trắng (đặt trên nền cam: header, banner)
+  --btn-white-bg: #ffffff;
+  --btn-white-fg: #{$color-primary};
+  --btn-white-hover: #fff3ef;
+
+  // ---------- Khối nổi bật (banner trang chủ, giới thiệu trang đăng nhập) ----------
+  --hero-bg:
+    radial-gradient(circle at 85% 20%, rgb(255 255 255 / 18%) 0 90px, transparent 91px),
+    radial-gradient(circle at 95% 90%, rgb(255 255 255 / 12%) 0 140px, transparent 141px),
+    linear-gradient(120deg, #{$color-primary}, #ff8a3d);
+  --hero-fg: #ffffff;
+  --hero-border: transparent;
+  --hero-chip-bg: rgb(255 255 255 / 16%);
+  --hero-icon: #ffffff;
+
+  // ---------- Thẻ tin ----------
+  --fav-bg: rgb(255 255 255 / 92%);
+  --fav-fg: #555555;
+
   --skeleton-base: #ececec;
   --skeleton-shine: #f6f6f6;
 
@@ -31,21 +64,62 @@
   --shadow-md: 0 4px 16px rgb(0 0 0 / 10%);
 }
 
+// =========================================================
+//  GIAO DIỆN TỐI
+//  - Xám hơi ngả lạnh, mỗi lớp (nền < thẻ < thẻ lồng) sáng dần -> có chiều sâu
+//  - Cam chỉ dùng làm điểm nhấn (viền, nút, giá), không phủ cả khối lớn gây chói
+//  - Cam sáng hơn bản light để đủ tương phản trên nền tối
+// =========================================================
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --color-bg: #121212;
-  --color-surface: #1e1e1e;
-  --color-surface-2: #262626;
-  --color-text: #e8e8e8;
-  --color-text-muted: #a3a3a3;
-  --color-border: #333333;
+  --color-bg: #0f1217;
+  --color-surface: #171b22;
+  --color-surface-2: #1f242d;
+  --color-text: #e7e9ee;
+  --color-text-muted: #98a0ad;
+  --color-border: #2a303b;
 
-  --color-primary-soft: rgb(238 77 45 / 16%);
+  --color-primary: #ff6a3d;
+  --color-primary-hover: #ff8660;
+  --color-primary-soft: rgb(255 106 61 / 13%);
+  --color-on-primary: #ffffff;
 
-  --skeleton-base: #2a2a2a;
-  --skeleton-shine: #353535;
+  --color-danger: #f26b67;
+  --color-info: #5b9cf0;
+
+  // Header tối, viền cam mảnh bên dưới
+  --header-bg: #171b22;
+  --header-fg: #e7e9ee;
+  --header-border: var(--color-primary);
+  --header-hover: rgb(255 255 255 / 7%);
+  --search-bg: #1f242d;
+  --search-fg: #e7e9ee;
+  --search-border: #2a303b;
+  --badge-bg: var(--color-primary);
+  --badge-fg: #ffffff;
+
+  // "Nút trắng" trên nền tối -> thành nút cam
+  --btn-white-bg: var(--color-primary);
+  --btn-white-fg: #ffffff;
+  --btn-white-hover: var(--color-primary-hover);
+
+  // Banner: nền tối, ánh cam nhẹ ở góc thay vì phủ cam toàn khối
+  --hero-bg:
+    radial-gradient(circle at 88% 12%, rgb(255 106 61 / 30%), transparent 42%),
+    radial-gradient(circle at 0% 100%, rgb(255 106 61 / 12%), transparent 38%),
+    linear-gradient(135deg, #1d2129, #161a20);
+  --hero-fg: #e7e9ee;
+  --hero-border: #2a303b;
+  --hero-chip-bg: rgb(255 255 255 / 5%);
+  --hero-icon: var(--color-primary);
+
+  --fav-bg: rgb(15 18 23 / 72%);
+  --fav-fg: #cfd3da;
+
+  --skeleton-base: #1f242d;
+  --skeleton-shine: #2a303b;
 
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
-  --shadow-md: 0 4px 16px rgb(0 0 0 / 50%);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 45%);
 }

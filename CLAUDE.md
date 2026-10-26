@@ -18,19 +18,20 @@ Trọng tâm chấm điểm là **JavaScript nâng cao** (DOM, sự kiện, Fetc
 
 ## Stack
 
-- Backend: **Node.js + Express 5** (ESM, `"type": "module"`), **MySQL** qua `mysql2/promise`, `express-session`, `bcryptjs`, `dotenv`. Sẽ thêm `multer` cho upload ảnh.
+- Backend: **Node.js + Express 5** (ESM, `"type": "module"`), **MySQL** qua `mysql2/promise`, `express-session`, `bcryptjs`, `dotenv`. **Không dùng `multer`** (xem mục Upload ảnh).
 - **Tách riêng 2 phần:**
-  - Backend `server/` = **chỉ API** (Node/Express) tại `http://market-c2c.test:3000`. Không phục vụ HTML.
-  - Frontend `frontend/` = HTML5 + SCSS + JS thuần, do **Apache của Laragon** phục vụ tại `http://market-c2c.test` (`.htaccess` ở gốc dự án ánh xạ URL vào `frontend/` và chặn `.env`, `server/`...).
+  - Backend `server/` = **chỉ API** (Node/Express) tại `https://market-c2c.test:3000`. Không phục vụ HTML.
+  - Frontend `frontend/` = HTML5 + SCSS + JS thuần, do **Apache của Laragon** phục vụ tại `https://market-c2c.test` (`.htaccess` ở gốc dự án ép http → https, ánh xạ URL vào `frontend/` và chặn `.env`, `server/`...).
+  - **Toàn bộ HTTPS.** API Node dùng `https.createServer` với chứng chỉ Laragon (`SSL_CERT`/`SSL_KEY` trong `.env`, mặc định `D:/laragon/etc/ssl/laragon.{crt,key}`, đã có SAN `*.test`). Cookie session `Secure`.
   - Khác origin (khác cổng) nhưng **cùng site** → cookie session `SameSite=Lax` vẫn gửi được. Backend bật CORS bằng middleware tự viết `server/middleware/cors.js` (whitelist `CORS_ORIGINS` trong `.env`), frontend `fetch` với `credentials: 'include'`.
-  - URL API lấy từ `frontend/js/config.js` (`API_BASE`, `assetUrl()` cho ảnh `/uploads`). Luôn mở trang bằng **http://** (https sẽ bị chặn mixed content).
+  - URL API lấy từ `frontend/js/config.js` (`API_BASE`, `assetUrl()` cho ảnh `/uploads`). Không gọi URL `http://` từ trang (bị chặn mixed content).
 - Môi trường dev: **Windows + Laragon** (MySQL user `root`, không mật khẩu). Lệnh hướng dẫn phải chạy được trên Windows.
 
 ## Lệnh
 
 ```bash
 npm install
-npm run dev          # API: node --watch, http://market-c2c.test:3000 (frontend: http://market-c2c.test, cần Apache Laragon chạy)
+npm run dev          # API: node --watch, https://market-c2c.test:3000 (frontend: https://market-c2c.test, cần Apache Laragon chạy)
 npm run db:setup     # tạo DB + bảng từ database/schema.sql
 npm run db:seed      # dữ liệu mẫu (chỉ khi bảng users trống)
 npm run db:reset     # XÓA DB rồi tạo lại + seed — hỏi trước khi chạy
@@ -100,10 +101,17 @@ uploads/                    # ảnh upload (gitignored)
 `/api/listings`: chỉ tin `active` của user chưa khóa. `category` nhận id hoặc slug, `province` so khớp một phần (LIKE), `sort` ∈ `newest|price_asc|price_desc|popular`, `limit` ≤ 48. Mỗi tin có `thumbnail` (ảnh đầu tiên hoặc null), `category{id,name,slug,icon}`, `seller{id,name}`.
 
 Dự kiến:
-- Listings: `GET /api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=` (chỉ `active`), `GET /api/listings/:id` (tăng views), `GET /api/me/listings?status=`, `POST /api/listings` (multipart, ảnh), `PUT /api/listings/:id`, `PATCH /api/listings/:id/status` (sold/hidden/active), `DELETE /api/listings/:id` (không cho xóa nếu đã có đơn, gợi ý ẩn).
+- Listings: `GET /api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=` (chỉ `active`), `GET /api/listings/:id` (tăng views), `GET /api/me/listings?status=`, `POST /api/listings` (FormData: thông tin + ảnh trong 1 request), `PUT /api/listings/:id`, `PATCH /api/listings/:id/status` (sold/hidden/active), `DELETE /api/listings/:id` (không cho xóa nếu đã có đơn, gợi ý ẩn).
 - Orders: tạo đơn từ tin `active`, người mua xem đơn mua, người bán xem đơn bán và chuyển trạng thái; hoàn thành đơn thì tin chuyển `sold`.
 - Reports: người dùng báo cáo tin.
 - Admin (`/api/admin`): thống kê dashboard, duyệt/từ chối tin, khóa/mở user, CRUD danh mục, xử lý báo cáo.
+
+### Upload ảnh (đã chốt, không dùng multer)
+- Ảnh **chỉ lưu vào `uploads/` khi bấm Đăng / Lưu tin**, không upload trước → không có ảnh mồ côi.
+- Frontend: `<input type="file" accept="image/*" multiple>` → nén bằng Canvas (tối đa ~1280px, WebP/JPEG) → giữ Blob trong bộ nhớ, xem trước bằng `URL.createObjectURL` (nhớ `revokeObjectURL`), cho xóa/sắp xếp → khi submit gửi **1 request `FormData`** (các trường chữ + `images`).
+- Backend: đọc multipart bằng **Web API có sẵn của Node** (`new Request(...).formData()`), không thêm thư viện. Giới hạn tổng dung lượng request + số ảnh/tin (~6) + dung lượng/ảnh; kiểm tra **magic bytes** (JPEG/PNG/WebP), không tin đuôi file / Content-Type; tên file ngẫu nhiên (`crypto.randomUUID`).
+- Ghi file rồi insert DB trong transaction; **DB lỗi thì xóa các file vừa ghi**. Sửa tin: xóa ảnh cũ bị bỏ khỏi đĩa sau khi commit.
+- Nháp đăng tin (`listingDraft`, LocalStorage) chỉ lưu phần chữ, không lưu ảnh (báo rõ cho người dùng).
 
 ## Quy ước frontend
 
@@ -116,19 +124,30 @@ Dự kiến:
     css/main.css            # file biên dịch
     js/config.js            # API_BASE, assetUrl()
     js/services/            # api.js (wrapper fetch), storage.js, auth.js...
-    js/utils/               # debounce, format tiền VND, escapeHtml...
+    js/utils/               # template (cloneTemplate, fillFields), dom ($, debounce), format VND, cookie
     js/components/          # render card, modal, toast...
     js/pages/               # mỗi trang 1 file entry
   ```
 - Mọi request backend đi qua wrapper `js/services/api.js` (async/await, parse JSON, ném lỗi có `message` + `errors`).
-- Breakpoint: mobile `< 576px`, tablet `≥ 768px`, desktop `≥ 1200px` (mixin `respond-to`). Màu chủ đạo cam `#ee4d2d`.
-- Escape dữ liệu người dùng trước khi chèn `innerHTML` (chống XSS).
+- Breakpoint: mobile `< 576px`, tablet `≥ 768px`, desktop `≥ 1200px` (mixin `respond-to` / `respond-below`, mobile-first). Màu chủ đạo cam `#ee4d2d`.
+- **Màu chỉ lấy từ biến CSS trong `scss/base/_theme.scss`** (`--color-*`, `--header-*`, `--hero-*`, `--btn-white-*`, `--fav-*`...), không viết màu cứng trong component, để dark theme tự đúng. Dark theme: xám ngả lạnh nhiều lớp, cam chỉ làm điểm nhấn (không phủ cả khối), `--color-primary` sáng hơn (#ff6a3d).
+  - Logo có 2 bản: `logo-text.png` (chữ navy, nền sáng) và `logo-text-dark.png` (chữ sáng, nền tối); dùng class `logo__picture--light` / `logo__picture--dark`, CSS chọn theo `[data-theme]`.
+- Responsive đã thống nhất (giữ cho các trang sau):
+  - Grid cha luôn `grid-template-columns: minmax(0, 1fr)` để con không đẩy tràn ngang; kiểm tra ở 320 / 375 / 768 / 1024 / 1280px, không được có thanh cuộn ngang.
+  - Header: < 768px 2 hàng (logo + nút | ô tìm kiếm); ≥ 768px 1 hàng; < 1200px nút "Đăng nhập", "Đăng tin" chỉ hiện icon (chữ `visually-hidden`).
+  - Logo dùng `<picture>`: < 576px `logo.png` (vuông), lớn hơn `logo-text.png`. Ảnh dùng đường dẫn tuyệt đối `/assets/images/...`.
+  - Lưới tin 2 / 3 (≥ 576) / 4 (≥ 1200) cột; dải cuộn ngang dùng mixin `scroll-x`; bộ lọc là ngăn kéo < 1200px, cột cố định ≥ 1200px.
+- **Component = HTML + CSS + JS tách bạch, không viết HTML trong chuỗi JS:**
+  - Phần tĩnh (header, footer, menu tài khoản, trạng thái trống/lỗi, nút phân trang trước/sau, option cố định) viết sẵn trong `.html`, JS chỉ bật/tắt `hidden` và điền chữ.
+  - Phần lặp lại (thẻ tin, ô danh mục, chip, toast, mục lịch sử...) đặt trong `<template id="tpl-...">` của trang; JS dùng `cloneTemplate(id)` + `fillFields(root, data)` (`js/utils/template.js`) và gán bằng `textContent` → tự an toàn XSS. **Không dùng `innerHTML`** với dữ liệu.
+  - Hiển thị theo trạng thái để CSS lo (vd icon tim theo `aria-pressed`, icon theme theo `[data-theme]`), JS chỉ đổi thuộc tính.
+  - Header, footer, `#toast-stack` và template dùng chung (`tpl-history-item`, `tpl-toast`) phải **copy sang mọi trang** (HTML thuần không có include); lấy `index.html` làm bản gốc.
 - Kỹ thuật JS nên thể hiện: class/module, event delegation, debounce tìm kiếm, `filter/map/reduce`, destructuring/spread, template literal, `CustomEvent` giữa các module, `Promise.all/allSettled`, `FormData` upload ảnh.
 
 ### LocalStorage / SessionStorage / Cookie
 Prefix key `mc2c:`. Bọc trong `storage.js` có try/catch + JSON parse an toàn.
-- LocalStorage: `cart` (giỏ hàng), `favorites`, `recentlyViewed`, `searchHistory`, `listingDraft` (nháp form đăng tin, F5 không mất), `cache:*` (cache API có TTL: danh mục, tỉnh thành, tỷ giá).
-- SessionStorage: trạng thái lọc/trang hiện tại khi quay lại danh sách.
+- LocalStorage: `cart` (giỏ hàng), `favorites`, `recentlyViewed`, `searchHistory`, `listingDraft` (nháp form đăng tin, F5 không mất), `rememberEmail` (ghi nhớ email ở trang đăng nhập), `cache:*` (cache API có TTL: danh mục, tỉnh thành, tỷ giá).
+- SessionStorage: trạng thái lọc/trang hiện tại khi quay lại danh sách (`homeFilters`); `flash` = thông báo để lại trước khi chuyển trang (`services/flash.js`, header tự hiện toast rồi xóa).
 - Cookie: theme sáng/tối (session đăng nhập do server quản lý bằng cookie httpOnly).
 
 ### API công khai
@@ -145,7 +164,8 @@ Prefix key `mc2c:`. Bọc trong `storage.js` có try/catch + JSON parse an toàn
 - [ ] Reports
 - [ ] Admin API
 - [x] Frontend: SCSS base + layout + components, header/footer dùng chung, trang chủ (`index.html` + `js/pages/home.js`)
-- [ ] Frontend: chi tiết (`product.html?id=`, nhớ thêm vào `recentlyViewed`), đăng tin, giỏ hàng, yêu thích, đơn hàng, đăng nhập/đăng ký
+- [x] Frontend: đăng nhập / đăng ký (`login.html`, `register.html`): `FormHandler` (`components/form.js`) + `utils/validators.js` (cùng quy tắc với server), `?redirect=` chỉ nhận đường dẫn nội bộ (`getRedirectTarget`), trang cần đăng nhập thì chuyển tới `loginUrl()`
+- [ ] Frontend: chi tiết (`product.html?id=`, nhớ thêm vào `recentlyViewed`), đăng tin, giỏ hàng, yêu thích, đơn hàng
 - [ ] Frontend admin
 - [ ] README hoàn chỉnh + ảnh chụp màn hình cho báo cáo
 

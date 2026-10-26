@@ -41,12 +41,14 @@ Dự án gồm 2 phần chạy riêng:
 
 | Phần | Địa chỉ | Chạy bởi |
 |---|---|---|
-| Frontend (`frontend/`) | **http://market-c2c.test** | Apache của Laragon |
-| Backend API (`server/`) | http://market-c2c.test:3000 | Node.js (`npm run dev`) |
+| Frontend (`frontend/`) | **https://market-c2c.test** | Apache của Laragon |
+| Backend API (`server/`) | https://market-c2c.test:3000 | Node.js (`npm run dev`) |
 
-Mở trình duyệt: **http://market-c2c.test** (dùng `http://`, không dùng `https://`).
+Mở trình duyệt: **https://market-c2c.test** (gõ `http://` cũng tự chuyển sang `https://`).
 
-> Tên miền `market-c2c.test` do Laragon tự tạo theo tên thư mục trong `www`. Nếu đổi tên thư mục hoặc chạy frontend ở địa chỉ khác (vd Live Server `http://127.0.0.1:5500`), thêm địa chỉ đó vào `CORS_ORIGINS` trong `.env`.
+Cả frontend và API đều chạy **HTTPS** bằng chứng chỉ Laragon tự tạo. Cần bật trong Laragon: **Menu > Apache > SSL > Enabled** (Laragon sẽ hỏi cài chứng chỉ vào Windows, chọn Yes). API đọc chứng chỉ theo `SSL_CERT` / `SSL_KEY` trong `.env`.
+
+> Tên miền `market-c2c.test` do Laragon tự tạo theo tên thư mục trong `www`. Nếu đổi tên thư mục hoặc chạy frontend ở địa chỉ khác (vd `https://localhost:5500`), thêm địa chỉ đó vào `CORS_ORIGINS` trong `.env`.
 
 > Có thể import thủ công thay cho bước 3: tạo database `market_c2c` (collation `utf8mb4_unicode_ci`) rồi chạy file `database/schema.sql` trong HeidiSQL/phpMyAdmin.
 
@@ -124,5 +126,6 @@ market-c2c/
 - **`ER_ACCESS_DENIED_ERROR`**: sai `DB_USER` / `DB_PASSWORD` trong `.env`.
 - **`ER_BAD_DB_ERROR`**: chưa tạo database → chạy `npm run db:setup`.
 - **Cổng 3000 đã bị dùng**: đổi `PORT` trong `.env` và `API_PORT` trong `frontend/js/config.js`.
-- **Trang báo "Không kết nối được máy chủ API"**: chưa chạy `npm run dev`, hoặc địa chỉ trang không có trong `CORS_ORIGINS`, hoặc đang mở bằng `https://`.
-- **Đăng nhập xong vẫn như chưa đăng nhập**: mở trang bằng `http://market-c2c.test` (không dùng `localhost`, vì `localhost` và `market-c2c.test` là hai site khác nhau nên cookie không dùng chung).
+- **Trang báo "Không kết nối được máy chủ API"**: chưa chạy `npm run dev`, hoặc địa chỉ trang không có trong `CORS_ORIGINS`, hoặc trình duyệt chưa tin chứng chỉ (mở thử https://market-c2c.test:3000/api/health).
+- **`Không đọc được chứng chỉ SSL`** khi chạy API: bật SSL trong Laragon hoặc sửa `SSL_CERT` / `SSL_KEY` trong `.env`.
+- **Đăng nhập xong vẫn như chưa đăng nhập**: mở trang bằng `https://market-c2c.test` (không dùng `localhost`, vì `localhost` và `market-c2c.test` là hai site khác nhau nên cookie không dùng chung).

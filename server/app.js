@@ -3,7 +3,7 @@
  *  - API JSON tại /api
  *  - Ảnh upload tại /uploads
  * Frontend nằm riêng ở thư mục /frontend, do Apache (Laragon) phục vụ tại
- * http://market-c2c.test và gọi sang API này qua CORS.
+ * https://market-c2c.test và gọi sang API này (https://market-c2c.test:3000) qua CORS.
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,10 +40,10 @@ const sessionMiddleware = session({
   saveUninitialized: false, // chỉ tạo session khi đăng nhập
   cookie: {
     httpOnly: true, // JS phía client không đọc được cookie -> hạn chế XSS đánh cắp phiên
-    // Lax: cookie vẫn được gửi giữa market-c2c.test và market-c2c.test:3000
-    // vì khác cổng nhưng cùng "site" (cùng tên miền)
+    // Lax: cookie vẫn được gửi giữa https://market-c2c.test và https://market-c2c.test:3000
+    // vì khác cổng nhưng cùng "site" (cùng scheme https + cùng tên miền)
     sameSite: 'lax',
-    secure: 'auto', // tự bật khi chạy HTTPS
+    secure: true, // chỉ gửi qua HTTPS (server luôn chạy https)
     maxAge: config.session.maxAgeMs,
   },
 });

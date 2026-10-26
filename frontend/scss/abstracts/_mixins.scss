@@ -64,6 +64,15 @@
   border: 0;
 }
 
+/// Vùng cuộn ngang gọn gàng (dải danh mục, tin vừa xem): thanh cuộn mảnh,
+/// cuộn hết không kéo theo cả trang
+@mixin scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
 /// Viền focus rõ ràng khi điều hướng bằng bàn phím
 @mixin focus-ring {
   &:focus-visible {

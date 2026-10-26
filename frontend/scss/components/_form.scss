@@ -5,6 +5,9 @@
 
 .form-group {
   display: grid;
+  // Dồn nhãn + ô nhập lên trên. Không có dòng này, khi nhóm bị kéo cao
+  // (đứng cạnh nhóm có thêm dòng gợi ý) phần dư sẽ chia cho các hàng -> ô nhập bị lệch
+  align-content: start;
   gap: $space-2;
 
   & + & {
@@ -88,5 +91,153 @@
 
   &--error {
     color: var(--color-danger);
+  }
+}
+
+// ---------- Trạng thái lỗi của ô nhập ----------
+.form-control.is-invalid {
+  border-color: var(--color-danger);
+
+  &:focus {
+    box-shadow: 0 0 0 3px rgb(229 57 53 / 18%);
+  }
+}
+
+// Dấu * của trường bắt buộc
+.form-label abbr {
+  color: var(--color-danger);
+  text-decoration: none;
+}
+
+// 2 ô trên 1 hàng từ 576px (vd: email + số điện thoại)
+.form-row {
+  display: grid;
+  align-items: start; // mỗi cột cao theo nội dung của nó, các ô nhập thẳng hàng
+  gap: $space-4;
+  margin-top: $space-4;
+
+  @include respond-to(sm) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-group + .form-group {
+    margin-top: 0;
+  }
+
+  & + .form-group {
+    margin-top: $space-4;
+  }
+}
+
+// ---------- Ô mật khẩu có nút ẩn/hiện ----------
+.password-field {
+  position: relative;
+
+  .form-control {
+    padding-right: 44px;
+
+    // Ẩn nút "con mắt" / nút xóa có sẵn của trình duyệt (Edge) -> chỉ dùng nút riêng của trang
+    &::-ms-reveal,
+    &::-ms-clear {
+      display: none;
+    }
+  }
+
+  &__toggle {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    transform: translateY(-50%);
+    @include flex-center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: $radius-sm;
+    background: none;
+    color: var(--color-text-muted);
+
+    &:hover {
+      color: var(--color-text);
+    }
+
+    // Icon mắt đóng chỉ hiện khi đang hiện mật khẩu (aria-pressed=true)
+    .bi-eye-slash {
+      display: none;
+    }
+
+    &[aria-pressed='true'] {
+      .bi-eye {
+        display: none;
+      }
+
+      .bi-eye-slash {
+        display: inline-block;
+      }
+    }
+  }
+}
+
+// ---------- Thanh độ mạnh mật khẩu (<meter>) ----------
+.strength {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  min-height: 18px;
+
+  &__meter {
+    flex: 1;
+    height: 6px;
+    border: 0;
+    border-radius: $radius-pill;
+    background: var(--color-surface-2);
+    // Màu theo vùng low / high / optimum do trình duyệt tự chọn
+    &::-webkit-meter-bar {
+      height: 6px;
+      border: 0;
+      border-radius: $radius-pill;
+      background: var(--color-border);
+    }
+
+    &::-webkit-meter-even-less-good-value {
+      background: $color-danger;
+    }
+
+    &::-webkit-meter-suboptimum-value {
+      background: $color-warning;
+    }
+
+    &::-webkit-meter-optimum-value {
+      background: $color-success;
+    }
+  }
+
+  &__label {
+    min-width: 120px;
+    font-size: $font-size-sm;
+    color: var(--color-text-muted);
+    text-align: right;
+
+    // Chưa gõ mật khẩu -> không chiếm chỗ, thanh đo dài hết cỡ
+    &:empty {
+      min-width: 0;
+    }
+  }
+}
+
+// ---------- Checkbox kèm chữ ----------
+.checkbox {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: $space-2;
+  font-size: $font-size-sm;
+  cursor: pointer;
+
+  input {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 1px 0 0;
+    accent-color: var(--color-primary);
+    cursor: pointer;
   }
 }
