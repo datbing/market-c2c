@@ -1,18 +1,20 @@
 /**
  * TRANG ĐĂNG TIN: /sell (bắt buộc đăng nhập)
+ * TRANG SỬA TIN: /sell?edit=<id> (dùng chung trang, chỉ chủ tin)
  *  - Danh mục (API của mình) + tỉnh thành (API công khai) tải song song bằng Promise.allSettled
  *  - Ảnh: chọn / kéo thả, nén bằng Canvas, xem trước, sắp xếp (components/image-picker.js).
  *    Ảnh chỉ gửi lên server khi bấm "Đăng tin" (1 request FormData).
  *  - Nháp: phần chữ tự lưu vào LocalStorage (listingDraft), F5 không mất. Ảnh không lưu trong nháp.
  *  - Ô giá tự thêm dấu chấm phân cách hàng nghìn khi gõ
  *  - Thẻ xem trước cập nhật trực tiếp theo nội dung đang nhập
+ *  - Sửa tin: nạp sẵn dữ liệu + ảnh đã đăng; không dùng nháp; gửi PUT kèm thứ tự ảnh
  */
 import { $, debounce } from '../utils/dom.js';
 import { rules } from '../utils/validators.js';
 import { formatDate } from '../utils/format.js';
 import { local } from '../services/storage.js';
 import { getCurrentUser, loginUrl } from '../services/auth.js';
-import { getCategories, createListing } from '../services/catalog.js';
+import { getCategories, createListing, getListing, updateListing } from '../services/catalog.js';
 import { getProvinces } from '../services/public-api.js';
 import { setFlash } from '../services/flash.js';
 import { initHeader } from '../components/header.js';
@@ -46,8 +48,12 @@ function priceInWords(amount) {
 class SellPage {
   submitted = false;
   categories = new Map();
+  /** id tin đang sửa (null = đăng tin mới) */
+  editId = null;
 
   constructor() {
+    const edit = new URLSearchParams(window.location.search).get('edit');
+    this.editId = /^\d+$/.test(edit ?? '') ? Number(edit) : null;
     this.form = $('#sell-form');
     this.el = {
       category: $('#sell-category'),
@@ -74,9 +80,69 @@ class SellPage {
     this.formHandler = this.createFormHandler();
 
     await this.loadOptions();
-    this.restoreDraft();
+    if (this.editId) await this.loadForEdit();
+    else this.restoreDraft();
     this.bindEvents();
     this.renderPreview();
+  }
+
+  // =======================================================
+  //  CHẾ ĐỘ SỬA TIN
+  // =======================================================
+  async loadForEdit() {
+    $('#sell-heading').textContent = 'Sửa tin đăng';
+    $('#sell-submit-label').textContent = 'Lưu thay đổi';
+    $('#sell-submit-hint').textContent = 'Ảnh mới và ảnh bị xóa chỉ được áp dụng khi bấm Lưu thay đổi.';
+    document.title = 'Sửa tin đăng | Market C2C';
+
+    let listing;
+    try {
+      listing = await getListing(this.editId);
+    } catch (err) {
+      this.lockForm(err.status === 404 ? 'Không tìm thấy tin đăng cần sửa.' : err.message);
+      return;
+    }
+    if (!listing.isOwner) return this.lockForm('Bạn chỉ được sửa tin của chính mình.');
+    if (listing.status === 'sold') {
+      return this.lockForm('Tin đã bán không sửa được. Hãy "Đăng bán lại" ở trang Tin đăng của tôi trước.');
+    }
+
+    $('#sell-subtitle').textContent =
+      listing.status === 'rejected'
+        ? `Tin bị từ chối${listing.rejectReason ? ` (${listing.rejectReason})` : ''}. Sửa xong tin sẽ được gửi duyệt lại.`
+        : `Đang sửa: ${listing.title}`;
+
+    // Điền dữ liệu cũ vào form
+    const set = (name, value) => {
+      const field = this.form.elements.namedItem(name);
+      field.value = value;
+      field.dispatchEvent(new Event('counter:refresh'));
+    };
+    set('title', listing.title);
+    set('description', listing.description);
+    set('categoryId', String(listing.category.id));
+    set('price', String(listing.price));
+    this.formatPrice();
+
+    // Khu vực cũ có thể không có trong danh sách tỉnh mới (vd "TP. Hồ Chí Minh") -> thêm option
+    const { province } = this.el;
+    if (!province.querySelector(`option[value="${CSS.escape(listing.province)}"]`)) {
+      province.add(new Option(listing.province, listing.province), 1);
+    }
+    province.value = listing.province;
+
+    const radio = this.form.querySelector(`input[name="condition"][value="${CSS.escape(listing.condition)}"]`);
+    if (radio) radio.checked = true;
+
+    this.picker.addExisting(listing.images);
+  }
+
+  /** Không sửa được (không phải chủ tin, tin đã bán...) -> báo lỗi và khóa form */
+  lockForm(message) {
+    this.formHandler.showAlert(message);
+    this.form.querySelectorAll('input, select, textarea, button').forEach((el) => {
+      el.disabled = true;
+    });
   }
 
   // =======================================================
@@ -151,10 +217,12 @@ class SellPage {
       province: values.province,
       description: values.description,
     };
-    const { listing, message } = await createListing(fields, this.picker.blobs);
+    const { listing, message } = this.editId
+      ? await updateListing(this.editId, fields, this.picker.images)
+      : await createListing(fields, this.picker.blobs);
 
     this.submitted = true; // không hỏi "rời trang?" nữa
-    local.remove(DRAFT_KEY);
+    if (!this.editId) local.remove(DRAFT_KEY);
     setFlash(message, 'success');
     window.location.assign(`/product?id=${listing.id}`);
   }
@@ -163,6 +231,7 @@ class SellPage {
   //  NHÁP (LocalStorage) - chỉ phần chữ
   // =======================================================
   saveDraft() {
+    if (this.editId) return; // đang sửa tin: không ghi đè nháp của tin mới
     // namedItem('condition') là RadioNodeList -> .value là giá trị radio đang chọn
     const data = Object.fromEntries(
       DRAFT_FIELDS.map((name) => [name, this.form.elements.namedItem(name)?.value ?? '']),
@@ -264,7 +333,7 @@ class SellPage {
 
     // Rời trang khi đã chọn ảnh mà chưa đăng -> trình duyệt hỏi lại (ảnh không lưu trong nháp)
     window.addEventListener('beforeunload', (e) => {
-      if (this.picker.count > 0 && !this.submitted) e.preventDefault();
+      if (this.picker.hasNewImages && !this.submitted) e.preventDefault();
     });
   }
 }

@@ -80,6 +80,7 @@
           <details class="account-menu" id="account-user" hidden>
             <summary aria-label="Menu tài khoản">
               <span class="avatar" data-user="initial" aria-hidden="true"></span>
+              <span class="account-menu__dot" data-order-dot hidden></span>
               <span class="account-menu__name" data-user="name"></span>
             </summary>
             <ul class="account-menu__list">
@@ -93,8 +94,8 @@
               </li>
               <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list" aria-hidden="true"></i>
                   Tin đăng của tôi</a></li>
-              <li><a class="account-menu__item" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
-                  hàng</a></li>
+              <li><a class="account-menu__item" id="menu-orders" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
+                  hàng <span class="account-menu__count" data-order-count hidden></span></a></li>
               <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart" aria-hidden="true"></i> Tin yêu
                   thích</a></li>
               <li>
@@ -119,8 +120,8 @@
   <main class="site-main">
     <div class="container sell">
       <header class="sell__head">
-        <h1 class="sell__title">Đăng tin bán</h1>
-        <p class="sell__subtitle">Tin của bạn sẽ hiển thị công khai sau khi quản trị viên duyệt.</p>
+        <h1 class="sell__title" id="sell-heading">Đăng tin bán</h1>
+        <p class="sell__subtitle" id="sell-subtitle">Tin của bạn sẽ hiển thị công khai sau khi quản trị viên duyệt.</p>
       </header>
 
       <!-- Có bản nháp trong LocalStorage -->
@@ -247,9 +248,9 @@
           <div class="sell__submit">
             <button type="submit" class="btn btn--primary btn--lg" data-submit>
               <span class="btn__spinner" aria-hidden="true"></span>
-              <span>Đăng tin</span>
+              <span id="sell-submit-label">Đăng tin</span>
             </button>
-            <p class="form-hint">Nội dung tự lưu nháp trên trình duyệt này khi bạn gõ.</p>
+            <p class="form-hint" id="sell-submit-hint">Nội dung tự lưu nháp trên trình duyệt này khi bạn gõ.</p>
           </div>
         </form>
 

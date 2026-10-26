@@ -80,6 +80,7 @@
           <details class="account-menu" id="account-user" hidden>
             <summary aria-label="Menu tài khoản">
               <span class="avatar" data-user="initial" aria-hidden="true"></span>
+              <span class="account-menu__dot" data-order-dot hidden></span>
               <span class="account-menu__name" data-user="name"></span>
             </summary>
             <ul class="account-menu__list">
@@ -93,8 +94,8 @@
               </li>
               <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list" aria-hidden="true"></i>
                   Tin đăng của tôi</a></li>
-              <li><a class="account-menu__item" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
-                  hàng</a></li>
+              <li><a class="account-menu__item" id="menu-orders" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
+                  hàng <span class="account-menu__count" data-order-count hidden></span></a></li>
               <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart" aria-hidden="true"></i> Tin yêu
                   thích</a></li>
               <li>
@@ -238,7 +239,7 @@
           <!-- Chủ tin -->
           <p class="alert alert--info" id="owner-note" hidden>
             <i class="bi bi-person-check" aria-hidden="true"></i>
-            <span>Đây là tin của bạn. <a href="/my-listings">Quản lý tin đăng</a></span>
+            <span>Đây là tin của bạn. <a id="owner-edit" href="/my-listings">Sửa tin</a> · <a href="/my-listings">Quản lý tin đăng</a></span>
           </p>
 
           <div class="product__secondary">
