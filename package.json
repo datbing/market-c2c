@@ -1,0 +1,30 @@
+{
+  "name": "market-c2c",
+  "version": "1.0.0",
+  "description": "Market C2C - Sàn mua bán C2C (Express + MySQL + HTML5/SCSS/JavaScript thuần)",
+  "private": true,
+  "type": "module",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "scss": "sass --watch frontend/scss/main.scss frontend/css/main.css",
+    "scss:build": "sass --no-source-map --style=compressed frontend/scss/main.scss frontend/css/main.css",
+    "db:setup": "node scripts/db-setup.js",
+    "db:seed": "node scripts/seed.js",
+    "db:reset": "node scripts/db-setup.js --reset && node scripts/seed.js"
+  },
+  "engines": {
+    "node": ">=18.18"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-session": "^1.18.1",
+    "mysql2": "^3.14.0"
+  },
+  "devDependencies": {
+    "sass": "^1.106.1"
+  }
+}

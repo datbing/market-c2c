@@ -1,0 +1,55 @@
+// =========================================================
+//  NHÃN (badge) + CHIP bộ lọc đang áp dụng
+// =========================================================
+@use 'sass:map';
+@use '../abstracts' as *;
+
+// Màu cho từng tình trạng hàng -> sinh class bằng vòng lặp @each
+$condition-colors: (
+  new: $color-success,
+  like_new: $color-info,
+  used: #757575,
+);
+
+.badge {
+  display: inline-block;
+  padding: 2px $space-2;
+  border-radius: $radius-sm;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #fff;
+  background: #757575;
+
+  @each $name, $color in $condition-colors {
+    &--#{$name} {
+      background: $color;
+    }
+  }
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  padding: $space-1 $space-2 $space-1 $space-3;
+  border: 1px solid var(--color-primary);
+  border-radius: $radius-pill;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: $font-size-sm;
+
+  &__remove {
+    @include flex-center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+
+    &:hover {
+      background: rgb(238 77 45 / 20%);
+    }
+  }
+}

@@ -1,0 +1,64 @@
+// =========================================================
+//  BIẾN SCSS DÙNG CHUNG (màu, breakpoint, khoảng cách, bo góc...)
+//  Màu thay đổi theo theme sáng/tối được khai báo bằng CSS custom
+//  properties trong base/_theme.scss, dựa trên các biến ở đây.
+// =========================================================
+
+// ---------- Màu thương hiệu ----------
+$color-primary: #ee4d2d;
+$color-primary-dark: #d73211;
+$color-primary-soft: #fff1ee;
+
+// ---------- Màu trạng thái ----------
+$color-success: #26aa99;
+$color-warning: #f6a700;
+$color-danger: #e53935;
+$color-info: #2673dd;
+
+// ---------- Font ----------
+$font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+$font-size-base: 0.9375rem; // 15px
+$font-size-sm: 0.8125rem; // 13px
+$font-size-lg: 1.125rem;
+$line-height: 1.5;
+
+// ---------- Breakpoint (mobile-first) ----------
+//  mobile  : < 576px
+//  sm      : >= 576px
+//  md      : >= 768px (tablet)
+//  xl      : >= 1200px (desktop)
+$breakpoints: (
+  sm: 576px,
+  md: 768px,
+  xl: 1200px,
+);
+
+// ---------- Bố cục ----------
+$container-max: 1200px;
+$container-padding: 16px;
+$header-height: 64px;
+$sidebar-width: 260px;
+
+// ---------- Khoảng cách (bội số của 4px) ----------
+$space-1: 4px;
+$space-2: 8px;
+$space-3: 12px;
+$space-4: 16px;
+$space-5: 24px;
+$space-6: 32px;
+$space-7: 48px;
+
+// ---------- Bo góc ----------
+$radius-sm: 4px;
+$radius: 8px;
+$radius-lg: 12px;
+$radius-pill: 999px;
+
+// ---------- Hiệu ứng ----------
+$transition: 0.2s ease;
+
+// ---------- Thứ tự lớp (z-index) ----------
+$z-header: 100;
+$z-dropdown: 150;
+$z-drawer: 200;
+$z-toast: 300;

@@ -1,0 +1,11 @@
+// =========================================================
+//  MARKET C2C - FILE SCSS CHÍNH
+//  Biên dịch: npm run scss  (theo dõi thay đổi)
+//             npm run scss:build (biên dịch 1 lần, nén)
+//  Thứ tự: base -> layout -> components -> pages
+//  (abstracts không sinh CSS, mỗi partial tự @use khi cần)
+// =========================================================
+@use 'base';
+@use 'layout';
+@use 'components';
+@use 'pages';

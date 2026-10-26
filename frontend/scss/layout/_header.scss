@@ -1,0 +1,313 @@
+// =========================================================
+//  HEADER: logo, ô tìm kiếm (+ lịch sử), nút tiện ích, tài khoản
+// =========================================================
+@use '../abstracts' as *;
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: $z-header;
+  background: linear-gradient(90deg, $color-primary, #ff7337);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+
+  &__inner {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'logo actions'
+      'search search';
+    align-items: center;
+    gap: $space-2 $space-3;
+    padding-block: $space-2 $space-3;
+
+    // Tablet trở lên: 1 hàng logo | tìm kiếm | tiện ích
+    @include respond-to(md) {
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas: 'logo search actions';
+      gap: $space-5;
+      min-height: $header-height;
+      padding-block: $space-2;
+    }
+  }
+}
+
+// ---------- Logo ----------
+.logo {
+  grid-area: logo;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: 1.25rem;
+  font-weight: 400;
+  white-space: nowrap;
+
+  .bi {
+    font-size: 1.6rem;
+  }
+
+  strong {
+    font-weight: 800;
+  }
+}
+
+// ---------- Ô tìm kiếm ----------
+.search {
+  grid-area: search;
+  position: relative;
+  display: flex;
+  background: #fff;
+  border-radius: $radius;
+  padding: 3px;
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    padding: $space-2 $space-3;
+    color: #222;
+    background: transparent;
+    outline: none;
+
+    // Ẩn nút "x" mặc định của input type=search trên Chrome
+    &::-webkit-search-cancel-button {
+      cursor: pointer;
+    }
+  }
+
+  &__submit {
+    @include flex-center;
+    border: 0;
+    border-radius: $radius-sm;
+    padding-inline: $space-4;
+    color: #fff;
+    background: $color-primary;
+    transition: background-color $transition;
+
+    &:hover {
+      background: $color-primary-dark;
+    }
+  }
+
+  // Dropdown lịch sử tìm kiếm (LocalStorage)
+  &__dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: $z-dropdown;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: $radius;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+
+  &__dropdown-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $space-2 $space-3;
+    font-size: $font-size-sm;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  &__history-item {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding-right: $space-2;
+
+    &:hover,
+    &.is-active {
+      background: var(--color-surface-2);
+    }
+  }
+
+  &__history-term {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-2 $space-3;
+    border: 0;
+    background: none;
+    text-align: left;
+
+    .bi {
+      color: var(--color-text-muted);
+    }
+  }
+}
+
+// ---------- Nút tiện ích bên phải ----------
+.header-actions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-1;
+
+  @include respond-to(sm) {
+    gap: $space-2;
+  }
+
+  &__sell {
+    // Mobile chỉ hiện icon "+" cho gọn
+    span {
+      @include respond-below(sm) {
+        @include visually-hidden;
+      }
+    }
+  }
+}
+
+// Nút tròn chỉ có icon (theme, yêu thích, giỏ hàng)
+.icon-btn {
+  position: relative;
+  @include flex-center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  transition: background-color $transition;
+
+  &:hover {
+    background: rgb(255 255 255 / 18%);
+  }
+
+  // Số đếm nhỏ ở góc
+  &__badge {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: $radius-pill;
+    background: #fff;
+    color: $color-primary;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+  }
+}
+
+// ---------- Tài khoản ----------
+.account {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+
+  &__login {
+    padding: $space-2 $space-2;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// Menu tài khoản dùng <details>/<summary>: mở/đóng không cần JS
+.account-menu {
+  position: relative;
+
+  > summary {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-1;
+    border-radius: $radius-pill;
+    cursor: pointer;
+    list-style: none;
+    @include focus-ring;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &:hover {
+      background: rgb(255 255 255 / 18%);
+    }
+  }
+
+  &__name {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+
+    @include respond-below(xl) {
+      @include visually-hidden;
+    }
+  }
+
+  &__list {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: $z-dropdown;
+    min-width: 220px;
+    padding-block: $space-2;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: $radius;
+    box-shadow: var(--shadow-md);
+  }
+
+  &__header {
+    padding: $space-2 $space-4 $space-3;
+    margin-bottom: $space-2;
+    border-bottom: 1px solid var(--color-border);
+    font-size: $font-size-sm;
+    color: var(--color-text-muted);
+
+    strong {
+      display: block;
+      color: var(--color-text);
+      font-size: $font-size-base;
+    }
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    width: 100%;
+    padding: $space-2 $space-4;
+    border: 0;
+    background: none;
+    text-align: left;
+
+    &:hover {
+      background: var(--color-surface-2);
+      color: var(--color-primary);
+    }
+
+    &--danger {
+      color: var(--color-danger);
+    }
+  }
+}
+
+.avatar {
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: $color-primary;
+  font-weight: 700;
+  text-transform: uppercase;
+}

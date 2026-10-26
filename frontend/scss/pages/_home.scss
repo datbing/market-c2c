@@ -1,0 +1,369 @@
+// =========================================================
+//  TRANG CHỦ: banner, danh mục, bộ lọc, danh sách tin
+// =========================================================
+@use '../abstracts' as *;
+
+.home {
+  display: grid;
+  gap: $space-5;
+
+  @include respond-to(md) {
+    gap: $space-6;
+  }
+}
+
+// ---------- Banner ----------
+.hero {
+  position: relative;
+  display: grid;
+  gap: $space-5;
+  padding: $space-5 $space-4;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(circle at 85% 20%, rgb(255 255 255 / 18%) 0 90px, transparent 91px),
+    radial-gradient(circle at 95% 90%, rgb(255 255 255 / 12%) 0 140px, transparent 141px),
+    linear-gradient(120deg, $color-primary, #ff8a3d);
+
+  @include respond-to(md) {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: $space-6;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    line-height: 1.25;
+
+    @include respond-to(md) {
+      font-size: 2rem;
+    }
+  }
+
+  &__text {
+    margin-top: $space-2;
+    max-width: 520px;
+    opacity: 0.92;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-3;
+    margin-top: $space-4;
+  }
+
+  // Nút viền trắng trên nền cam
+  &__secondary {
+    border-color: rgb(255 255 255 / 70%);
+    color: #fff;
+
+    &:hover {
+      background: rgb(255 255 255 / 15%);
+    }
+  }
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: $space-2;
+
+    @include respond-to(md) {
+      grid-template-columns: 1fr;
+      min-width: 180px;
+    }
+
+    li {
+      padding: $space-2 $space-3;
+      border-radius: $radius;
+      background: rgb(255 255 255 / 16%);
+      backdrop-filter: blur(4px);
+      font-size: $font-size-sm;
+    }
+
+    strong {
+      display: block;
+      font-size: 1.35rem;
+      line-height: 1.2;
+    }
+  }
+}
+
+// ---------- Danh mục ----------
+.category-list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 92px;
+  gap: $space-2;
+  overflow-x: auto;
+  padding-bottom: $space-2;
+  scroll-snap-type: x proximity;
+
+  @include respond-to(md) {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  > li {
+    scroll-snap-align: start;
+  }
+}
+
+.category-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-2;
+  width: 100%;
+  height: 100%;
+  padding: $space-3 $space-2;
+  border: 1px solid var(--color-border);
+  border-radius: $radius;
+  background: var(--color-surface);
+  text-align: center;
+  transition: all $transition;
+
+  &:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  &__icon {
+    @include flex-center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-size: 1.4rem;
+    transition: all $transition;
+  }
+
+  &__name {
+    @include line-clamp(2);
+    font-size: 0.8125rem;
+    line-height: 1.3;
+  }
+
+  &__count {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  &.is-active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+
+    .category-tile__icon {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+    }
+
+    .category-tile__name {
+      color: var(--color-primary);
+      font-weight: 700;
+    }
+  }
+
+  // Skeleton khi đang tải danh mục
+  &--loading {
+    pointer-events: none;
+
+    .category-tile__icon,
+    .category-tile__name {
+      color: transparent;
+    }
+  }
+}
+
+// ---------- Bố cục bộ lọc + kết quả ----------
+.home-layout {
+  scroll-margin-top: calc(#{$header-height} + #{$space-6}); // tránh bị header sticky che khi cuộn tới
+  display: grid;
+  gap: $space-5;
+  align-items: start;
+
+  @include respond-to(xl) {
+    grid-template-columns: $sidebar-width minmax(0, 1fr);
+  }
+}
+
+// Bộ lọc: mobile/tablet là ngăn kéo trượt từ trái, desktop là cột cố định
+.filters {
+  @include surface($space-4);
+
+  @include respond-below(xl) {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: $z-drawer;
+    width: min(320px, 86vw);
+    border-radius: 0;
+    overflow-y: auto;
+    transform: translateX(-105%);
+    transition: transform 0.25s ease;
+    visibility: hidden;
+
+    &.is-open {
+      transform: none;
+      visibility: visible;
+    }
+  }
+
+  @include respond-to(xl) {
+    position: sticky;
+    top: calc(#{$header-height} + #{$space-4});
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $space-4;
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: $space-2;
+      font-size: $font-size-base;
+    }
+  }
+
+  &__close {
+    @include respond-to(xl) {
+      display: none;
+    }
+  }
+
+  &__actions {
+    display: grid;
+    gap: $space-2;
+    margin-top: $space-5;
+  }
+
+  // Nút "Xem kết quả" chỉ cần trên mobile/tablet (ngăn kéo)
+  &__apply {
+    @include respond-to(xl) {
+      display: none;
+    }
+  }
+}
+
+.price-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+
+  .btn {
+    font-weight: 400;
+  }
+
+  .is-active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+  }
+}
+
+// fieldset mặc định có viền và padding -> bỏ đi
+fieldset.form-group {
+  margin-inline: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    margin-bottom: $space-2;
+    padding: 0;
+  }
+}
+
+.filters-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-drawer - 1;
+  background: rgb(0 0 0 / 45%);
+
+  @include respond-to(xl) {
+    display: none;
+  }
+}
+
+// Khóa cuộn trang khi ngăn kéo bộ lọc mở
+body.no-scroll {
+  overflow: hidden;
+}
+
+// ---------- Khu kết quả ----------
+.results {
+  min-width: 0;
+
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: $space-3;
+    margin-bottom: $space-3;
+
+    h2 {
+      font-size: $font-size-lg;
+    }
+  }
+
+  &__count {
+    font-size: $font-size-sm;
+    color: var(--color-text-muted);
+  }
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+
+    .form-control {
+      width: auto;
+      padding-block: 6px;
+    }
+  }
+
+  &__filter-toggle {
+    @include respond-to(xl) {
+      display: none;
+    }
+  }
+
+  &__rate {
+    margin-top: $space-4;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+}
+
+.filter-count {
+  @include flex-center;
+  min-width: 20px;
+  height: 20px;
+  padding-inline: 6px;
+  border-radius: $radius-pill;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 0.6875rem;
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-2;
+  margin-bottom: $space-3;
+}
+
+// Danh sách mờ đi khi đang tải trang mới (giữ kết quả cũ để không giật)
+.listing-grid.is-loading {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity $transition;
+}

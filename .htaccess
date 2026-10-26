@@ -1,0 +1,28 @@
+Options -Indexes
+DirectoryIndex index.html
+
+RewriteEngine On
+RewriteBase /
+
+# Chặn file/thư mục ẩn (.env, .git, .htaccess...)
+RewriteRule (^|/)\. - [F,L]
+
+# Đã trỏ vào frontend/ rồi -> dừng (tránh lặp vô hạn khi Apache chạy lại rule)
+RewriteRule ^frontend/ - [L]
+
+# /login hoặc /login/ -> frontend/login.html (nếu file tồn tại)
+RewriteCond %{DOCUMENT_ROOT}/frontend/$1.html -f
+RewriteRule ^(.+?)/?$ frontend/$1.html [L]
+
+# Mọi đường dẫn khác -> tìm trong frontend/
+RewriteRule ^(.*)$ frontend/$1 [L]
+
+ErrorDocument 403 /frontend/404.html
+ErrorDocument 404 /frontend/404.html
+
+# Không cache HTML để sửa code là thấy ngay; CSS/JS cache ngắn
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
