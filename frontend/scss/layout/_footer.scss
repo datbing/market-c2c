@@ -1,0 +1,48 @@
+// =========================================================
+//  FOOTER
+// =========================================================
+@use '../abstracts' as *;
+
+.site-footer {
+  background: var(--color-surface);
+  border-top: 3px solid var(--color-primary);
+  font-size: $font-size-sm;
+  color: var(--color-text-muted);
+
+  &__grid {
+    display: grid;
+    gap: $space-5;
+    padding-block: $space-6;
+
+    @include respond-to(md) {
+      grid-template-columns: 2fr 1fr 1fr;
+    }
+  }
+
+  &__brand {
+    color: var(--color-primary);
+    margin-bottom: $space-2;
+  }
+
+  h2 {
+    margin-bottom: $space-3;
+    font-size: $font-size-base;
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  li + li {
+    margin-top: $space-2;
+  }
+
+  a:hover {
+    color: var(--color-primary);
+  }
+
+  &__bottom {
+    padding-block: $space-4;
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+  }
+}

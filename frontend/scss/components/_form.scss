@@ -1,0 +1,92 @@
+// =========================================================
+//  FORM: ô nhập, select, nhóm radio
+// =========================================================
+@use '../abstracts' as *;
+
+.form-group {
+  display: grid;
+  gap: $space-2;
+
+  & + & {
+    margin-top: $space-4;
+  }
+}
+
+.form-label {
+  font-weight: 600;
+  font-size: $font-size-sm;
+}
+
+.form-control {
+  width: 100%;
+  padding: $space-2 $space-3;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-sm;
+  background: var(--color-surface);
+  transition: border-color $transition, box-shadow $transition;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-soft);
+  }
+
+  &:disabled {
+    background: var(--color-surface-2);
+    cursor: not-allowed;
+  }
+}
+
+// Hai ô giá "từ - đến" nằm cùng hàng
+.form-range {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: $space-2;
+  color: var(--color-text-muted);
+}
+
+// Nhóm lựa chọn dạng "viên thuốc" (radio ẩn, label làm nút)
+.choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+
+  input {
+    @include visually-hidden;
+  }
+
+  label {
+    padding: $space-1 $space-3;
+    border: 1px solid var(--color-border);
+    border-radius: $radius-pill;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    transition: all $transition;
+
+    &:hover {
+      border-color: var(--color-primary);
+    }
+  }
+
+  input:checked + label {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  input:focus-visible + label {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.form-hint {
+  font-size: $font-size-sm;
+  color: var(--color-text-muted);
+
+  &--error {
+    color: var(--color-danger);
+  }
+}

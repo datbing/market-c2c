@@ -1,0 +1,62 @@
+// =========================================================
+//  NÚT BẤM: .btn + biến thể (--primary, --outline, --ghost, --white)
+// =========================================================
+@use '../abstracts' as *;
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  padding: $space-2 $space-4;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: background-color $transition, border-color $transition, color $transition;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    @include button-variant(var(--color-primary), var(--color-on-primary), var(--color-primary-hover));
+  }
+
+  &--outline {
+    @include button-variant(transparent, var(--color-primary), var(--color-primary-soft), var(--color-primary));
+  }
+
+  &--ghost {
+    @include button-variant(transparent, var(--color-text), var(--color-surface-2), var(--color-border));
+  }
+
+  // Nút trắng chữ cam, dùng trên nền cam (header, banner)
+  &--white {
+    @include button-variant(#fff, $color-primary, #fff3ef, #fff);
+  }
+
+  &--sm {
+    padding: $space-1 $space-3;
+    font-size: $font-size-sm;
+  }
+
+  &--block {
+    width: 100%;
+  }
+}
+
+// Nút dạng chữ (link)
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font-size: $font-size-sm;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
