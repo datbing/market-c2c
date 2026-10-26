@@ -8,34 +8,42 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $space-2;
 
+  // Số cột theo màn hình: 2 (mobile) -> 3 (từ 576px) -> 4 (desktop)
   @include respond-to(sm) {
-    gap: $space-3;
-  }
-
-  @include respond-to(md) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: $space-3;
   }
 
   @include respond-to(xl) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  // Biến thể cuộn ngang (tin vừa xem)
+  // Biến thể cuộn ngang (tin vừa xem): nhìn thấy ~2,2 / 3,3 / 4,3 / 6 thẻ
+  // (để lộ một phần thẻ kế tiếp -> người dùng biết là cuộn được)
   &--scroll {
     grid-auto-flow: column;
     grid-template-columns: none;
-    grid-auto-columns: 46%;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
+    grid-auto-columns: 44%;
     padding-bottom: $space-2;
+    scroll-snap-type: x mandatory;
+    @include scroll-x;
 
     > * {
       scroll-snap-align: start;
     }
 
-    @include respond-to(md) {
+    // Thẻ trong dải cuộn luôn hẹp -> tỉnh thành / thời gian luôn 2 dòng
+    .listing-card__meta {
+      flex-direction: column;
+    }
+
+    @include respond-to(sm) {
       grid-template-columns: none;
-      grid-auto-columns: 23%;
+      grid-auto-columns: 29%;
+    }
+
+    @include respond-to(md) {
+      grid-auto-columns: 22%;
     }
 
     @include respond-to(xl) {
@@ -109,19 +117,33 @@
     height: 34px;
     border: 0;
     border-radius: 50%;
-    background: rgb(255 255 255 / 92%);
-    color: #555;
+    background: var(--fav-bg);
+    color: var(--fav-fg);
+    backdrop-filter: blur(4px);
     font-size: 1.05rem;
     box-shadow: var(--shadow-sm);
     transition: transform $transition, color $transition;
 
     &:hover {
       transform: scale(1.1);
-      color: $color-primary;
+      color: var(--color-primary);
     }
 
-    &.is-active {
-      color: $color-primary;
+    // Tim rỗng / tim đặc: CSS đổi theo aria-pressed, JS chỉ cần set thuộc tính
+    .bi-heart-fill {
+      display: none;
+    }
+
+    &[aria-pressed='true'] {
+      color: var(--color-primary);
+
+      .bi-heart {
+        display: none;
+      }
+
+      .bi-heart-fill {
+        display: inline-block;
+      }
     }
   }
 
@@ -156,18 +178,36 @@
     color: var(--color-text-muted);
     font-size: 0.75rem;
     font-weight: 400;
+
+    // Không có tỷ giá -> chuỗi rỗng -> ẩn
+    &:empty {
+      display: none;
+    }
   }
 
+  // Thẻ hẹp (< 768px) -> tỉnh thành và thời gian xếp 2 dòng; tablet trở lên: cùng 1 dòng
   &__meta {
     display: flex;
-    justify-content: space-between;
-    gap: $space-2;
+    flex-direction: column;
+    gap: 0 $space-2;
     font-size: 0.75rem;
     color: var(--color-text-muted);
 
-    span {
+    @include respond-to(md) {
+      flex-direction: row;
+      justify-content: space-between;
+    }
+
+    // Tỉnh thành dài thì cắt "...", thời gian luôn giữ trên 1 dòng
+    > span {
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    time {
+      flex-shrink: 0;
       white-space: nowrap;
     }
   }

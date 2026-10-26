@@ -1,0 +1,142 @@
+// =========================================================
+//  TRANG ĐĂNG NHẬP / ĐĂNG KÝ
+//  Mobile + tablet: chỉ có thẻ form ở giữa.
+//  Desktop (>= 1200px): khối giới thiệu bên trái + form bên phải.
+// =========================================================
+@use '../abstracts' as *;
+
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+  gap: $space-6;
+
+  @include respond-to(md) {
+    padding-block: $space-5;
+  }
+
+  @include respond-to(xl) {
+    grid-template-columns: minmax(0, 1fr) 480px;
+    justify-items: stretch;
+    gap: $space-7;
+    min-height: calc(100vh - #{$header-height} - 260px);
+  }
+
+  // ---------- Khối giới thiệu ----------
+  &__intro {
+    display: none;
+
+    @include respond-to(xl) {
+      display: block;
+      position: relative;
+      padding: $space-7;
+      border-radius: $radius-lg;
+      overflow: hidden;
+      color: var(--hero-fg);
+      background: var(--hero-bg);
+      border: 1px solid var(--hero-border);
+    }
+  }
+
+  &__intro-title {
+    font-size: 2rem;
+    line-height: 1.25;
+  }
+
+  &__intro-text {
+    margin-top: $space-2;
+    opacity: 0.92;
+  }
+
+  &__benefits {
+    display: grid;
+    gap: $space-3;
+    margin-top: $space-6;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: $space-3;
+    }
+
+    .bi {
+      @include flex-center;
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--hero-chip-bg);
+      color: var(--hero-icon);
+      font-size: 1.1rem;
+    }
+  }
+}
+
+// ---------- Thẻ chứa form ----------
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  padding: $space-5 $space-4;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  box-shadow: var(--shadow-md);
+
+  @include respond-to(sm) {
+    padding: $space-6;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+  }
+
+  &__subtitle {
+    margin-top: $space-1;
+    color: var(--color-text-muted);
+
+    a {
+      color: var(--color-primary);
+      font-weight: 600;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .alert {
+    margin-top: $space-4;
+  }
+
+  &__form {
+    margin-top: $space-5;
+
+    .btn[type='submit'] {
+      margin-top: $space-5;
+    }
+  }
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: $space-4;
+  }
+
+  &__footer {
+    margin-top: $space-5;
+    padding-top: $space-4;
+    border-top: 1px solid var(--color-border);
+    font-size: $font-size-sm;
+    text-align: center;
+
+    a {
+      color: var(--color-text-muted);
+
+      &:hover {
+        color: var(--color-primary);
+      }
+    }
+  }
+}

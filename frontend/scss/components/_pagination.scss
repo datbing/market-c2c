@@ -38,6 +38,11 @@
     }
   }
 
+  // Vùng chứa nút số trang: "trong suốt" với flexbox để các nút xếp chung hàng
+  &__pages {
+    display: contents;
+  }
+
   &__gap {
     align-self: center;
     padding-inline: $space-1;

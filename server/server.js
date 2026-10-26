@@ -1,10 +1,28 @@
 /**
  * Điểm khởi động server.
- * Kiểm tra kết nối MySQL trước, lỗi thì báo rõ cách khắc phục rồi thoát.
+ *  1. Kiểm tra kết nối MySQL, lỗi thì báo rõ cách khắc phục rồi thoát.
+ *  2. Đọc chứng chỉ SSL và chạy API bằng HTTPS (frontend chạy https nên API
+ *     cũng phải https, nếu không trình duyệt chặn vì "mixed content").
  */
+import fs from 'node:fs';
+import https from 'node:https';
 import { app } from './app.js';
 import { config } from './config/env.js';
 import { pool, checkConnection } from './config/db.js';
+
+/** Đọc file chứng chỉ + khóa, thiếu file thì báo hướng dẫn rồi thoát */
+function loadSslOptions() {
+  const { certFile, keyFile } = config.ssl;
+  try {
+    return { cert: fs.readFileSync(certFile), key: fs.readFileSync(keyFile) };
+  } catch (err) {
+    console.error(`✖ Không đọc được chứng chỉ SSL: ${err.message}`);
+    console.error('  → Laragon: Menu > Apache > SSL > Enabled để Laragon tạo chứng chỉ');
+    console.error(`  → Hoặc khai báo đường dẫn khác bằng SSL_CERT / SSL_KEY trong .env`);
+    console.error(`    (đang dùng: ${certFile} | ${keyFile})`);
+    process.exit(1);
+  }
+}
 
 async function bootstrap() {
   try {
@@ -18,8 +36,9 @@ async function bootstrap() {
     process.exit(1);
   }
 
-  const server = app.listen(config.port, () => {
-    console.log(`🚀 API đang chạy tại http://market-c2c.test:${config.port} (hoặc http://localhost:${config.port})`);
+  const server = https.createServer(loadSslOptions(), app);
+  server.listen(config.port, () => {
+    console.log(`🚀 API đang chạy tại https://market-c2c.test:${config.port}`);
     console.log(`   Frontend được phép gọi API: ${config.corsOrigins.join(', ')}`);
   });
 

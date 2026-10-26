@@ -1,12 +1,15 @@
 /**
- * Header dùng chung cho mọi trang:
+ * Header dùng chung cho mọi trang. Toàn bộ HTML của header viết sẵn trong file .html,
+ * file này chỉ gắn hành vi:
  *  - Ô tìm kiếm + dropdown lịch sử tìm kiếm (LocalStorage), điều khiển bằng bàn phím
  *  - Số đếm giỏ hàng / yêu thích (nghe CustomEvent từ stores.js)
- *  - Khu vực tài khoản (gọi /api/auth/me)
+ *  - Khu vực tài khoản: bật khối "khách" hoặc "đã đăng nhập" (gọi /api/auth/me)
  *  - Nút đổi theme sáng/tối (cookie)
  */
-import { $, escapeHtml, debounce } from '../utils/dom.js';
-import { getCurrentUser, logout } from '../services/auth.js';
+import { $, $$, debounce } from '../utils/dom.js';
+import { cloneTemplate } from '../utils/template.js';
+import { getCurrentUser, logout, loginUrl } from '../services/auth.js';
+import { consumeFlash } from '../services/flash.js';
 import { cart, favorites, searchHistory } from '../services/stores.js';
 import { initThemeToggle } from './theme.js';
 import { showToast } from './toast.js';
@@ -29,55 +32,44 @@ function initCounters() {
 }
 
 // ---------------------------------------------------------
-//  Tài khoản
+//  Tài khoản: 2 khối #account-guest và #account-user có sẵn trong HTML
 // ---------------------------------------------------------
-function renderGuest(container) {
-  container.innerHTML = `
-    <a class="account__login" href="/login">Đăng nhập</a>`;
+function showUser(user) {
+  const menu = $('#account-user');
+  const fields = { name: user.name, email: user.email, initial: user.name.trim().charAt(0) || '?' };
+
+  $$('[data-user]', menu).forEach((el) => {
+    el.textContent = fields[el.dataset.user] ?? '';
+  });
+  // Mục chỉ dành cho admin
+  $$('[data-role="admin"]', menu).forEach((el) => {
+    el.hidden = user.role !== 'admin';
+  });
+
+  menu.hidden = false;
+  $('#account-guest').hidden = true;
 }
 
-function renderUser(container, user) {
-  const initial = escapeHtml(user.name.trim().charAt(0) || '?');
-  const adminLink =
-    user.role === 'admin'
-      ? `<li><a class="account-menu__item" href="/admin/"><i class="bi bi-speedometer2"></i> Trang quản trị</a></li>`
-      : '';
-
-  container.innerHTML = `
-    <details class="account-menu">
-      <summary aria-label="Menu tài khoản">
-        <span class="avatar" aria-hidden="true">${initial}</span>
-        <span class="account-menu__name">${escapeHtml(user.name)}</span>
-      </summary>
-      <ul class="account-menu__list">
-        <li class="account-menu__header">
-          <strong>${escapeHtml(user.name)}</strong>${escapeHtml(user.email)}
-        </li>
-        ${adminLink}
-        <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list"></i> Tin đăng của tôi</a></li>
-        <li><a class="account-menu__item" href="/orders"><i class="bi bi-receipt"></i> Đơn hàng</a></li>
-        <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart"></i> Tin yêu thích</a></li>
-        <li>
-          <button type="button" class="account-menu__item account-menu__item--danger" data-action="logout">
-            <i class="bi bi-box-arrow-right"></i> Đăng xuất
-          </button>
-        </li>
-      </ul>
-    </details>`;
+function showGuest() {
+  const link = $('#account-guest');
+  // Đăng nhập xong quay lại đúng trang đang xem (trừ khi đang ở chính trang login/register)
+  if (!/^\/(login|register)/.test(window.location.pathname)) link.href = loginUrl();
+  link.hidden = false;
+  $('#account-user').hidden = true;
 }
 
 async function initAccount() {
-  const container = $('#account-area');
-  if (!container) return;
+  const area = $('#account-area');
+  if (!area) return;
 
   try {
     const user = await getCurrentUser();
-    user ? renderUser(container, user) : renderGuest(container);
+    user ? showUser(user) : showGuest();
   } catch {
-    renderGuest(container); // lỗi mạng: vẫn cho người dùng bấm đăng nhập
+    showGuest(); // lỗi mạng: vẫn cho người dùng bấm đăng nhập
   }
 
-  container.addEventListener('click', async (e) => {
+  area.addEventListener('click', async (e) => {
     if (!e.target.closest('[data-action="logout"]')) return;
     try {
       await logout();
@@ -90,8 +82,8 @@ async function initAccount() {
 
   // Bấm ra ngoài thì đóng menu <details>
   document.addEventListener('click', (e) => {
-    const menu = $('.account-menu[open]', container);
-    if (menu && !menu.contains(e.target)) menu.removeAttribute('open');
+    const menu = $('#account-user');
+    if (menu.open && !menu.contains(e.target)) menu.open = false;
   });
 }
 
@@ -102,12 +94,28 @@ async function initAccount() {
 const normalize = (str) =>
   str.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().trim();
 
+/** Tạo 1 dòng lịch sử từ <template id="tpl-history-item"> */
+function createHistoryItem(term, isActive) {
+  const item = cloneTemplate('tpl-history-item');
+  item.classList.toggle('is-active', isActive);
+  item.setAttribute('aria-selected', String(isActive));
+
+  item.querySelector('[data-term]').dataset.term = term;
+  item.querySelector('[data-field="term"]').textContent = term;
+
+  const removeBtn = item.querySelector('[data-remove]');
+  removeBtn.dataset.remove = term;
+  removeBtn.setAttribute('aria-label', `Xóa "${term}" khỏi lịch sử`);
+  return item;
+}
+
 function initSearch({ onSearch, liveSearch }) {
   const form = $('#search-form');
   if (!form) return;
   const input = $('#search-input', form);
   const dropdown = $('#search-history', form);
-  let activeIndex = -1; // phần tử đang chọn bằng phím mũi tên
+  const list = $('#search-history-list', form);
+  let activeIndex = -1; // dòng đang chọn bằng phím mũi tên
 
   // Điền sẵn từ khóa trên URL (?q=...)
   input.value = new URLSearchParams(window.location.search).get('q') ?? '';
@@ -127,28 +135,7 @@ function initSearch({ onSearch, liveSearch }) {
     const matches = getMatches();
     if (matches.length === 0) return closeDropdown();
 
-    dropdown.innerHTML = `
-      <div class="search__dropdown-head">
-        <span>Tìm kiếm gần đây</span>
-        <button type="button" class="link-btn" data-clear>Xóa tất cả</button>
-      </div>
-      <ul role="listbox" aria-label="Lịch sử tìm kiếm">
-        ${matches
-          .map(
-            (term, i) => `
-          <li class="search__history-item ${i === activeIndex ? 'is-active' : ''}"
-              role="option" aria-selected="${i === activeIndex}">
-            <button type="button" class="search__history-term" data-term="${escapeHtml(term)}">
-              <i class="bi bi-clock-history" aria-hidden="true"></i> ${escapeHtml(term)}
-            </button>
-            <button type="button" class="toast__close" data-remove="${escapeHtml(term)}"
-                    aria-label="Xóa '${escapeHtml(term)}' khỏi lịch sử">
-              <i class="bi bi-x" aria-hidden="true"></i>
-            </button>
-          </li>`,
-          )
-          .join('')}
-      </ul>`;
+    list.replaceChildren(...matches.map((term, i) => createHistoryItem(term, i === activeIndex)));
     dropdown.hidden = false;
     input.setAttribute('aria-expanded', 'true');
   };
@@ -232,6 +219,14 @@ export function initHeader({ onSearch, liveSearch = false } = {}) {
   initCounters();
   initSearch({ onSearch, liveSearch });
   initAccount();
+
+  // Thông báo do trang trước để lại (vd: "Đăng nhập thành công")
+  const flash = consumeFlash();
+  if (flash) showToast(flash.message, flash.type, 4500); // lâu hơn chút vì trang vừa tải
+
+  // Năm ở footer (footer cũng dùng chung)
+  const year = $('#year');
+  if (year) year.textContent = new Date().getFullYear();
 }
 
 /** Đồng bộ ô tìm kiếm khi trang đổi từ khóa bằng cách khác (vd: bấm xóa chip) */

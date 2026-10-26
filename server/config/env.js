@@ -25,12 +25,21 @@ export const config = Object.freeze({
 
   /**
    * Origin của frontend được phép gọi API kèm cookie (CORS).
-   * Nhiều origin cách nhau bằng dấu phẩy, vd: "http://market-c2c.test,http://localhost:5500"
+   * Nhiều origin cách nhau bằng dấu phẩy, vd: "https://market-c2c.test,https://localhost:5500"
    */
-  corsOrigins: (process.env.CORS_ORIGINS || 'http://market-c2c.test')
+  corsOrigins: (process.env.CORS_ORIGINS || 'https://market-c2c.test')
     .split(',')
     .map((origin) => origin.trim().replace(/\/+$/, ''))
     .filter(Boolean),
+
+  /**
+   * Chứng chỉ HTTPS cho API. Mặc định dùng chung chứng chỉ Laragon tự tạo
+   * (đã có tên miền *.test và được Windows tin cậy khi bật SSL trong Laragon).
+   */
+  ssl: {
+    certFile: process.env.SSL_CERT || 'D:/laragon/etc/ssl/laragon.crt',
+    keyFile: process.env.SSL_KEY || 'D:/laragon/etc/ssl/laragon.key',
+  },
 
   session: {
     cookieName: 'mc2c.sid',

@@ -1,12 +1,15 @@
 /**
  * TRANG CHỦ
+ *  - HTML của mọi thành phần nằm trong index.html (phần tĩnh + <template>);
+ *    file này chỉ lấy dữ liệu, nhân bản template, điền chữ và bật/tắt `hidden`.
  *  - Tải song song (Promise.allSettled): danh mục (backend), tỉnh thành + tỷ giá (API công khai)
  *  - Danh sách tin: tìm kiếm, lọc (danh mục, khu vực, tình trạng, giá), sắp xếp, phân trang
  *  - Trạng thái bộ lọc lưu SessionStorage + URL (F5 / quay lại trang vẫn giữ)
  *  - Yêu thích (LocalStorage), tin vừa xem (LocalStorage)
  *  - AbortController hủy request cũ khi người dùng đổi bộ lọc liên tục
  */
-import { $, $$, escapeHtml, debounce } from '../utils/dom.js';
+import { $, $$, debounce } from '../utils/dom.js';
+import { cloneTemplate, fillFields } from '../utils/template.js';
 import { formatVND, formatCompact, CONDITION_LABELS, SORT_LABELS } from '../utils/format.js';
 import { session } from '../services/storage.js';
 import { favorites, recentlyViewed, toListingSnapshot } from '../services/stores.js';
@@ -17,8 +20,8 @@ import { initHeader, setSearchValue } from '../components/header.js';
 import { showToast } from '../components/toast.js';
 import { renderPagination } from '../components/pagination.js';
 import {
-  renderListingCard,
-  renderSkeletonCards,
+  createListingCard,
+  createSkeletonCards,
   applyUsdRate,
   setFavoriteButton,
 } from '../components/listing-card.js';
@@ -53,11 +56,17 @@ class HomePage {
   constructor() {
     this.el = {
       categoryList: $('#category-list'),
+      categoryError: $('#category-error'),
+      results: $('.results'),
       grid: $('#listing-grid'),
+      empty: $('#listing-empty'),
+      error: $('#listing-error'),
       pagination: $('#pagination'),
       count: $('#result-count'),
       title: $('#results-title'),
       chips: $('#active-filters'),
+      chipList: $('#chip-list'),
+      chipReset: $('#chip-reset'),
       form: $('#filter-form'),
       province: $('#filter-province'),
       provinceHint: $('#province-hint'),
@@ -90,7 +99,6 @@ class HomePage {
     });
     setSearchValue(this.filters.q);
 
-    this.renderSortOptions();
     this.syncForm();
     this.renderChips();
     this.renderRecent();
@@ -204,6 +212,18 @@ class HomePage {
   // =======================================================
   //  DANH SÁCH TIN
   // =======================================================
+  /**
+   * Chọn khối hiển thị: 'list' (lưới tin) | 'empty' (không có kết quả) | 'error'.
+   * Các khối đều viết sẵn trong HTML, ở đây chỉ bật/tắt `hidden`.
+   */
+  showListingState(state) {
+    const { grid, empty, error, pagination } = this.el;
+    grid.hidden = state !== 'list';
+    empty.hidden = state !== 'empty';
+    error.hidden = state !== 'error';
+    if (state !== 'list') pagination.hidden = true;
+  }
+
   async loadListings() {
     // Hủy request trước (nếu chưa xong) để kết quả cũ không đè kết quả mới
     this.controller?.abort();
@@ -212,8 +232,13 @@ class HomePage {
 
     const { grid, count } = this.el;
     grid.setAttribute('aria-busy', 'true');
-    if (grid.querySelector('.listing-card[data-id]')) grid.classList.add('is-loading');
-    else grid.innerHTML = renderSkeletonCards(PAGE_SIZE);
+    // Đang có kết quả cũ -> làm mờ; chưa có -> hiện thẻ skeleton
+    if (!grid.hidden && grid.querySelector('.listing-card[data-id]')) {
+      grid.classList.add('is-loading');
+    } else {
+      grid.replaceChildren(createSkeletonCards(PAGE_SIZE));
+      this.showListingState('list');
+    }
     count.textContent = 'Đang tải...';
 
     try {
@@ -238,107 +263,94 @@ class HomePage {
   }
 
   renderListings(items, meta) {
-    const { grid, pagination, count, title } = this.el;
+    const { grid, pagination, count } = this.el;
     this.listings = new Map(items.map((item) => [item.id, item]));
 
-    // Tiêu đề + số kết quả
-    const { q, category } = this.filters;
-    const categoryName = this.categories.get(category)?.name;
-    title.textContent = q ? `Kết quả cho "${q}"` : categoryName ?? 'Tin đăng mới nhất';
+    this.renderTitle();
     count.textContent =
       meta.total > 0
         ? `${meta.total.toLocaleString('vi-VN')} tin · Trang ${meta.page}/${meta.totalPages}`
         : 'Không có tin phù hợp';
 
     if (items.length === 0) {
-      grid.innerHTML = `
-        <div class="state">
-          <i class="bi bi-search" aria-hidden="true"></i>
-          <p class="state__title">Không tìm thấy tin đăng nào</p>
-          <p class="state__text">Thử bỏ bớt bộ lọc, đổi từ khóa khác hoặc tìm không dấu.</p>
-          <button type="button" class="btn btn--primary" data-action="reset">Xóa bộ lọc</button>
-        </div>`;
-      pagination.innerHTML = '';
+      this.showListingState('empty');
       return;
     }
 
-    grid.innerHTML = items
-      .map((item) =>
-        renderListingCard(item, { isFavorite: favorites.has(item.id), usdRate: this.usdRate }),
-      )
-      .join('');
-    pagination.innerHTML = renderPagination(meta);
+    grid.replaceChildren(
+      ...items.map((item) =>
+        createListingCard(item, { isFavorite: favorites.has(item.id), usdRate: this.usdRate }),
+      ),
+    );
+    this.showListingState('list');
+    renderPagination(pagination, meta);
   }
 
   renderListingError(err) {
     this.el.count.textContent = 'Không tải được dữ liệu';
-    this.el.pagination.innerHTML = '';
-    this.el.grid.innerHTML = `
-      <div class="state state--error" role="alert">
-        <i class="bi bi-wifi-off" aria-hidden="true"></i>
-        <p class="state__title">Không tải được danh sách tin</p>
-        <p class="state__text">${escapeHtml(err.message)}</p>
-        <button type="button" class="btn btn--primary" data-action="retry">
-          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Thử lại
-        </button>
-      </div>`;
+    $('#listing-error-message').textContent = err.message;
+    this.showListingState('error');
+  }
+
+  /** Tiêu đề khu kết quả: theo từ khóa > danh mục > mặc định */
+  renderTitle() {
+    const { q, category } = this.filters;
+    const categoryName = this.categories.get(category)?.name;
+    this.el.title.textContent = q ? `Kết quả cho "${q}"` : categoryName ?? 'Tin đăng mới nhất';
   }
 
   // =======================================================
   //  DANH MỤC
   // =======================================================
   renderCategories(categories) {
+    const { categoryList, categoryError } = this.el;
     this.categories = new Map(categories.map((c) => [c.slug, c]));
 
-    // Thống kê banner bằng reduce
+    // Thống kê bằng reduce
     const totalActive = categories.reduce((sum, c) => sum + c.listingCount, 0);
     $('#stat-listings').textContent = formatCompact(totalActive);
     $('#stat-categories').textContent = categories.length;
+    $('#category-all-count').textContent = `${totalActive} tin`;
 
-    const tile = ({ slug, name, icon, count }) => `
-      <li>
-        <button type="button" class="category-tile" data-category="${escapeHtml(slug)}"
-                aria-pressed="false">
-          <span class="category-tile__icon"><i class="bi ${escapeHtml(icon || 'bi-tag')}" aria-hidden="true"></i></span>
-          <span class="category-tile__name">${escapeHtml(name)}</span>
-          <span class="category-tile__count">${count} tin</span>
-        </button>
-      </li>`;
+    // Xóa khung chờ + ô cũ (nếu tải lại), giữ ô "Tất cả" viết sẵn trong HTML
+    $$('[data-skeleton], [data-generated]', categoryList).forEach((li) => li.remove());
 
-    this.el.categoryList.innerHTML = [
-      tile({ slug: '', name: 'Tất cả', icon: 'bi-grid-3x3-gap', count: totalActive }),
-      ...categories.map((c) => tile({ ...c, count: c.listingCount })),
-    ].join('');
-    this.el.categoryList.setAttribute('aria-busy', 'false');
+    const tiles = categories.map(({ slug, name, icon, listingCount }) => {
+      const li = cloneTemplate('tpl-category-tile');
+      li.dataset.generated = '';
+      fillFields(li, { name, count: `${listingCount} tin` });
+      li.querySelector('[data-category]').dataset.category = slug;
+      if (icon) li.querySelector('.category-tile__icon .bi').className = `bi ${icon}`;
+      return li;
+    });
+    categoryList.append(...tiles);
 
+    categoryList.setAttribute('aria-busy', 'false');
+    categoryError.hidden = true;
     this.highlightCategory();
     this.renderChips(); // chip danh mục cần tên -> vẽ lại
-    // Cập nhật tiêu đề nếu danh sách đã về trước danh mục
-    const current = this.categories.get(this.filters.category);
-    if (current && !this.filters.q) this.el.title.textContent = current.name;
+    this.renderTitle();
   }
 
   renderCategoryError(err) {
+    $$('[data-skeleton]', this.el.categoryList).forEach((li) => {
+      li.hidden = true;
+    });
+    $('#category-error-message').textContent = err?.message ?? 'lỗi không xác định';
     this.el.categoryList.setAttribute('aria-busy', 'false');
-    this.el.categoryList.innerHTML = `
-      <li class="inline-alert" style="grid-column: 1 / -1">
-        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
-        Không tải được danh mục: ${escapeHtml(err?.message ?? 'lỗi không xác định')}
-        <button type="button" class="link-btn" data-action="retry-categories">Thử lại</button>
-      </li>`;
+    this.el.categoryError.hidden = false;
   }
 
-  renderCategorySkeleton() {
-    this.el.categoryList.innerHTML = Array.from(
-      { length: 9 },
-      () => `
-        <li>
-          <div class="category-tile category-tile--loading" aria-hidden="true">
-            <span class="category-tile__icon skeleton"></span>
-            <span class="skeleton skeleton--line" style="width: 70%"></span>
-          </div>
-        </li>`,
-    ).join('');
+  async retryCategories() {
+    this.el.categoryError.hidden = true;
+    $$('[data-skeleton]', this.el.categoryList).forEach((li) => {
+      li.hidden = false;
+    });
+    try {
+      this.renderCategories(await getCategories());
+    } catch (err) {
+      this.renderCategoryError(err);
+    }
   }
 
   highlightCategory() {
@@ -360,10 +372,8 @@ class HomePage {
     // Nếu bộ lọc cũ có tỉnh không còn trong danh sách thì vẫn giữ lại 1 option
     if (current && !names.includes(current)) names.unshift(current);
 
-    select.innerHTML = [
-      '<option value="">Toàn quốc</option>',
-      ...names.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`),
-    ].join('');
+    // new Option(text, value): tạo <option> bằng DOM API, không cần chuỗi HTML
+    select.replaceChildren(new Option('Toàn quốc', ''), ...names.map((name) => new Option(name, name)));
     select.value = current;
     select.disabled = false;
 
@@ -375,7 +385,7 @@ class HomePage {
 
   renderProvinceError() {
     const { province: select, provinceHint } = this.el;
-    select.innerHTML = '<option value="">Toàn quốc</option>';
+    select.replaceChildren(new Option('Toàn quốc', ''));
     select.disabled = true;
     provinceHint.hidden = false;
     provinceHint.classList.add('form-hint--error');
@@ -384,12 +394,12 @@ class HomePage {
 
   applyRate(rate) {
     this.usdRate = rate;
-    if (!rate) return; // không có tỷ giá -> phần quy đổi tự ẩn (chuỗi rỗng)
+    if (!rate) return; // không có tỷ giá -> phần quy đổi để trống (CSS ẩn ô rỗng)
 
     applyUsdRate(this.el.grid, rate);
     applyUsdRate(this.el.recentList, rate);
+    $('#usd-rate-value').textContent = formatVND(Math.round(rate));
     this.el.usdRate.hidden = false;
-    this.el.usdRate.textContent = `Giá USD tham khảo theo tỷ giá 1 USD = ${formatVND(Math.round(rate))}`;
   }
 
   // =======================================================
@@ -413,20 +423,18 @@ class HomePage {
       (minPrice || maxPrice) && ['price', priceLabel()],
     ].filter(Boolean);
 
+    this.el.chipList.replaceChildren(
+      ...chips.map(([key, label]) => {
+        const chip = cloneTemplate('tpl-chip');
+        fillFields(chip, { label });
+        const btn = chip.querySelector('[data-remove]');
+        btn.dataset.remove = key;
+        btn.setAttribute('aria-label', `Bỏ lọc ${label}`);
+        return chip;
+      }),
+    );
     this.el.chips.hidden = chips.length === 0;
-    this.el.chips.innerHTML =
-      chips
-        .map(
-          ([key, label]) => `
-        <span class="chip">
-          ${escapeHtml(label)}
-          <button type="button" class="chip__remove" data-remove="${key}" aria-label="Bỏ lọc ${escapeHtml(label)}">
-            <i class="bi bi-x" aria-hidden="true"></i>
-          </button>
-        </span>`,
-        )
-        .join('') +
-      (chips.length > 1 ? '<button type="button" class="link-btn" data-action="reset">Xóa tất cả</button>' : '');
+    this.el.chipReset.hidden = chips.length < 2;
   }
 
   // =======================================================
@@ -435,9 +443,11 @@ class HomePage {
   renderRecent() {
     const items = recentlyViewed.getAll();
     this.el.recentSection.hidden = items.length === 0;
-    this.el.recentList.innerHTML = items
-      .map((item) => renderListingCard(item, { isFavorite: favorites.has(item.id), usdRate: this.usdRate }))
-      .join('');
+    this.el.recentList.replaceChildren(
+      ...items.map((item) =>
+        createListingCard(item, { isFavorite: favorites.has(item.id), usdRate: this.usdRate }),
+      ),
+    );
   }
 
   // =======================================================
@@ -481,38 +491,27 @@ class HomePage {
     this.el.filterToggle.focus();
   }
 
-  renderSortOptions() {
-    this.el.sort.innerHTML = Object.entries(SORT_LABELS)
-      .map(([value, label]) => `<option value="${value}">${label}</option>`)
-      .join('');
-  }
-
   resetFilters() {
     setSearchValue('');
+    this.el.priceError.hidden = true;
     this.setFilters({ ...DEFAULT_FILTERS });
   }
 
   // =======================================================
-  //  SỰ KIỆN (dùng event delegation cho phần tử render động)
+  //  SỰ KIỆN (event delegation cho phần tử được nhân bản từ template)
   // =======================================================
   bindEvents() {
-    const { form, grid, pagination, chips, categoryList, presets, sort, recentList } = this.el;
+    const { form, results, categoryList, presets, sort, recentList } = this.el;
 
     // Danh mục
     categoryList.addEventListener('click', (e) => {
-      if (e.target.closest('[data-action="retry-categories"]')) {
-        this.renderCategorySkeleton();
-        getCategories()
-          .then((data) => this.renderCategories(data))
-          .catch((err) => this.renderCategoryError(err));
-        return;
-      }
       const tile = e.target.closest('[data-category]');
       if (!tile) return;
       const slug = tile.dataset.category;
       // Bấm lại danh mục đang chọn -> bỏ chọn
       this.setFilters({ category: slug === this.filters.category ? '' : slug });
     });
+    $('#category-retry').addEventListener('click', () => this.retryCategories());
 
     // Select khu vực + radio tình trạng: áp dụng ngay khi đổi
     form.addEventListener('change', (e) => {
@@ -524,10 +523,9 @@ class HomePage {
     const applyPrice = debounce(() => {
       const min = this.el.minPrice.value.trim();
       const max = this.el.maxPrice.value.trim();
-      const invalid = min && max && Number(min) > Number(max);
+      const invalid = Boolean(min && max && Number(min) > Number(max));
 
       this.el.priceError.hidden = !invalid;
-      this.el.priceError.textContent = invalid ? 'Giá "từ" phải nhỏ hơn hoặc bằng giá "đến"' : '';
       if (!invalid) this.setFilters({ minPrice: min, maxPrice: max });
     }, 600);
     form.addEventListener('input', (e) => {
@@ -548,43 +546,42 @@ class HomePage {
     // Nút reset của form
     form.addEventListener('reset', (e) => {
       e.preventDefault();
-      this.el.priceError.hidden = true;
       this.resetFilters();
     });
 
     sort.addEventListener('change', () => this.setFilters({ sort: sort.value }));
 
-    // Phân trang
-    pagination.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-page]');
-      if (!btn || btn.disabled) return;
-      this.setFilters({ page: Number(btn.dataset.page) });
-      $('#listings').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    // Một listener cho cả khu kết quả: tim, chip, phân trang, thử lại, xóa bộ lọc
+    results.addEventListener('click', (e) => {
+      const target = e.target;
 
-    // Xóa từng chip
-    chips.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-remove]');
-      if (!btn) return;
-      const key = btn.dataset.remove;
-      if (key === 'q') setSearchValue('');
-      this.setFilters(key === 'price' ? { minPrice: '', maxPrice: '' } : { [key]: '' });
-    });
-
-    // Lưới tin: yêu thích, thử lại, xóa bộ lọc
-    const onGridClick = (e) => {
-      const favBtn = e.target.closest('[data-action="favorite"]');
+      const favBtn = target.closest('[data-action="favorite"]');
       if (favBtn) return this.toggleFavorite(favBtn);
-      if (e.target.closest('[data-action="retry"]')) return this.loadListings();
-      if (e.target.closest('[data-action="reset"]')) return this.resetFilters();
-    };
-    grid.addEventListener('click', onGridClick);
-    recentList.addEventListener('click', onGridClick);
-    chips.addEventListener('click', (e) => {
-      if (e.target.closest('[data-action="reset"]')) this.resetFilters();
+
+      const pageBtn = target.closest('[data-page]');
+      if (pageBtn && !pageBtn.disabled) {
+        this.setFilters({ page: Number(pageBtn.dataset.page) });
+        $('#listings').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      const chipBtn = target.closest('[data-remove]');
+      if (chipBtn) {
+        const key = chipBtn.dataset.remove;
+        if (key === 'q') setSearchValue('');
+        this.setFilters(key === 'price' ? { minPrice: '', maxPrice: '' } : { [key]: '' });
+        return;
+      }
+
+      if (target.closest('[data-action="retry"]')) return this.loadListings();
+      if (target.closest('[data-action="reset"]')) return this.resetFilters();
     });
 
     // Tin vừa xem
+    recentList.addEventListener('click', (e) => {
+      const favBtn = e.target.closest('[data-action="favorite"]');
+      if (favBtn) this.toggleFavorite(favBtn);
+    });
     $('#recent-clear').addEventListener('click', () => {
       recentlyViewed.clear();
       showToast('Đã xóa lịch sử xem', 'info');
@@ -602,13 +599,7 @@ class HomePage {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.closeFilters();
     });
-
-    // Năm ở footer
-    $('#year').textContent = new Date().getFullYear();
   }
 }
 
-// Hiện khung skeleton danh mục ngay khi trang mở
-const page = new HomePage();
-page.renderCategorySkeleton();
-page.init();
+new HomePage().init();
