@@ -74,7 +74,7 @@ class ProductPage {
     notFound.hidden = state !== 'not-found';
     error.hidden = state !== 'error';
     content.hidden = state !== 'content';
-    if (state === 'not-found') document.title = 'Không tìm thấy tin đăng - Market C2C';
+    if (state === 'not-found') document.title = 'Không tìm thấy tin đăng | Market C2C';
   }
 
   async load() {
@@ -110,7 +110,7 @@ class ProductPage {
     const categoryUrl = `/?category=${encodeURIComponent(l.category.slug)}`;
 
     // Tiêu đề tab + mô tả cho chia sẻ
-    document.title = `${l.title} - Market C2C`;
+    document.title = `${l.title} | Market C2C`;
     $('meta[name="description"]')?.setAttribute('content', l.description.slice(0, 160));
 
     // Breadcrumb

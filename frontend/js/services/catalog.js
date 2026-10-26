@@ -38,3 +38,21 @@ export async function getRelatedListings({ category, excludeId, limit = 8 }) {
   });
   return data;
 }
+
+/**
+ * Đăng tin mới. Gửi 1 request FormData gồm các trường chữ + file ảnh (theo thứ tự hiển thị).
+ * @param {object} fields  { title, categoryId, condition, price, province, description }
+ * @param {Blob[]} images
+ * @returns {Promise<object>} tin vừa tạo (chi tiết)
+ */
+export async function createListing(fields, images) {
+  const formData = new FormData();
+  Object.entries(fields).forEach(([name, value]) => formData.append(name, value));
+  images.forEach((blob, i) => {
+    const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+    formData.append('images', blob, `anh-${i + 1}.${ext}`);
+  });
+
+  const { data, message } = await api.post('/api/listings', formData);
+  return { listing: data, message };
+}

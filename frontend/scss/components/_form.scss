@@ -241,3 +241,46 @@
     cursor: pointer;
   }
 }
+
+// ---------- Nhãn + bộ đếm ký tự cùng 1 hàng ----------
+.form-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.char-counter {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums; // số không nhảy chiều rộng khi đếm
+
+  &.is-near-limit {
+    color: var(--color-warning);
+    font-weight: 600;
+  }
+}
+
+textarea.form-control {
+  min-height: 140px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+// Ô nhập có chữ đơn vị ở cuối (vd: ₫)
+.input-affix {
+  position: relative;
+
+  .form-control {
+    padding-right: 36px;
+  }
+
+  &__suffix {
+    position: absolute;
+    top: 50%;
+    right: $space-3;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    pointer-events: none;
+  }
+}

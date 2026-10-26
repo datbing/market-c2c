@@ -26,3 +26,9 @@ export function findAllWithCount() {
       ORDER BY c.sort_order, c.name`,
   );
 }
+
+/** Danh mục có tồn tại không (dùng khi tạo/sửa tin) */
+export async function exists(id) {
+  const rows = await query('SELECT id FROM categories WHERE id = ?', [id]);
+  return rows.length > 0;
+}

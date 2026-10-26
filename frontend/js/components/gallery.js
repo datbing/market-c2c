@@ -6,6 +6,7 @@
  * Điều khiển: bấm ảnh nhỏ, nút trước/sau, phím ← →, vuốt trên điện thoại,
  * bấm ảnh lớn để mở <dialog> xem phóng to (Esc để đóng - hành vi có sẵn của <dialog>).
  */
+import { assetUrl } from '../config.js';
 import { cloneTemplate } from '../utils/template.js';
 
 const SWIPE_MIN_DISTANCE = 40; // px
@@ -22,7 +23,8 @@ export class Gallery {
    */
   constructor(root, { images, title, placeholderIcon = 'bi-box-seam' }) {
     this.root = root;
-    this.images = images;
+    // Ảnh nằm ở server API (khác origin) -> đổi "/uploads/..." thành URL đầy đủ
+    this.images = images.map((image) => ({ ...image, url: assetUrl(image.url) }));
     this.title = title;
 
     this.el = {
@@ -35,7 +37,7 @@ export class Gallery {
       dialog: document.getElementById('lightbox'),
     };
 
-    if (images.length === 0) {
+    if (this.images.length === 0) {
       this.#renderEmpty(placeholderIcon);
       return;
     }

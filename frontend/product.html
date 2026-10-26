@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#ee4d2d">
 
   <!-- JS đổi lại thành tên món đồ sau khi tải xong -->
-  <title>Chi tiết tin đăng - Market C2C</title>
+  <title>Chi tiết tin đăng | Market C2C</title>
 
   <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
   <script src="/js/theme-init.js"></script>
@@ -32,7 +32,8 @@
         </picture>
         <picture class="logo__picture logo__picture--dark">
           <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
-          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C" loading="lazy">
+          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C"
+            loading="lazy">
         </picture>
       </a>
 
@@ -168,7 +169,8 @@
             <span class="gallery__placeholder" data-gallery-placeholder hidden>
               <i class="bi bi-box-seam" aria-hidden="true"></i>
             </span>
-            <button type="button" class="gallery__nav gallery__nav--prev" data-gallery-nav="prev" aria-label="Ảnh trước">
+            <button type="button" class="gallery__nav gallery__nav--prev" data-gallery-nav="prev"
+              aria-label="Ảnh trước">
               <i class="bi bi-chevron-left" aria-hidden="true"></i>
             </button>
             <button type="button" class="gallery__nav gallery__nav--next" data-gallery-nav="next" aria-label="Ảnh sau">
@@ -240,8 +242,8 @@
           </p>
 
           <div class="product__secondary">
-            <button type="button" class="product__link-btn favorite-toggle" id="favorite-btn"
-                    data-action="favorite" aria-pressed="false" aria-label="Thêm vào yêu thích">
+            <button type="button" class="product__link-btn favorite-toggle" id="favorite-btn" data-action="favorite"
+              aria-pressed="false" aria-label="Thêm vào yêu thích">
               <i class="bi bi-heart" aria-hidden="true"></i>
               <i class="bi bi-heart-fill" aria-hidden="true"></i>
               <span class="favorite-toggle__off">Lưu tin</span>
@@ -264,8 +266,14 @@
               </div>
             </div>
             <dl class="seller-card__stats">
-              <div><dt>Đang bán</dt><dd id="seller-active">0</dd></div>
-              <div><dt>Đã bán</dt><dd id="seller-sold">0</dd></div>
+              <div>
+                <dt>Đang bán</dt>
+                <dd id="seller-active">0</dd>
+              </div>
+              <div>
+                <dt>Đã bán</dt>
+                <dd id="seller-sold">0</dd>
+              </div>
             </dl>
           </section>
         </section>
@@ -321,8 +329,10 @@
     <div class="container site-footer__grid">
       <section>
         <a class="site-footer__logo" href="/" aria-label="Market C2C - Trang chủ">
-          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C" loading="lazy">
-          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C" loading="lazy">
+          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296"
+            alt="Market C2C" loading="lazy">
+          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117"
+            alt="Market C2C" loading="lazy">
         </a>
         <p>Sàn mua bán giữa người với người. Đồ án môn Lập trình Web: HTML5, SCSS, JavaScript thuần.</p>
       </section>
@@ -420,4 +430,5 @@
 
   <script type="module" src="/js/pages/product.js"></script>
 </body>
+
 </html>

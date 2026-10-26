@@ -4,12 +4,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Tạo tài khoản Market C2C miễn phí để đăng tin bán đồ và mua hàng từ người dùng khác.">
+  <meta name="description"
+    content="Tạo tài khoản Market C2C miễn phí để đăng tin bán đồ và mua hàng từ người dùng khác.">
   <meta name="robots" content="noindex">
   <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
   <meta name="theme-color" content="#ee4d2d">
 
-  <title>Đăng ký tài khoản - Market C2C</title>
+  <title>Đăng ký tài khoản | Market C2C</title>
 
   <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
   <script src="/js/theme-init.js"></script>
@@ -32,7 +33,8 @@
         </picture>
         <picture class="logo__picture logo__picture--dark">
           <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
-          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C" loading="lazy">
+          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C"
+            loading="lazy">
         </picture>
       </a>
 
@@ -144,9 +146,8 @@
         <form id="register-form" class="auth-card__form" novalidate>
           <div class="form-group">
             <label class="form-label" for="register-name">Họ và tên <abbr title="bắt buộc">*</abbr></label>
-            <input class="form-control" id="register-name" name="name" type="text"
-                   autocomplete="name" maxlength="100" required
-                   placeholder="Nguyễn Văn A" aria-describedby="register-name-error">
+            <input class="form-control" id="register-name" name="name" type="text" autocomplete="name" maxlength="100"
+              required placeholder="Nguyễn Văn A" aria-describedby="register-name-error">
             <p class="form-hint form-hint--error" id="register-name-error" data-error-for="name" hidden></p>
           </div>
 
@@ -154,17 +155,17 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label" for="register-email">Email <abbr title="bắt buộc">*</abbr></label>
-              <input class="form-control" id="register-email" name="email" type="email"
-                     autocomplete="email" inputmode="email" maxlength="150" required
-                     placeholder="ban@example.com" aria-describedby="register-email-error">
+              <input class="form-control" id="register-email" name="email" type="email" autocomplete="email"
+                inputmode="email" maxlength="150" required placeholder="ban@example.com"
+                aria-describedby="register-email-error">
               <p class="form-hint form-hint--error" id="register-email-error" data-error-for="email" hidden></p>
             </div>
 
             <div class="form-group">
               <label class="form-label" for="register-phone">Số điện thoại</label>
-              <input class="form-control" id="register-phone" name="phone" type="tel"
-                     autocomplete="tel" inputmode="numeric" maxlength="10" pattern="0[0-9]{9}"
-                     placeholder="0901234567" aria-describedby="register-phone-hint register-phone-error">
+              <input class="form-control" id="register-phone" name="phone" type="tel" autocomplete="tel"
+                inputmode="numeric" maxlength="10" pattern="0[0-9]{9}" placeholder="0901234567"
+                aria-describedby="register-phone-hint register-phone-error">
               <p class="form-hint" id="register-phone-hint">Không bắt buộc</p>
               <p class="form-hint form-hint--error" id="register-phone-error" data-error-for="phone" hidden></p>
             </div>
@@ -174,21 +175,22 @@
             <label class="form-label" for="register-password">Mật khẩu <abbr title="bắt buộc">*</abbr></label>
             <div class="password-field">
               <input class="form-control" id="register-password" name="password" type="password"
-                     autocomplete="new-password" minlength="6" maxlength="72" required
-                     aria-describedby="register-password-hint register-password-error">
+                autocomplete="new-password" minlength="6" maxlength="72" required
+                aria-describedby="register-password-hint register-password-error">
               <button type="button" class="password-field__toggle" data-toggle-password="register-password"
-                      aria-pressed="false" aria-label="Hiện mật khẩu">
+                aria-pressed="false" aria-label="Hiện mật khẩu">
                 <i class="bi bi-eye" aria-hidden="true"></i>
                 <i class="bi bi-eye-slash" aria-hidden="true"></i>
               </button>
             </div>
             <!-- Thanh đo độ mạnh mật khẩu (thẻ <meter> HTML5) -->
             <div class="strength">
-              <meter class="strength__meter" id="password-strength" min="0" max="5" low="2" high="3" optimum="5" value="0"
-                     aria-label="Độ mạnh mật khẩu"></meter>
+              <meter class="strength__meter" id="password-strength" min="0" max="5" low="2" high="3" optimum="5"
+                value="0" aria-label="Độ mạnh mật khẩu"></meter>
               <span class="strength__label" id="password-strength-label" aria-live="polite"></span>
             </div>
-            <p class="form-hint" id="register-password-hint">Tối thiểu 6 ký tự. Nên có chữ hoa, số và ký tự đặc biệt.</p>
+            <p class="form-hint" id="register-password-hint">Tối thiểu 6 ký tự. Nên có chữ hoa, số và ký tự đặc biệt.
+            </p>
             <p class="form-hint form-hint--error" id="register-password-error" data-error-for="password" hidden></p>
           </div>
 
@@ -196,21 +198,21 @@
             <label class="form-label" for="register-confirm">Nhập lại mật khẩu <abbr title="bắt buộc">*</abbr></label>
             <div class="password-field">
               <input class="form-control" id="register-confirm" name="confirmPassword" type="password"
-                     autocomplete="new-password" maxlength="72" required
-                     aria-describedby="register-confirm-error">
+                autocomplete="new-password" maxlength="72" required aria-describedby="register-confirm-error">
               <button type="button" class="password-field__toggle" data-toggle-password="register-confirm"
-                      aria-pressed="false" aria-label="Hiện mật khẩu">
+                aria-pressed="false" aria-label="Hiện mật khẩu">
                 <i class="bi bi-eye" aria-hidden="true"></i>
                 <i class="bi bi-eye-slash" aria-hidden="true"></i>
               </button>
             </div>
-            <p class="form-hint form-hint--error" id="register-confirm-error" data-error-for="confirmPassword" hidden></p>
+            <p class="form-hint form-hint--error" id="register-confirm-error" data-error-for="confirmPassword" hidden>
+            </p>
           </div>
 
           <div class="form-group">
             <label class="checkbox">
               <input type="checkbox" id="register-agree" name="agree" value="1" required
-                     aria-describedby="register-agree-error">
+                aria-describedby="register-agree-error">
               <span>Tôi đồng ý với điều khoản sử dụng và quy định đăng tin của Market C2C</span>
             </label>
             <p class="form-hint form-hint--error" id="register-agree-error" data-error-for="agree" hidden></p>
@@ -236,8 +238,10 @@
     <div class="container site-footer__grid">
       <section>
         <a class="site-footer__logo" href="/" aria-label="Market C2C - Trang chủ">
-          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C" loading="lazy">
-          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C" loading="lazy">
+          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296"
+            alt="Market C2C" loading="lazy">
+          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117"
+            alt="Market C2C" loading="lazy">
         </a>
         <p>Sàn mua bán giữa người với người. Đồ án môn Lập trình Web: HTML5, SCSS, JavaScript thuần.</p>
       </section>
@@ -294,4 +298,5 @@
 
   <script type="module" src="/js/pages/register.js"></script>
 </body>
+
 </html>

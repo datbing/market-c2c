@@ -27,19 +27,19 @@ function loadSslOptions() {
 async function bootstrap() {
   try {
     await checkConnection();
-    console.log(`✔ Đã kết nối MySQL (database: ${config.db.database})`);
+    console.log(`Connected to MySQL (database: ${config.db.database})`);
   } catch (err) {
-    console.error(`✖ Không kết nối được MySQL: ${err.message}`);
-    console.error('  → Kiểm tra: MySQL trong Laragon đã Start chưa?');
-    console.error('  → File .env đã đúng DB_USER / DB_PASSWORD chưa?');
-    console.error('  → Đã chạy "npm run db:setup" để tạo database chưa?');
+    console.error(`Cannot connect to MySQL: ${err.message}`);
+    console.error('Check MySQL already running?');
+    console.error('Check .env config: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_DATABASE');
+    console.error('`npm run db:setup` ?');
     process.exit(1);
   }
 
   const server = https.createServer(loadSslOptions(), app);
   server.listen(config.port, () => {
-    console.log(`🚀 API đang chạy tại https://market-c2c.test:${config.port}`);
-    console.log(`   Frontend được phép gọi API: ${config.corsOrigins.join(', ')}`);
+    console.log(`API running at https://market-c2c.test:${config.port}`);
+    console.log(`Frontend CORS accepted: ${config.corsOrigins.join(', ')}`);
   });
 
   // Tắt server gọn gàng khi nhấn Ctrl + C
