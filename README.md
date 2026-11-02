@@ -97,6 +97,8 @@ Dự án gồm 2 phần chạy riêng:
 Mở trình duyệt: **https://market-c2c.test** (gõ `http://` cũng tự chuyển sang `https://`).
 
 - Cả frontend và API chạy **HTTPS** bằng chứng chỉ Laragon tự tạo. Bật trong Laragon: **Menu > Apache > SSL > Enabled** (Laragon hỏi cài chứng chỉ vào Windows, chọn Yes). API đọc chứng chỉ theo `SSL_CERT` / `SSL_KEY` trong `.env`.
+- **Laragon cài ở ổ C:** `.env.example` đang ghi đường dẫn ổ D, hãy sửa trong `.env` thành `SSL_CERT=C:/laragon/etc/ssl/laragon.crt` và `SSL_KEY=C:/laragon/etc/ssl/laragon.key` (file mẫu có sẵn 2 dòng này), nếu không API sẽ báo không đọc được chứng chỉ.
+- **Giữ đúng tên thư mục `market-c2c`** trong `www` của Laragon để có địa chỉ `https://market-c2c.test`.
 - Tên miền `market-c2c.test` do Laragon tự tạo theo tên thư mục trong `www`. Đổi tên thư mục hoặc chạy frontend ở địa chỉ khác thì thêm địa chỉ đó vào `CORS_ORIGINS` trong `.env`.
 - Có thể import thủ công thay cho bước 3: tạo database `market_c2c` (collation `utf8mb4_unicode_ci`) rồi chạy `database/schema.sql` trong HeidiSQL / phpMyAdmin.
 
