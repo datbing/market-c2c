@@ -94,7 +94,8 @@
               </li>
               <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list" aria-hidden="true"></i>
                   Tin đăng của tôi</a></li>
-              <li><a class="account-menu__item" id="menu-orders" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
+              <li><a class="account-menu__item" id="menu-orders" href="/orders"><i class="bi bi-receipt"
+                    aria-hidden="true"></i> Đơn
                   hàng <span class="account-menu__count" data-order-count hidden></span></a></li>
               <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart" aria-hidden="true"></i> Tin yêu
                   thích</a></li>
@@ -151,7 +152,7 @@
               <!-- Clicking the label opens the OS file picker (plain HTML, no JS needed) -->
               <label class="image-picker__drop">
                 <input class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/*" multiple
-                       aria-describedby="images-status images-error">
+                  aria-describedby="images-status images-error">
                 <i class="bi bi-camera" aria-hidden="true"></i>
                 <strong>Chọn ảnh hoặc kéo thả ảnh vào đây</strong>
                 <span>JPG, PNG, WebP · tối đa 6 ảnh · ảnh tự được nén trước khi gửi</span>
@@ -174,8 +175,7 @@
                 <span class="char-counter" data-counter-for="sell-title" aria-hidden="true"></span>
               </div>
               <input class="form-control" id="sell-title" name="title" type="text" maxlength="150" required
-                     placeholder="VD: iPhone 13 128GB xanh, pin 89%, máy zin"
-                     aria-describedby="sell-title-error">
+                placeholder="VD: iPhone 13 128GB xanh, pin 89%, máy zin" aria-describedby="sell-title-error">
               <p class="form-hint form-hint--error" id="sell-title-error" data-error-for="title" hidden></p>
             </div>
 
@@ -183,7 +183,7 @@
               <div class="form-group">
                 <label class="form-label" for="sell-category">Danh mục <abbr title="bắt buộc">*</abbr></label>
                 <select class="form-control" id="sell-category" name="categoryId" required disabled
-                        aria-describedby="sell-category-error">
+                  aria-describedby="sell-category-error">
                   <option value="">Đang tải danh mục...</option>
                 </select>
                 <p class="form-hint form-hint--error" id="sell-category-error" data-error-for="categoryId" hidden></p>
@@ -192,7 +192,7 @@
               <div class="form-group">
                 <label class="form-label" for="sell-province">Khu vực <abbr title="bắt buộc">*</abbr></label>
                 <select class="form-control" id="sell-province" name="province" required disabled
-                        aria-describedby="sell-province-error">
+                  aria-describedby="sell-province-error">
                   <option value="">Đang tải tỉnh thành...</option>
                 </select>
                 <p class="form-hint form-hint--error" id="sell-province-error" data-error-for="province" hidden></p>
@@ -202,7 +202,8 @@
             <fieldset class="form-group">
               <legend class="form-label">Tình trạng <abbr title="bắt buộc">*</abbr></legend>
               <div class="choice-group">
-                <input type="radio" id="sell-cond-new" name="condition" value="new" aria-describedby="sell-condition-error">
+                <input type="radio" id="sell-cond-new" name="condition" value="new"
+                  aria-describedby="sell-condition-error">
                 <label for="sell-cond-new">Mới</label>
                 <input type="radio" id="sell-cond-like-new" name="condition" value="like_new">
                 <label for="sell-cond-like-new">Như mới</label>
@@ -217,8 +218,8 @@
               <!-- type="text" so thousands separators can be added; inputmode="numeric" -> numeric keyboard on phones -->
               <div class="input-affix">
                 <input class="form-control" id="sell-price" name="price" type="text" inputmode="numeric"
-                       autocomplete="off" required placeholder="VD: 9.500.000"
-                       aria-describedby="sell-price-words sell-price-error">
+                  autocomplete="off" required placeholder="VD: 9.500.000"
+                  aria-describedby="sell-price-words sell-price-error">
                 <span class="input-affix__suffix" aria-hidden="true">₫</span>
               </div>
               <p class="form-hint" id="sell-price-words" aria-live="polite"></p>
@@ -238,9 +239,10 @@
                 <span class="char-counter" data-counter-for="sell-description" aria-hidden="true"></span>
               </div>
               <textarea class="form-control" id="sell-description" name="description" rows="7" maxlength="3000" required
-                        placeholder="Tình trạng, thời gian đã dùng, phụ kiện kèm theo, lý do bán, bảo hành..."
-                        aria-describedby="sell-description-hint sell-description-error"></textarea>
-              <p class="form-hint" id="sell-description-hint">Mô tả càng rõ, người mua càng tin tưởng. Không ghi số tài khoản ngân hàng.</p>
+                placeholder="Tình trạng, thời gian đã dùng, phụ kiện kèm theo, lý do bán, bảo hành..."
+                aria-describedby="sell-description-hint sell-description-error"></textarea>
+              <p class="form-hint" id="sell-description-hint">Mô tả càng rõ, người mua càng tin tưởng. Không ghi số tài
+                khoản ngân hàng.</p>
               <p class="form-hint form-hint--error" id="sell-description-error" data-error-for="description" hidden></p>
             </div>
           </section>
@@ -284,7 +286,7 @@
           <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117"
             alt="Market C2C" loading="lazy">
         </a>
-        <p>Sàn mua bán giữa người với người. Đồ án môn Lập trình Web: HTML5, SCSS, JavaScript thuần.</p>
+        <p>Sàn mua bán đồ cũ. Môn Lập trình Web: HTML5, CSS/SCSS, JavaScript/ExpressJS.</p>
       </section>
       <nav aria-labelledby="footer-nav-title">
         <h2 id="footer-nav-title">Khám phá</h2>
@@ -304,7 +306,8 @@
         </ul>
       </section>
     </div>
-    <p class="site-footer__bottom">© <span id="year">2026</span> Market C2C. Dữ liệu tỉnh thành: provinces.open-api.vn ·
+    <p class="site-footer__bottom">© <span id="year">2026</span> Market C2C by <b>Đào Xuân Đạt</b>. Dữ liệu tỉnh thành:
+      provinces.open-api.vn ·
       Tỷ giá: open.er-api.com</p>
   </footer>
 
@@ -389,4 +392,5 @@
 
   <script type="module" src="/js/pages/sell.js"></script>
 </body>
+
 </html>
