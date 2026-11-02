@@ -94,7 +94,8 @@
               </li>
               <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list" aria-hidden="true"></i>
                   Tin đăng của tôi</a></li>
-              <li><a class="account-menu__item" id="menu-orders" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
+              <li><a class="account-menu__item" id="menu-orders" href="/orders"><i class="bi bi-receipt"
+                    aria-hidden="true"></i> Đơn
                   hàng <span class="account-menu__count" data-order-count hidden></span></a></li>
               <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart" aria-hidden="true"></i> Tin yêu
                   thích</a></li>
@@ -159,23 +160,24 @@
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label" for="checkout-name">Người nhận <abbr title="bắt buộc">*</abbr></label>
-                  <input class="form-control" id="checkout-name" name="receiverName" type="text"
-                         autocomplete="name" maxlength="100" required aria-describedby="checkout-name-error">
-                  <p class="form-hint form-hint--error" id="checkout-name-error" data-error-for="receiverName" hidden></p>
+                  <input class="form-control" id="checkout-name" name="receiverName" type="text" autocomplete="name"
+                    maxlength="100" required aria-describedby="checkout-name-error">
+                  <p class="form-hint form-hint--error" id="checkout-name-error" data-error-for="receiverName" hidden>
+                  </p>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="checkout-phone">Số điện thoại <abbr title="bắt buộc">*</abbr></label>
-                  <input class="form-control" id="checkout-phone" name="receiverPhone" type="tel"
-                         autocomplete="tel" inputmode="numeric" maxlength="10" required
-                         aria-describedby="checkout-phone-error">
-                  <p class="form-hint form-hint--error" id="checkout-phone-error" data-error-for="receiverPhone" hidden></p>
+                  <input class="form-control" id="checkout-phone" name="receiverPhone" type="tel" autocomplete="tel"
+                    inputmode="numeric" maxlength="10" required aria-describedby="checkout-phone-error">
+                  <p class="form-hint form-hint--error" id="checkout-phone-error" data-error-for="receiverPhone" hidden>
+                  </p>
                 </div>
               </div>
 
               <div class="form-group">
                 <label class="form-label" for="checkout-province">Tỉnh / thành <abbr title="bắt buộc">*</abbr></label>
                 <select class="form-control" id="checkout-province" name="province" required disabled
-                        aria-describedby="checkout-province-error">
+                  aria-describedby="checkout-province-error">
                   <option value="">Đang tải tỉnh thành...</option>
                 </select>
                 <p class="form-hint form-hint--error" id="checkout-province-error" data-error-for="province" hidden></p>
@@ -184,8 +186,8 @@
               <div class="form-group">
                 <label class="form-label" for="checkout-address">Địa chỉ <abbr title="bắt buộc">*</abbr></label>
                 <input class="form-control" id="checkout-address" name="address" type="text"
-                       autocomplete="street-address" maxlength="255" required
-                       placeholder="Số nhà, tên đường, phường/xã" aria-describedby="checkout-address-error">
+                  autocomplete="street-address" maxlength="255" required placeholder="Số nhà, tên đường, phường/xã"
+                  aria-describedby="checkout-address-error">
                 <p class="form-hint form-hint--error" id="checkout-address-error" data-error-for="address" hidden></p>
               </div>
 
@@ -195,8 +197,8 @@
                   <span class="char-counter" data-counter-for="checkout-note" aria-hidden="true"></span>
                 </div>
                 <textarea class="form-control" id="checkout-note" name="note" rows="3" maxlength="500"
-                          placeholder="VD: Gọi trước khi giao, giao giờ hành chính..."
-                          aria-describedby="checkout-note-error"></textarea>
+                  placeholder="VD: Gọi trước khi giao, giao giờ hành chính..."
+                  aria-describedby="checkout-note-error"></textarea>
                 <p class="form-hint form-hint--error" id="checkout-note-error" data-error-for="note" hidden></p>
               </div>
             </form>
@@ -224,8 +226,8 @@
             </div>
           </dl>
           <!-- form="checkout-form": a button outside the form can still submit it (HTML5) -->
-          <button type="submit" form="checkout-form" class="btn btn--primary btn--lg btn--block"
-                  id="checkout-submit" disabled>
+          <button type="submit" form="checkout-form" class="btn btn--primary btn--lg btn--block" id="checkout-submit"
+            disabled>
             <span class="btn__spinner" aria-hidden="true"></span>
             <span>Đặt hàng (<span data-submit-count>0</span>)</span>
           </button>
@@ -252,7 +254,7 @@
           <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117"
             alt="Market C2C" loading="lazy">
         </a>
-        <p>Sàn mua bán giữa người với người. Đồ án môn Lập trình Web: HTML5, SCSS, JavaScript thuần.</p>
+        <p>Sàn mua bán đồ cũ. Môn Lập trình Web: HTML5, CSS/SCSS, JavaScript/ExpressJS.</p>
       </section>
       <nav aria-labelledby="footer-nav-title">
         <h2 id="footer-nav-title">Khám phá</h2>
@@ -272,7 +274,8 @@
         </ul>
       </section>
     </div>
-    <p class="site-footer__bottom">© <span id="year">2026</span> Market C2C. Dữ liệu tỉnh thành: provinces.open-api.vn ·
+    <p class="site-footer__bottom">© <span id="year">2026</span> Market C2C by <b>Đào Xuân Đạt</b>. Dữ liệu tỉnh thành:
+      provinces.open-api.vn ·
       Tỷ giá: open.er-api.com</p>
   </footer>
 
@@ -326,7 +329,8 @@
       </a>
       <div class="cart-item__body">
         <a class="cart-item__title" href="#" data-field="title"></a>
-        <p class="cart-item__meta"><i class="bi bi-geo-alt" aria-hidden="true"></i> <span data-field="province"></span></p>
+        <p class="cart-item__meta"><i class="bi bi-geo-alt" aria-hidden="true"></i> <span data-field="province"></span>
+        </p>
         <p class="cart-item__problem" hidden></p>
       </div>
       <p class="cart-item__price" data-field="price"></p>
@@ -338,4 +342,5 @@
 
   <script type="module" src="/js/pages/cart.js"></script>
 </body>
+
 </html>
