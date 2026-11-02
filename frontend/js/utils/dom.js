@@ -1,11 +1,11 @@
 /**
- * Tiện ích thao tác DOM và xử lý sự kiện.
+ * DOM and event helpers.
  */
 
-/** querySelector rút gọn */
+/** Short querySelector */
 export const $ = (selector, root = document) => root.querySelector(selector);
 
-/** querySelectorAll trả về mảng thật (dùng được map/filter) */
+/** querySelectorAll returning a real array (map/filter work on it) */
 export const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 const HTML_ESCAPES = {
@@ -17,16 +17,16 @@ const HTML_ESCAPES = {
 };
 
 /**
- * Escape ký tự đặc biệt trước khi chèn dữ liệu người dùng vào innerHTML (chống XSS).
- * Ví dụ: '<script>' -> '&lt;script&gt;'
+ * Escape special characters before putting user data into innerHTML (prevents XSS).
+ * Example: '<script>' -> '&lt;script&gt;'
  */
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
 }
 
 /**
- * Debounce: chỉ gọi `fn` sau khi người dùng ngừng thao tác `delay` ms.
- * Dùng cho ô tìm kiếm, ô nhập giá... để không gọi API liên tục mỗi phím gõ.
+ * Debounce: only call `fn` after the user stops for `delay` ms.
+ * Used for the search box, price inputs... so the API is not called on every keystroke.
  */
 export function debounce(fn, delay = 400) {
   let timerId;
@@ -34,7 +34,7 @@ export function debounce(fn, delay = 400) {
     clearTimeout(timerId);
     timerId = setTimeout(() => fn(...args), delay);
   };
-  // Cho phép hủy lời gọi đang chờ (vd: khi người dùng bấm Enter thì tìm ngay)
+  // Allows cancelling the pending call (e.g. pressing Enter searches immediately)
   debounced.cancel = () => clearTimeout(timerId);
   return debounced;
 }

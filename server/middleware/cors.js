@@ -1,11 +1,11 @@
 /**
- * CORS: cho phép frontend (khác origin, vd http://market-c2c.test) gọi API
- * tại http://market-c2c.test:3000 và gửi kèm cookie session.
+ * CORS: lets the frontend (another origin, e.g. https://market-c2c.test) call the API
+ * at https://market-c2c.test:3000 and send the session cookie.
  *
- * Tự viết thay vì dùng thư viện `cors` để thấy rõ cơ chế:
- *  - Chỉ origin trong whitelist mới được trả header Access-Control-Allow-Origin
- *  - Có gửi cookie (credentials) thì KHÔNG được dùng "*", phải ghi đúng origin
- *  - Request "preflight" (OPTIONS) được trả 204 luôn, không vào router
+ * Hand-written instead of the `cors` package to show the mechanism clearly:
+ *  - Only whitelisted origins get the Access-Control-Allow-Origin header
+ *  - With cookies (credentials) "*" is NOT allowed, the exact origin must be echoed
+ *  - "Preflight" requests (OPTIONS) get a 204 immediately, without reaching the router
  */
 import { config } from '../config/env.js';
 
@@ -14,7 +14,7 @@ const allowedOrigins = new Set(config.corsOrigins);
 export function cors(req, res, next) {
   const { origin } = req.headers;
 
-  // Response thay đổi theo Origin -> báo cho cache/proxy biết
+  // The response varies by Origin -> tell caches/proxies
   res.vary('Origin');
 
   if (origin && allowedOrigins.has(origin)) {
@@ -28,7 +28,7 @@ export function cors(req, res, next) {
     res.set({
       'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Accept',
-      'Access-Control-Max-Age': '600', // trình duyệt nhớ kết quả preflight 10 phút
+      'Access-Control-Max-Age': '600', // the browser caches the preflight result for 10 minutes
     });
     return res.sendStatus(204);
   }

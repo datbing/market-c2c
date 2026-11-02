@@ -1,6 +1,6 @@
 # CLAUDE.md — Market C2C
 
-Luôn trả lời và viết comment code bằng **tiếng Việt**. Làm theo từng feature, đưa code đầy đủ chạy được, không đưa snippet dở dang.
+Luôn trả lời bằng **tiếng Việt**. **Comment code và log console viết bằng tiếng Anh, không dùng icon/emoji** (vd `console.log('Seed failed')`, không `✔ Đã ...`). Chữ hiển thị cho người dùng (giao diện, message API) vẫn là tiếng Việt. Làm theo từng feature, đưa code đầy đủ chạy được, không đưa snippet dở dang.
 
 ## Bối cảnh
 
@@ -11,35 +11,37 @@ Trọng tâm chấm điểm là **JavaScript nâng cao** (DOM, sự kiện, Fetc
 - **Frontend dùng JavaScript thuần.** Cấm React/Vue/Angular/jQuery/Alpine, cấm Bootstrap CSS/Tailwind. Được dùng Bootstrap Icons qua CDN. Biểu đồ admin vẽ bằng **Canvas API** (không dùng Chart.js trừ khi được xác nhận).
 - HTML5 **semantic** (`header`, `nav`, `main`, `section`, `article`, `aside`, `footer`, `dialog`...).
 - **SCSS** có dùng biến, nesting, mixin, partials (`@use`). Responsive tối thiểu 2 breakpoint (dự án dùng 3).
-- JS **tách file riêng**, ES Modules, **có comment**.
+- JS **tách file riêng**, ES Modules, **có comment** (tiếng Anh).
 - Chức năng: hiển thị danh sách; thêm/sửa/xóa; **đánh dấu hoàn thành** (= tin đăng "đã bán", đơn hàng "hoàn thành"); lọc theo trạng thái + tìm kiếm từ khóa.
 - **LocalStorage phải có vai trò thật** (xem mục LocalStorage). Có thể kết hợp SessionStorage/Cookie.
 - Gọi ít nhất một **API công khai** bằng `fetch` + `async/await`, có `try/catch`, trạng thái loading, thông báo lỗi và fallback.
 
 ## Stack
 
-- Backend: **Node.js + Express 5** (ESM, `"type": "module"`), **MySQL** qua `mysql2/promise`, `express-session`, `bcryptjs`, `dotenv`. Sẽ thêm `multer` cho upload ảnh.
+- Backend: **Node.js + Express 5** (ESM, `"type": "module"`), **MySQL** qua `mysql2/promise`, `express-session`, `bcryptjs`, `dotenv`. **Không dùng `multer`** (xem mục Upload ảnh).
 - **Tách riêng 2 phần:**
-  - Backend `server/` = **chỉ API** (Node/Express) tại `http://market-c2c.test:3000`. Không phục vụ HTML.
-  - Frontend `frontend/` = HTML5 + SCSS + JS thuần, do **Apache của Laragon** phục vụ tại `http://market-c2c.test` (`.htaccess` ở gốc dự án ánh xạ URL vào `frontend/` và chặn `.env`, `server/`...).
+  - Backend `server/` = **chỉ API** (Node/Express) tại `https://market-c2c.test:3000`. Không phục vụ HTML.
+  - Frontend `frontend/` = HTML5 + SCSS + JS thuần, do **Apache của Laragon** phục vụ tại `https://market-c2c.test` (`.htaccess` ở gốc dự án ép http → https, ánh xạ URL vào `frontend/` và chặn `.env`, `server/`...).
+  - **Toàn bộ HTTPS.** API Node dùng `https.createServer` với chứng chỉ Laragon (`SSL_CERT`/`SSL_KEY` trong `.env`, mặc định `D:/laragon/etc/ssl/laragon.{crt,key}`, đã có SAN `*.test`). Cookie session `Secure`.
   - Khác origin (khác cổng) nhưng **cùng site** → cookie session `SameSite=Lax` vẫn gửi được. Backend bật CORS bằng middleware tự viết `server/middleware/cors.js` (whitelist `CORS_ORIGINS` trong `.env`), frontend `fetch` với `credentials: 'include'`.
-  - URL API lấy từ `frontend/js/config.js` (`API_BASE`, `assetUrl()` cho ảnh `/uploads`). Luôn mở trang bằng **http://** (https sẽ bị chặn mixed content).
+  - URL API lấy từ `frontend/js/config.js` (`API_BASE`, `assetUrl()` cho ảnh `/uploads`). Không gọi URL `http://` từ trang (bị chặn mixed content).
 - Môi trường dev: **Windows + Laragon** (MySQL user `root`, không mật khẩu). Lệnh hướng dẫn phải chạy được trên Windows.
 
 ## Lệnh
 
 ```bash
 npm install
-npm run dev          # API: node --watch, http://market-c2c.test:3000 (frontend: http://market-c2c.test, cần Apache Laragon chạy)
+npm run dev          # API: node --watch, https://market-c2c.test:3000 (frontend: https://market-c2c.test, cần Apache Laragon chạy)
 npm run db:setup     # tạo DB + bảng từ database/schema.sql
 npm run db:seed      # dữ liệu mẫu (chỉ khi bảng users trống)
-npm run db:reset     # XÓA DB rồi tạo lại + seed — hỏi trước khi chạy
+npm run db:reset     # XÓA DB + ảnh uploads/listings rồi tạo lại + seed — hỏi trước khi chạy
 npm run scss         # theo dõi + biên dịch frontend/scss/main.scss -> frontend/css/main.css
 npm run scss:build   # biên dịch 1 lần, nén (chạy trước khi nộp bài)
 ```
 `frontend/css/main.css` là file sinh ra: sửa SCSS rồi biên dịch lại, không sửa tay file CSS.
 
-Tài khoản seed: `admin@marketc2c.vn / Admin@123`, `an@example.com / 123456`, `binh@example.com / 123456`.
+Tài khoản seed: `admin@marketc2c.vn / Admin@123`, `an@example.com`, `binh@example.com`, `cuong@example.com`, `dung@example.com` (mật khẩu `123456`), `huy@example.com` (bị khóa).
+Seed (`scripts/seed.js`): 29 tin có ảnh thật từ `database/seed-images/` (Unsplash, `CREDITS.md`) chép vào `uploads/listings/` qua `saveListingImages`; đơn hàng / báo cáo rải trong 2 tuần (`daysAgo`) cho biểu đồ admin. `db:reset` xóa luôn `uploads/listings`.
 
 ## Cấu trúc
 
@@ -84,7 +86,7 @@ uploads/                    # ảnh upload (gitignored)
 - `orders` — lưu snapshot `listing_title`, `price`. `status`: `pending → confirmed → shipping → completed`, hoặc `cancelled`.
 - `reports` — báo cáo vi phạm, `open|resolved|dismissed`.
 
-> Vấn đề đang cân nhắc: có thể đổi `listings` → `products` (và thêm `stock`). **Chưa quyết, hỏi lại trước khi đổi tên.**
+> **Đã chốt (26/10/2026): mỗi tin = đúng 1 món, KHÔNG có số lượng / tồn kho, giữ tên `listings`** (kiểu Chợ Tốt). Giỏ hàng không có ô số lượng; đơn hàng hoàn thành thì tin chuyển `sold`. Không đổi sang `products`.
 
 ## API
 
@@ -95,15 +97,41 @@ uploads/                    # ảnh upload (gitignored)
 | POST | `/api/auth/register`, `/login`, `/logout` | công khai |
 | GET | `/api/auth/me` | đăng nhập |
 | GET | `/api/categories` | công khai |
-| GET | `/api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=` | công khai |
+| GET | `/api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=&exclude=` | công khai |
+| GET | `/api/listings/:id` | công khai (optionalAuth) |
+| POST | `/api/listings` (FormData: `title, categoryId, condition, price, province, description` + `images` 1–6 file) | đăng nhập |
+| PUT | `/api/listings/:id` (FormData như POST + `imageOrder` JSON `["existing:<id>","new:<n>"]`) | chủ tin |
+| PATCH | `/api/listings/:id/status` `{ status }` | chủ tin |
+| DELETE | `/api/listings/:id` | chủ tin |
+| GET | `/api/me/listings?status=&q=&page=&limit=` (`meta.counts` theo trạng thái) | đăng nhập |
+| POST | `/api/orders` `{ listingIds[], receiverName, receiverPhone, address, province, note? }` (mỗi món 1 đơn) | đăng nhập |
+| GET | `/api/orders?role=buyer|seller&status=&page=` (`meta.counts`) | đăng nhập |
+| GET | `/api/orders/:id` | người mua / người bán / admin |
+| PATCH | `/api/orders/:id/status` `{ status }` | người mua / người bán (theo `TRANSITIONS`) |
+| GET | `/api/orders/summary` (`needAction: { seller, buyer }`) | đăng nhập |
+| POST | `/api/reports` `{ listingId, reason }` (không tự báo cáo tin mình, không trùng khi còn mở) | đăng nhập |
+| GET | `/api/admin/stats?days=` | admin |
+| GET / PATCH | `/api/admin/listings?status=&q=`, `/api/admin/listings/:id/review` `{ action: approve|reject, reason }` | admin |
+| GET / PATCH | `/api/admin/users?status=&q=`, `/api/admin/users/:id/status` | admin |
+| GET / POST / PUT / DELETE | `/api/admin/categories[/:id]` (slug tự sinh, còn tin thì không xóa) | admin |
+| GET / PATCH | `/api/admin/reports?status=`, `/api/admin/reports/:id` `{ action: dismiss|resolve|takedown, reason? }` | admin |
 
-`/api/listings`: chỉ tin `active` của user chưa khóa. `category` nhận id hoặc slug, `province` so khớp một phần (LIKE), `sort` ∈ `newest|price_asc|price_desc|popular`, `limit` ≤ 48. Mỗi tin có `thumbnail` (ảnh đầu tiên hoặc null), `category{id,name,slug,icon}`, `seller{id,name}`.
+`/api/listings`: chỉ tin `active` của user chưa khóa. `category` nhận id hoặc slug, `province` so khớp một phần (LIKE), `sort` ∈ `newest|price_asc|price_desc|popular`, `limit` ≤ 48. Mỗi tin có `thumbnail` (ảnh đầu tiên hoặc null), `category{id,name,slug,icon}`, `seller{id,name}`. `exclude` = bỏ 1 id (tin cùng danh mục).
 
-Dự kiến:
-- Listings: `GET /api/listings?q=&category=&province=&condition=&minPrice=&maxPrice=&sort=&page=&limit=` (chỉ `active`), `GET /api/listings/:id` (tăng views), `GET /api/me/listings?status=`, `POST /api/listings` (multipart, ảnh), `PUT /api/listings/:id`, `PATCH /api/listings/:id/status` (sold/hidden/active), `DELETE /api/listings/:id` (không cho xóa nếu đã có đơn, gợi ý ẩn).
-- Orders: tạo đơn từ tin `active`, người mua xem đơn mua, người bán xem đơn bán và chuyển trạng thái; hoàn thành đơn thì tin chuyển `sold`.
-- Reports: người dùng báo cáo tin.
-- Admin (`/api/admin`): thống kê dashboard, duyệt/từ chối tin, khóa/mở user, CRUD danh mục, xử lý báo cáo.
+`/api/listings/:id`: `active` + `sold` ai cũng xem; `pending|hidden|rejected` chỉ chủ tin/admin (người khác 404). Tăng `views` khi tin active và người xem không phải chủ. Trả thêm `description`, `images[{id,url}]`, `seller{id,name,avatar,province,joinedAt,activeCount,soldCount}`, `isOwner`, `rejectReason` (chỉ chủ/admin).
+
+Quy tắc chủ tin đổi trạng thái (`OWNER_TRANSITIONS` trong controller): `active → sold|hidden`, `hidden → active|sold`, `sold → active` (đăng bán lại); `pending`/`rejected` không tự đổi được. Sửa tin bị từ chối → tự về `pending`. Tin đã bán không sửa được. Tin đã có đơn không xóa được (409, gợi ý ẩn).
+
+Đơn hàng (`server/controllers/order.controller.js`): đặt hàng trong transaction + `SELECT ... FOR UPDATE` khóa tin (không đặt trùng); 1 tin chỉ có 1 đơn đang mở (`pending|confirmed|shipping`) → chi tiết tin có `reserved`, chủ tin không ẩn / đánh dấu đã bán khi còn đơn mở. `TRANSITIONS`: `pending → confirmed` (bán) / `cancelled` (bán, mua); `confirmed → shipping|cancelled` (bán); `shipping → completed` (bán, hoặc mua bấm "đã nhận hàng") → tin chuyển `sold`.
+
+Admin (`server/controllers/admin.controller.js`): `REVIEW_ACTIONS` approve `pending|rejected → active`, reject `pending|active|hidden → rejected` (bắt buộc lý do); không gỡ tin đang có đơn mở. Không khóa admin / tự khóa mình. Gỡ tin theo báo cáo → đóng mọi báo cáo mở của tin đó.
+
+### Upload ảnh (đã chốt, không dùng multer)
+- Ảnh **chỉ lưu vào `uploads/` khi bấm Đăng / Lưu tin**, không upload trước → không có ảnh mồ côi.
+- Frontend: `<input type="file" accept="image/*" multiple>` → nén bằng Canvas (tối đa ~1280px, WebP/JPEG) → giữ Blob trong bộ nhớ, xem trước bằng `URL.createObjectURL` (nhớ `revokeObjectURL`), cho xóa/sắp xếp → khi submit gửi **1 request `FormData`** (các trường chữ + `images`).
+- Backend: đọc multipart bằng **Web API có sẵn của Node** (`new Request(...).formData()`), không thêm thư viện. Giới hạn tổng dung lượng request + số ảnh/tin (~6) + dung lượng/ảnh; kiểm tra **magic bytes** (JPEG/PNG/WebP), không tin đuôi file / Content-Type; tên file ngẫu nhiên (`crypto.randomUUID`).
+- Ghi file rồi insert DB trong transaction; **DB lỗi thì xóa các file vừa ghi**. Sửa tin: xóa ảnh cũ bị bỏ khỏi đĩa sau khi commit.
+- Nháp đăng tin (`listingDraft`, LocalStorage) chỉ lưu phần chữ, không lưu ảnh (báo rõ cho người dùng).
 
 ## Quy ước frontend
 
@@ -111,24 +139,36 @@ Dự kiến:
   ```
   frontend/
     index.html, product.html, sell.html, cart.html, orders.html, login.html, register.html
-    admin/index.html ...
+    admin/index.html, listings.html, users.html, categories.html, reports.html   # khung admin chung: sidebar + topbar (components/admin-shell.js)
     scss/abstracts (_variables, _mixins) | base | components | layout | pages | main.scss
     css/main.css            # file biên dịch
     js/config.js            # API_BASE, assetUrl()
     js/services/            # api.js (wrapper fetch), storage.js, auth.js...
-    js/utils/               # debounce, format tiền VND, escapeHtml...
+    js/utils/               # template (cloneTemplate, fillFields), dom ($, debounce), format VND, cookie
     js/components/          # render card, modal, toast...
     js/pages/               # mỗi trang 1 file entry
   ```
 - Mọi request backend đi qua wrapper `js/services/api.js` (async/await, parse JSON, ném lỗi có `message` + `errors`).
-- Breakpoint: mobile `< 576px`, tablet `≥ 768px`, desktop `≥ 1200px` (mixin `respond-to`). Màu chủ đạo cam `#ee4d2d`.
-- Escape dữ liệu người dùng trước khi chèn `innerHTML` (chống XSS).
+- Breakpoint: mobile `< 576px`, tablet `≥ 768px`, desktop `≥ 1200px` (mixin `respond-to` / `respond-below`, mobile-first). Màu chủ đạo cam `#ee4d2d`.
+- **Màu chỉ lấy từ biến CSS trong `scss/base/_theme.scss`** (`--color-*`, `--header-*`, `--hero-*`, `--btn-white-*`, `--fav-*`...), không viết màu cứng trong component, để dark theme tự đúng. Dark theme: xám ngả lạnh nhiều lớp, cam chỉ làm điểm nhấn (không phủ cả khối), `--color-primary` sáng hơn (#ff6a3d).
+  - Logo có 2 bản: `logo-text.png` (chữ navy, nền sáng) và `logo-text-dark.png` (chữ sáng, nền tối); dùng class `logo__picture--light` / `logo__picture--dark`, CSS chọn theo `[data-theme]`.
+- Responsive đã thống nhất (giữ cho các trang sau):
+  - Grid cha luôn `grid-template-columns: minmax(0, 1fr)` để con không đẩy tràn ngang; kiểm tra ở 320 / 375 / 768 / 1024 / 1280px, không được có thanh cuộn ngang.
+  - Header: < 768px 2 hàng (logo + nút | ô tìm kiếm); ≥ 768px 1 hàng; < 1200px nút "Đăng nhập", "Đăng tin" chỉ hiện icon (chữ `visually-hidden`).
+  - Logo dùng `<picture>`: < 576px `logo.png` (vuông), lớn hơn `logo-text.png`. Ảnh dùng đường dẫn tuyệt đối `/assets/images/...`.
+  - Lưới tin 2 / 3 (≥ 576) / 4 (≥ 1200) cột; dải cuộn ngang dùng mixin `scroll-x`; bộ lọc là ngăn kéo < 1200px, cột cố định ≥ 1200px.
+- **Component = HTML + CSS + JS tách bạch, không viết HTML trong chuỗi JS:**
+  - Phần tĩnh (header, footer, menu tài khoản, trạng thái trống/lỗi, nút phân trang trước/sau, option cố định) viết sẵn trong `.html`, JS chỉ bật/tắt `hidden` và điền chữ.
+  - Phần lặp lại (thẻ tin, ô danh mục, chip, toast, mục lịch sử...) đặt trong `<template id="tpl-...">` của trang; JS dùng `cloneTemplate(id)` + `fillFields(root, data)` (`js/utils/template.js`) và gán bằng `textContent` → tự an toàn XSS. **Không dùng `innerHTML`** với dữ liệu.
+  - Hiển thị theo trạng thái để CSS lo (vd icon tim theo `aria-pressed`, icon theme theo `[data-theme]`), JS chỉ đổi thuộc tính.
+  - Header, footer, `#toast-stack` và template dùng chung (`tpl-history-item`, `tpl-toast`, `tpl-listing-card` nếu trang có thẻ tin) phải **copy sang mọi trang** (HTML thuần không có include); lấy `index.html` làm bản gốc.
+  - Nút yêu thích dùng `components/favorite.js` (`toggleFavorite`, `watchFavorites`); snapshot giỏ/yêu thích/đã xem tạo bằng `toListingSnapshot()` (có `sellerId`, `sellerName`).
 - Kỹ thuật JS nên thể hiện: class/module, event delegation, debounce tìm kiếm, `filter/map/reduce`, destructuring/spread, template literal, `CustomEvent` giữa các module, `Promise.all/allSettled`, `FormData` upload ảnh.
 
 ### LocalStorage / SessionStorage / Cookie
 Prefix key `mc2c:`. Bọc trong `storage.js` có try/catch + JSON parse an toàn.
-- LocalStorage: `cart` (giỏ hàng), `favorites`, `recentlyViewed`, `searchHistory`, `listingDraft` (nháp form đăng tin, F5 không mất), `cache:*` (cache API có TTL: danh mục, tỉnh thành, tỷ giá).
-- SessionStorage: trạng thái lọc/trang hiện tại khi quay lại danh sách.
+- LocalStorage: `cart` (giỏ hàng), `favorites`, `recentlyViewed`, `searchHistory`, `listingDraft` (nháp form đăng tin, F5 không mất), `rememberEmail` (ghi nhớ email ở trang đăng nhập), `shippingInfo` (thông tin nhận hàng lần đặt trước), `cache:*` (cache API có TTL: danh mục, tỉnh thành, tỷ giá).
+- SessionStorage: trạng thái lọc/trang hiện tại khi quay lại danh sách (`homeFilters`); `flash` = thông báo để lại trước khi chuyển trang (`services/flash.js`, header tự hiện toast rồi xóa).
 - Cookie: theme sáng/tối (session đăng nhập do server quản lý bằng cookie httpOnly).
 
 ### API công khai
@@ -140,14 +180,20 @@ Prefix key `mc2c:`. Bọc trong `storage.js` có try/catch + JSON parse an toàn
 
 - [x] Khung backend, kết nối MySQL, schema + seed
 - [x] Auth (session), categories
-- [ ] Module listings — đã có `GET /api/listings` (lọc/tìm kiếm/phân trang); còn chi tiết, CRUD, upload ảnh, đánh dấu đã bán
-- [ ] Orders
-- [ ] Reports
-- [ ] Admin API
+- [x] Module listings — danh sách, chi tiết, tạo tin + ảnh (`utils/multipart.js`, `utils/image-store.js`), sửa (giữ/xóa/thêm/sắp xếp ảnh), xóa, đổi trạng thái, tin của tôi (`/api/me/listings`)
+- [x] Orders (đặt hàng nhiều món, đơn mua / đơn bán, chuyển trạng thái, hoàn thành → tin `sold`)
+- [x] Reports (người dùng báo cáo, admin xử lý)
+- [x] Admin API (thống kê, duyệt tin, người dùng, danh mục, báo cáo)
 - [x] Frontend: SCSS base + layout + components, header/footer dùng chung, trang chủ (`index.html` + `js/pages/home.js`)
-- [ ] Frontend: chi tiết (`product.html?id=`, nhớ thêm vào `recentlyViewed`), đăng tin, giỏ hàng, yêu thích, đơn hàng, đăng nhập/đăng ký
-- [ ] Frontend admin
-- [ ] README hoàn chỉnh + ảnh chụp màn hình cho báo cáo
+- [x] Frontend: đăng nhập / đăng ký (`login.html`, `register.html`): `FormHandler` (`components/form.js`) + `utils/validators.js` (cùng quy tắc với server), `?redirect=` chỉ nhận đường dẫn nội bộ (`getRedirectTarget`), trang cần đăng nhập thì chuyển tới `loginUrl()`
+- [x] Frontend: chi tiết tin `product.html?id=` (`js/pages/product.js`, `components/gallery.js` + `<dialog>` phóng to, giỏ hàng / mua ngay / yêu thích / chia sẻ, lưu `recentlyViewed`, tin cùng danh mục)
+- [x] Frontend: đăng tin `sell.html` (`js/pages/sell.js`, `components/image-picker.js` nén ảnh bằng Canvas `utils/image.js`, kéo thả sắp xếp, nháp `listingDraft`, giá có dấu chấm, thẻ xem trước)
+- [x] Frontend: tin đăng của tôi `my-listings.html` (tab trạng thái + số đếm, tìm kiếm, hành động theo trạng thái, `components/confirm-dialog.js` dùng `<dialog>`); sửa tin = `sell.html?edit=<id>`
+- [x] Frontend: giỏ hàng `cart.html` (kiểm tra lại từng món với server, nhóm theo người bán, đặt hàng; nút ngoài form dùng `form="checkout-form"`), đơn hàng `orders.html` (đơn mua / bán, thanh tiến trình, nút theo vai trò); trang chi tiết khóa nút mua khi tin `reserved`
+- [x] Frontend: trang yêu thích `favorites.html`; nút báo cáo vi phạm (`<dialog>`) ở trang chi tiết
+- [x] Frontend admin `/admin/` (dashboard 4 biểu đồ Canvas `components/charts.js` lớp `BaseChart`, duyệt tin, người dùng, danh mục, báo cáo; `components/prompt-dialog.js` nhập lý do)
+- [x] README hoàn chỉnh (đối chiếu yêu cầu đề, API, kiến trúc, lưu trữ)
+- [ ] Ảnh chụp màn hình cho báo cáo
 
 ## Cách làm việc
 

@@ -1,10 +1,10 @@
 /**
- * Wrapper cho Fetch API: mọi request tới backend đều đi qua đây.
- *  - Tự gắn query string (bỏ qua giá trị rỗng)
- *  - Tự gửi JSON hoặc FormData (upload ảnh)
- *  - Parse JSON, nếu lỗi thì ném ApiError có `message`, `status`, `errors` (lỗi từng trường)
- *  - Hỗ trợ AbortController (`signal`) để hủy request cũ khi người dùng lọc liên tục
- *  - Backend chạy ở server riêng (API_BASE), gửi kèm cookie session qua CORS
+ * Fetch API wrapper: every request to the backend goes through here.
+ *  - Builds the query string (skipping empty values)
+ *  - Sends JSON or FormData (image uploads)
+ *  - Parses JSON; on error throws an ApiError with `message`, `status`, `errors` (per-field errors)
+ *  - Supports AbortController (`signal`) to cancel stale requests while the user keeps filtering
+ *  - The backend runs on a separate server (API_BASE), the session cookie is sent through CORS
  */
 import { API_BASE } from '../config.js';
 
@@ -17,10 +17,10 @@ export class ApiError extends Error {
   }
 }
 
-/** Kiểm tra lỗi do chủ động hủy request (không cần báo cho người dùng) */
+/** Whether the error comes from a deliberately aborted request (no need to tell the user) */
 export const isAbortError = (err) => err?.name === 'AbortError';
 
-/** Tạo URL kèm query string, bỏ qua các tham số undefined/null/'' */
+/** Build a URL with a query string, skipping undefined/null/'' params */
 function buildUrl(path, params) {
   const url = new URL(path, API_BASE);
   Object.entries(params ?? {}).forEach(([key, value]) => {
@@ -32,7 +32,7 @@ function buildUrl(path, params) {
 }
 
 /**
- * Gửi request và trả về toàn bộ body JSON: { success, data, message?, meta? }
+ * Send a request and return the whole JSON body: { success, data, message?, meta? }
  * @param {string} path  vd: '/api/listings'
  * @param {object} [options]
  */
@@ -40,12 +40,12 @@ export async function request(path, { method = 'GET', params, body, signal } = {
   const options = {
     method,
     headers: { Accept: 'application/json' },
-    credentials: 'include', // khác origin -> phải 'include' thì mới gửi/nhận cookie session
+    credentials: 'include', // different origin -> must be 'include' to send/receive the session cookie
     signal,
   };
 
   if (body instanceof FormData) {
-    options.body = body; // trình duyệt tự đặt Content-Type multipart kèm boundary
+    options.body = body; // the browser sets the multipart Content-Type with its boundary
   } else if (body !== undefined) {
     options.headers['Content-Type'] = 'application/json';
     options.body = JSON.stringify(body);
@@ -56,11 +56,11 @@ export async function request(path, { method = 'GET', params, body, signal } = {
     response = await fetch(buildUrl(path, params), options);
   } catch (err) {
     if (isAbortError(err)) throw err;
-    // fetch chỉ reject khi lỗi mạng / server API chưa chạy / bị chặn CORS
+    // fetch only rejects on network errors / API server down / blocked by CORS
     throw new ApiError('Không kết nối được máy chủ API. Vui lòng kiểm tra mạng và thử lại.');
   }
 
-  // Server có thể trả HTML (vd: lỗi proxy) -> không parse được JSON
+  // The server may return HTML (e.g. a proxy error) -> not parseable as JSON
   const json = await response.json().catch(() => null);
 
   if (!response.ok || !json?.success) {
@@ -73,7 +73,7 @@ export async function request(path, { method = 'GET', params, body, signal } = {
   return json;
 }
 
-/** Cú pháp ngắn gọn: api.get('/api/listings', { params }) */
+/** Short syntax: api.get('/api/listings', { params }) */
 export const api = {
   get: (path, options) => request(path, { ...options, method: 'GET' }),
   post: (path, body, options) => request(path, { ...options, method: 'POST', body }),

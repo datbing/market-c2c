@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Tạo tài khoản Market C2C miễn phí để đăng tin bán đồ và mua hàng từ người dùng khác.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
+  <meta name="theme-color" content="#ee4d2d">
+
+  <title>Đăng ký tài khoản | Market C2C</title>
+
+  <!-- Apply the light/dark theme before the page paints to avoid a color flash -->
+  <script src="/js/theme-init.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+
+<body>
+  <!-- =====================================================
+       HEADER (shared: copy this whole block to the other pages)
+       ===================================================== -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="/" aria-label="Market C2C - Trang chủ">
+        <!-- Responsive via HTML: screens < 576px use the square logo, larger ones the text logo.
+             Two versions: navy text for light backgrounds, light text for dark ones (CSS picks by [data-theme]) -->
+        <picture class="logo__picture logo__picture--light">
+          <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
+          <img class="logo__img" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C">
+        </picture>
+        <picture class="logo__picture logo__picture--dark">
+          <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
+          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C"
+            loading="lazy">
+        </picture>
+      </a>
+
+      <form class="search" id="search-form" role="search" autocomplete="off">
+        <label for="search-input" class="visually-hidden">Tìm kiếm tin đăng</label>
+        <input class="search__input" id="search-input" name="q" type="search" placeholder="Tìm iPhone, xe đạp, sách..."
+          maxlength="100" aria-controls="search-history" aria-expanded="false" aria-autocomplete="list">
+        <button class="search__submit" type="submit" aria-label="Tìm kiếm">
+          <i class="bi bi-search" aria-hidden="true"></i>
+        </button>
+
+        <!-- Search history (LocalStorage) -->
+        <div class="search__dropdown" id="search-history" hidden>
+          <div class="search__dropdown-head">
+            <span>Tìm kiếm gần đây</span>
+            <button type="button" class="link-btn" data-clear>Xóa tất cả</button>
+          </div>
+          <ul id="search-history-list" role="listbox" aria-label="Lịch sử tìm kiếm"></ul>
+        </div>
+      </form>
+
+      <nav class="header-actions" aria-label="Tiện ích và tài khoản">
+        <!-- CSS shows the moon (light) or the sun (dark) based on [data-theme] -->
+        <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
+          <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
+          <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
+        </button>
+        <a class="icon-btn" href="/favorites" aria-label="Tin yêu thích">
+          <i class="bi bi-heart" aria-hidden="true"></i>
+          <span class="icon-btn__badge" data-count="favorites" hidden>0</span>
+        </a>
+        <a class="icon-btn" href="/cart" aria-label="Giỏ hàng">
+          <i class="bi bi-cart3" aria-hidden="true"></i>
+          <span class="icon-btn__badge" data-count="cart" hidden>0</span>
+        </a>
+
+        <!-- Account: JS shows one of the two blocks after calling /api/auth/me -->
+        <div class="account" id="account-area">
+          <!-- Below 1200px only the icon is visible; the text is still read by screen readers -->
+          <a class="account__login" id="account-guest" href="/login" hidden>
+            <i class="bi bi-person-circle" aria-hidden="true"></i><span>Đăng nhập</span>
+          </a>
+
+          <details class="account-menu" id="account-user" hidden>
+            <summary aria-label="Menu tài khoản">
+              <span class="avatar" data-user="initial" aria-hidden="true"></span>
+              <span class="account-menu__dot" data-order-dot hidden></span>
+              <span class="account-menu__name" data-user="name"></span>
+            </summary>
+            <ul class="account-menu__list">
+              <li class="account-menu__header">
+                <strong data-user="name"></strong>
+                <span data-user="email"></span>
+              </li>
+              <li data-role="admin" hidden>
+                <a class="account-menu__item" href="/admin/"><i class="bi bi-speedometer2" aria-hidden="true"></i> Trang
+                  quản trị</a>
+              </li>
+              <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list" aria-hidden="true"></i>
+                  Tin đăng của tôi</a></li>
+              <li><a class="account-menu__item" id="menu-orders" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
+                  hàng <span class="account-menu__count" data-order-count hidden></span></a></li>
+              <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart" aria-hidden="true"></i> Tin yêu
+                  thích</a></li>
+              <li>
+                <button type="button" class="account-menu__item account-menu__item--danger" data-action="logout">
+                  <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Đăng xuất
+                </button>
+              </li>
+            </ul>
+          </details>
+        </div>
+
+        <a class="btn btn--white header-actions__sell" href="/sell">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Đăng tin</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- =====================================================
+       REGISTER PAGE CONTENT
+       ===================================================== -->
+  <main class="site-main">
+    <div class="container auth">
+
+      <!-- Introduction (only shown on desktop >= 1200px) -->
+      <section class="auth__intro" aria-labelledby="auth-intro-title">
+        <h2 class="auth__intro-title" id="auth-intro-title">Tham gia Market C2C</h2>
+        <p class="auth__intro-text">Chỉ cần một tài khoản để vừa mua vừa bán.</p>
+        <ul class="auth__benefits">
+          <li><i class="bi bi-gift" aria-hidden="true"></i> Miễn phí, không giới hạn số tin đăng</li>
+          <li><i class="bi bi-camera" aria-hidden="true"></i> Đăng nhiều ảnh cho mỗi món đồ</li>
+          <li><i class="bi bi-heart" aria-hidden="true"></i> Lưu tin yêu thích, xem lại bất cứ lúc nào</li>
+          <li><i class="bi bi-geo-alt" aria-hidden="true"></i> Tìm đồ gần bạn theo tỉnh thành</li>
+        </ul>
+      </section>
+
+      <section class="auth-card" aria-labelledby="register-title">
+        <h1 class="auth-card__title" id="register-title">Tạo tài khoản</h1>
+        <p class="auth-card__subtitle">
+          Đã có tài khoản? <a href="/login" data-keep-redirect>Đăng nhập</a>
+        </p>
+
+        <div class="alert alert--error" data-form-alert role="alert" hidden>
+          <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+          <span data-alert-message></span>
+        </div>
+
+        <form id="register-form" class="auth-card__form" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="register-name">Họ và tên <abbr title="bắt buộc">*</abbr></label>
+            <input class="form-control" id="register-name" name="name" type="text" autocomplete="name" maxlength="100"
+              required placeholder="Nguyễn Văn A" aria-describedby="register-name-error">
+            <p class="form-hint form-hint--error" id="register-name-error" data-error-for="name" hidden></p>
+          </div>
+
+          <!-- Email + phone: two columns from tablet up -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="register-email">Email <abbr title="bắt buộc">*</abbr></label>
+              <input class="form-control" id="register-email" name="email" type="email" autocomplete="email"
+                inputmode="email" maxlength="150" required placeholder="ban@example.com"
+                aria-describedby="register-email-error">
+              <p class="form-hint form-hint--error" id="register-email-error" data-error-for="email" hidden></p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="register-phone">Số điện thoại</label>
+              <input class="form-control" id="register-phone" name="phone" type="tel" autocomplete="tel"
+                inputmode="numeric" maxlength="10" pattern="0[0-9]{9}" placeholder="0901234567"
+                aria-describedby="register-phone-hint register-phone-error">
+              <p class="form-hint" id="register-phone-hint">Không bắt buộc</p>
+              <p class="form-hint form-hint--error" id="register-phone-error" data-error-for="phone" hidden></p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="register-password">Mật khẩu <abbr title="bắt buộc">*</abbr></label>
+            <div class="password-field">
+              <input class="form-control" id="register-password" name="password" type="password"
+                autocomplete="new-password" minlength="6" maxlength="72" required
+                aria-describedby="register-password-hint register-password-error">
+              <button type="button" class="password-field__toggle" data-toggle-password="register-password"
+                aria-pressed="false" aria-label="Hiện mật khẩu">
+                <i class="bi bi-eye" aria-hidden="true"></i>
+                <i class="bi bi-eye-slash" aria-hidden="true"></i>
+              </button>
+            </div>
+            <!-- Password strength meter (HTML5 <meter>) -->
+            <div class="strength">
+              <meter class="strength__meter" id="password-strength" min="0" max="5" low="2" high="3" optimum="5"
+                value="0" aria-label="Độ mạnh mật khẩu"></meter>
+              <span class="strength__label" id="password-strength-label" aria-live="polite"></span>
+            </div>
+            <p class="form-hint" id="register-password-hint">Tối thiểu 6 ký tự. Nên có chữ hoa, số và ký tự đặc biệt.
+            </p>
+            <p class="form-hint form-hint--error" id="register-password-error" data-error-for="password" hidden></p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="register-confirm">Nhập lại mật khẩu <abbr title="bắt buộc">*</abbr></label>
+            <div class="password-field">
+              <input class="form-control" id="register-confirm" name="confirmPassword" type="password"
+                autocomplete="new-password" maxlength="72" required aria-describedby="register-confirm-error">
+              <button type="button" class="password-field__toggle" data-toggle-password="register-confirm"
+                aria-pressed="false" aria-label="Hiện mật khẩu">
+                <i class="bi bi-eye" aria-hidden="true"></i>
+                <i class="bi bi-eye-slash" aria-hidden="true"></i>
+              </button>
+            </div>
+            <p class="form-hint form-hint--error" id="register-confirm-error" data-error-for="confirmPassword" hidden>
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox">
+              <input type="checkbox" id="register-agree" name="agree" value="1" required
+                aria-describedby="register-agree-error">
+              <span>Tôi đồng ý với điều khoản sử dụng và quy định đăng tin của Market C2C</span>
+            </label>
+            <p class="form-hint form-hint--error" id="register-agree-error" data-error-for="agree" hidden></p>
+          </div>
+
+          <button type="submit" class="btn btn--primary btn--block btn--lg" data-submit>
+            <span class="btn__spinner" aria-hidden="true"></span>
+            <span>Tạo tài khoản</span>
+          </button>
+        </form>
+
+        <p class="auth-card__footer">
+          <a href="/"><i class="bi bi-arrow-left" aria-hidden="true"></i> Về trang chủ</a>
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <!-- =====================================================
+       FOOTER (shared)
+       ===================================================== -->
+  <footer class="site-footer">
+    <div class="container site-footer__grid">
+      <section>
+        <a class="site-footer__logo" href="/" aria-label="Market C2C - Trang chủ">
+          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296"
+            alt="Market C2C" loading="lazy">
+          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117"
+            alt="Market C2C" loading="lazy">
+        </a>
+        <p>Sàn mua bán giữa người với người. Đồ án môn Lập trình Web: HTML5, SCSS, JavaScript thuần.</p>
+      </section>
+      <nav aria-labelledby="footer-nav-title">
+        <h2 id="footer-nav-title">Khám phá</h2>
+        <ul>
+          <li><a href="/">Trang chủ</a></li>
+          <li><a href="/sell">Đăng tin bán</a></li>
+          <li><a href="/favorites">Tin yêu thích</a></li>
+          <li><a href="/cart">Giỏ hàng</a></li>
+        </ul>
+      </nav>
+      <section aria-labelledby="footer-help-title">
+        <h2 id="footer-help-title">Hỗ trợ</h2>
+        <ul>
+          <li><i class="bi bi-envelope" aria-hidden="true"></i> hotro@marketc2c.vn</li>
+          <li><i class="bi bi-telephone" aria-hidden="true"></i> 1900 0000</li>
+          <li><i class="bi bi-shield-check" aria-hidden="true"></i> Giao dịch an toàn, gặp mặt trực tiếp</li>
+        </ul>
+      </section>
+    </div>
+    <p class="site-footer__bottom">© <span id="year">2026</span> Market C2C. Dữ liệu tỉnh thành: provinces.open-api.vn ·
+      Tỷ giá: open.er-api.com</p>
+  </footer>
+
+  <!-- Toast notification area -->
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+  <!-- =====================================================
+       SHARED TEMPLATES (header, toast) - copy to the other pages
+       <template> is not rendered; JS clones it and fills in the data.
+       ===================================================== -->
+  <template id="tpl-history-item">
+    <li class="search__history-item" role="option" aria-selected="false">
+      <button type="button" class="search__history-term" data-term>
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span data-field="term"></span>
+      </button>
+      <button type="button" class="toast__close" data-remove aria-label="Xóa khỏi lịch sử">
+        <i class="bi bi-x" aria-hidden="true"></i>
+      </button>
+    </li>
+  </template>
+
+  <template id="tpl-toast">
+    <div class="toast">
+      <i class="bi toast__icon" aria-hidden="true"></i>
+      <p class="toast__message"></p>
+      <button type="button" class="toast__close" aria-label="Đóng thông báo">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+  </template>
+
+  <script type="module" src="/js/pages/register.js"></script>
+</body>
+
+</html>

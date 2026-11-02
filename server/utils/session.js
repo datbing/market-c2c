@@ -1,20 +1,20 @@
 /**
- * express-session dùng callback -> bọc lại thành Promise để dùng được với async/await.
+ * express-session uses callbacks -> wrapped in Promises to use with async/await.
  */
 
-/** Tạo session ID mới (chống tấn công session fixation khi đăng nhập) */
+/** Create a new session ID (prevents session fixation attacks on login) */
 export const regenerateSession = (req) =>
   new Promise((resolve, reject) => {
     req.session.regenerate((err) => (err ? reject(err) : resolve()));
   });
 
-/** Lưu session ngay lập tức */
+/** Save the session immediately */
 export const saveSession = (req) =>
   new Promise((resolve, reject) => {
     req.session.save((err) => (err ? reject(err) : resolve()));
   });
 
-/** Hủy session (đăng xuất) */
+/** Destroy the session (logout) */
 export const destroySession = (req) =>
   new Promise((resolve, reject) => {
     if (!req.session) return resolve();

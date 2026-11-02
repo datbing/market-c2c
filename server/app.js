@@ -1,9 +1,9 @@
 /**
- * Khởi tạo ứng dụng Express (CHỈ LÀ BACKEND API):
- *  - API JSON tại /api
- *  - Ảnh upload tại /uploads
- * Frontend nằm riêng ở thư mục /frontend, do Apache (Laragon) phục vụ tại
- * http://market-c2c.test và gọi sang API này qua CORS.
+ * Express application setup (BACKEND API ONLY):
+ *  - JSON API at /api
+ *  - Uploaded images at /uploads
+ * The frontend lives separately in /frontend, served by Apache (Laragon) at
+ * https://market-c2c.test, and calls this API (https://market-c2c.test:3000) via CORS.
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,14 +20,14 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 export const app = express();
 app.disable('x-powered-by');
 
-// CORS đặt đầu tiên để cả /api lẫn /uploads đều có header phù hợp
+// CORS goes first so both /api and /uploads get the right headers
 app.use(cors);
 
-// ---------- Ảnh upload ----------
+// ---------- Uploaded images ----------
 app.use(
   '/uploads',
   express.static(path.join(ROOT_DIR, 'uploads'), {
-    // Cho phép trang khác origin hiển thị ảnh
+    // Allow pages from other origins to display the images
     setHeaders: (res) => res.set('Cross-Origin-Resource-Policy', 'cross-origin'),
   }),
 );
@@ -37,13 +37,13 @@ const sessionMiddleware = session({
   name: config.session.cookieName,
   secret: config.session.secret,
   resave: false,
-  saveUninitialized: false, // chỉ tạo session khi đăng nhập
+  saveUninitialized: false, // only create a session on login
   cookie: {
-    httpOnly: true, // JS phía client không đọc được cookie -> hạn chế XSS đánh cắp phiên
-    // Lax: cookie vẫn được gửi giữa market-c2c.test và market-c2c.test:3000
-    // vì khác cổng nhưng cùng "site" (cùng tên miền)
+    httpOnly: true, // client-side JS cannot read the cookie -> limits session theft via XSS
+    // Lax: the cookie is still sent between https://market-c2c.test and https://market-c2c.test:3000
+    // because they differ only by port and are the same "site" (same https scheme + same domain)
     sameSite: 'lax',
-    secure: 'auto', // tự bật khi chạy HTTPS
+    secure: true, // only sent over HTTPS (the server always runs https)
     maxAge: config.session.maxAgeMs,
   },
 });
@@ -57,7 +57,7 @@ app.use(
   apiNotFound,
 );
 
-// ---------- Trang gốc: giới thiệu ngắn ----------
+// ---------- Root path: short description ----------
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -69,10 +69,10 @@ app.get('/', (req, res) => {
   });
 });
 
-// ---------- Đường dẫn không tồn tại ----------
+// ---------- Unknown paths ----------
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Không tìm thấy đường dẫn' });
 });
 
-// ---------- Xử lý lỗi (luôn đặt cuối) ----------
+// ---------- Error handling (always last) ----------
 app.use(errorHandler);

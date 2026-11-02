@@ -1,0 +1,144 @@
+// =========================================================
+//  IMAGE PICKER (post / edit listing)
+// =========================================================
+@use '../abstracts' as *;
+
+.image-picker {
+  display: grid;
+  gap: $space-3;
+
+  // Click / drag-and-drop area
+  &__drop {
+    display: grid;
+    justify-items: center;
+    gap: $space-1;
+    padding: $space-6 $space-4;
+    border: 2px dashed var(--color-border);
+    border-radius: $radius-lg;
+    background: var(--color-surface-2);
+    color: var(--color-text-muted);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color $transition, background-color $transition;
+
+    > .bi {
+      font-size: 2rem;
+      color: var(--color-primary);
+    }
+
+    strong {
+      color: var(--color-text);
+    }
+
+    span {
+      font-size: $font-size-sm;
+    }
+
+    &:hover,
+    &.is-dragover {
+      border-color: var(--color-primary);
+      background: var(--color-primary-soft);
+    }
+
+    // The file input is hidden -> show the focus outline on the box for keyboard users
+    &:focus-within {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    &.is-busy {
+      cursor: progress;
+    }
+
+    &.is-disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+  }
+
+  // Preview grid: 3 columns on mobile, 4 from tablet up
+  &__list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: $space-2;
+
+    @include respond-to(md) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__item {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border: 1px solid var(--color-border);
+    border-radius: $radius;
+    overflow: hidden;
+    background: var(--color-surface-2);
+    cursor: grab;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none; // drag the whole tile, not just the image
+    }
+
+    // The first image (cover) gets an orange border
+    &:first-child {
+      border: 2px solid var(--color-primary);
+    }
+
+    &.is-dragging {
+      opacity: 0.4;
+    }
+  }
+
+  &__cover,
+  &__size {
+    position: absolute;
+    left: $space-1;
+    padding: 1px $space-2;
+    border-radius: $radius-sm;
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+
+  &__cover {
+    top: $space-1;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  &__size {
+    bottom: $space-1;
+    background: rgb(0 0 0 / 55%);
+    color: #fff;
+  }
+
+  &__tools {
+    position: absolute;
+    top: $space-1;
+    right: $space-1;
+    display: flex;
+    gap: $space-1;
+
+    button {
+      @include flex-center;
+      width: 28px;
+      height: 28px;
+      border: 0;
+      border-radius: 50%;
+      background: rgb(0 0 0 / 60%);
+      color: #fff;
+      font-size: 0.8125rem;
+
+      &:hover {
+        background: var(--color-primary);
+      }
+    }
+  }
+}

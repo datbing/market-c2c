@@ -1,14 +1,14 @@
 -- =========================================================
---  MARKET C2C - CẤU TRÚC CƠ SỞ DỮ LIỆU (MySQL 8 / MariaDB 10.4+)
---  Charset utf8mb4 để lưu tiếng Việt và emoji.
---  Nếu import thủ công (HeidiSQL/phpMyAdmin): tạo database `market_c2c`
---  với collation utf8mb4_unicode_ci, chọn database đó rồi chạy file này.
+--  MARKET C2C - DATABASE SCHEMA (MySQL 8 / MariaDB 10.4+)
+--  utf8mb4 charset to store Vietnamese text and emoji.
+--  Manual import (HeidiSQL/phpMyAdmin): create the `market_c2c` database
+--  with utf8mb4_unicode_ci collation, select it, then run this file.
 -- =========================================================
 
 SET NAMES utf8mb4;
 
 -- ---------------------------------------------------------
--- Người dùng (vừa là người mua vừa là người bán) + admin
+-- Users (both buyers and sellers) + admins
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -27,25 +27,25 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------
--- Danh mục sản phẩm
+-- Product categories
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS categories (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name        VARCHAR(100) NOT NULL,
   slug        VARCHAR(120) NOT NULL UNIQUE,
-  icon        VARCHAR(50)  NULL COMMENT 'Tên class Bootstrap Icons, vd: bi-phone',
+  icon        VARCHAR(50)  NULL COMMENT 'Bootstrap Icons class name, e.g. bi-phone',
   sort_order  INT NOT NULL DEFAULT 0,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------
--- Tin đăng bán (mỗi tin là 1 món đồ của 1 người bán)
---   pending  : chờ admin duyệt
---   active   : đang bán
---   sold     : đã bán (= "đánh dấu hoàn thành")
---   hidden   : người bán tạm ẩn
---   rejected : admin từ chối
+-- Listings for sale (each listing is one item from one seller)
+--   pending  : waiting for admin review
+--   active   : for sale
+--   sold     : sold (= "mark as completed")
+--   hidden   : temporarily hidden by the seller
+--   rejected : rejected by an admin
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS listings (
   id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -53,12 +53,12 @@ CREATE TABLE IF NOT EXISTS listings (
   category_id   INT UNSIGNED NOT NULL,
   title         VARCHAR(150) NOT NULL,
   description   TEXT NOT NULL,
-  price         INT UNSIGNED NOT NULL COMMENT 'Đơn vị VND',
+  price         INT UNSIGNED NOT NULL COMMENT 'In VND',
   item_condition ENUM('new', 'like_new', 'used') NOT NULL DEFAULT 'used',
   province      VARCHAR(100) NOT NULL,
   status        ENUM('pending', 'active', 'sold', 'hidden', 'rejected') NOT NULL DEFAULT 'pending',
   reject_reason VARCHAR(255) NULL,
-  search_text   TEXT NOT NULL COMMENT 'Tiêu đề + mô tả đã bỏ dấu, chữ thường',
+  search_text   TEXT NOT NULL COMMENT 'Title + description without diacritics, lowercase',
   views         INT UNSIGNED NOT NULL DEFAULT 0,
   sold_at       DATETIME NULL,
   created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS listings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------
--- Ảnh của tin đăng (1 tin có nhiều ảnh)
+-- Listing images (one listing has many images)
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS listing_images (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -84,9 +84,9 @@ CREATE TABLE IF NOT EXISTS listing_images (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------
--- Đơn hàng: người mua đặt mua một tin đăng
---   Lưu "ảnh chụp" tiêu đề và giá tại thời điểm đặt (listing_title, price)
---   để người bán sửa tin sau này không làm sai lịch sử đơn.
+-- Orders: a buyer orders one listing
+--   Stores a "snapshot" of the title and price at order time (listing_title, price)
+--   so later edits by the seller do not alter the order history.
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS orders (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS orders (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------
--- Báo cáo vi phạm tin đăng (admin xử lý)
+-- Listing reports (handled by admins)
 -- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reports (
   id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

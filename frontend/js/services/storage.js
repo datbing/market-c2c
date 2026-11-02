@@ -1,15 +1,15 @@
 /**
- * Bọc LocalStorage / SessionStorage:
- *  - Tự thêm prefix "mc2c:" cho mọi key
- *  - Tự JSON.stringify / JSON.parse, có try/catch (trình duyệt chặn storage,
- *    hết dung lượng, dữ liệu bị sửa tay hỏng JSON... đều không làm sập trang)
- *  - Cache có hạn dùng (TTL) cho dữ liệu API
- *  - Class ListStore cho các danh sách: giỏ hàng, yêu thích, đã xem, lịch sử tìm kiếm
+ * LocalStorage / SessionStorage wrapper:
+ *  - Adds the "mc2c:" prefix to every key
+ *  - JSON.stringify / JSON.parse with try/catch (blocked storage, quota exceeded,
+ *    hand-edited broken JSON... none of them crash the page)
+ *  - Cache with an expiry (TTL) for API data
+ *  - ListStore class for lists: cart, favorites, recently viewed, search history
  */
 
 export const PREFIX = 'mc2c:';
 
-/** Tạo bộ get/set/remove cho một vùng lưu trữ (localStorage hoặc sessionStorage) */
+/** Create get/set/remove helpers for one storage area (localStorage or sessionStorage) */
 function createStore(getArea) {
   return {
     get(key, fallback = null) {
@@ -26,7 +26,7 @@ function createStore(getArea) {
         getArea().setItem(PREFIX + key, JSON.stringify(value));
         return true;
       } catch (err) {
-        console.warn(`[storage] Không lưu được "${key}":`, err.message);
+        console.warn(`[storage] Could not save "${key}":`, err.message);
         return false;
       }
     },
@@ -35,7 +35,7 @@ function createStore(getArea) {
       try {
         getArea().removeItem(PREFIX + key);
       } catch {
-        /* bỏ qua */
+        /* ignore */
       }
     },
   };
@@ -45,12 +45,12 @@ export const local = createStore(() => window.localStorage);
 export const session = createStore(() => window.sessionStorage);
 
 // ---------------------------------------------------------
-//  Cache API có TTL: lưu { value, expiresAt } dưới key "cache:<tên>"
+//  API cache with TTL: stores { value, expiresAt } under the key "cache:<name>"
 // ---------------------------------------------------------
 
 /**
- * Đọc cache. Hết hạn thì trả null, trừ khi `allowExpired` = true
- * (dùng làm phương án dự phòng khi gọi API thất bại).
+ * Read the cache. Returns null when expired, unless `allowExpired` = true
+ * (used as a fallback when the API call fails).
  */
 export function getCache(name, { allowExpired = false } = {}) {
   const entry = local.get(`cache:${name}`);
@@ -64,10 +64,10 @@ export function setCache(name, value, ttlMs) {
 }
 
 /**
- * Lấy dữ liệu theo chiến lược "cache trước, mạng sau":
- *  1. Cache còn hạn -> trả luôn, không gọi mạng
- *  2. Hết hạn -> gọi `loader()`, thành công thì lưu cache mới
- *  3. Gọi lỗi -> dùng cache cũ (dù hết hạn) nếu có, không có thì ném lỗi
+ * Get data with a "cache first, network second" strategy:
+ *  1. Cache still valid -> return it, no network call
+ *  2. Expired -> call `loader()`, save the new cache on success
+ *  3. Call failed -> use the old cache (even if expired) if any, otherwise throw
  */
 export async function cached(name, ttlMs, loader) {
   const fresh = getCache(name);
@@ -80,7 +80,7 @@ export async function cached(name, ttlMs, loader) {
   } catch (err) {
     const stale = getCache(name, { allowExpired: true });
     if (stale !== null) {
-      console.warn(`[cache] "${name}" lỗi mạng, dùng dữ liệu cũ:`, err.message);
+      console.warn(`[cache] "${name}" network error, using stale data:`, err.message);
       return stale;
     }
     throw err;
@@ -88,16 +88,16 @@ export async function cached(name, ttlMs, loader) {
 }
 
 // ---------------------------------------------------------
-//  ListStore: danh sách lưu trong LocalStorage, mỗi lần đổi
-//  sẽ phát CustomEvent để các module khác (header, trang...) cập nhật.
+//  ListStore: a list stored in LocalStorage; every change
+//  dispatches a CustomEvent so other modules (header, pages...) can update.
 // ---------------------------------------------------------
 export class ListStore {
   /**
-   * @param {string} key      Tên key (không cần prefix)
+   * @param {string} key      Key name (without prefix)
    * @param {object} options
-   * @param {string} options.event  Tên CustomEvent phát ra trên window khi thay đổi
-   * @param {number} [options.max]  Số phần tử tối đa (cũ nhất bị bỏ)
-   * @param {string|null} [options.idKey] Trường làm khóa; null = phần tử chính là khóa (chuỗi)
+   * @param {string} options.event  CustomEvent name dispatched on window when it changes
+   * @param {number} [options.max]  Maximum number of items (the oldest are dropped)
+   * @param {string|null} [options.idKey] Field used as the key; null = the item itself is the key (string)
    */
   constructor(key, { event, max = Infinity, idKey = 'id' }) {
     this.key = key;
@@ -105,7 +105,7 @@ export class ListStore {
     this.max = max;
     this.idKey = idKey;
 
-    // Đồng bộ giữa các tab: tab khác sửa LocalStorage -> tab này cũng phát sự kiện
+    // Sync across tabs: another tab changed LocalStorage -> this tab dispatches the event too
     window.addEventListener('storage', (e) => {
       if (e.key === PREFIX + key) this.#emit();
     });
@@ -120,7 +120,7 @@ export class ListStore {
     window.dispatchEvent(new CustomEvent(this.event, { detail: { items, count: items.length } }));
   }
 
-  /** Luôn trả về mảng, kể cả khi dữ liệu trong storage bị hỏng */
+  /** Always returns an array, even when the stored data is corrupted */
   getAll() {
     const value = local.get(this.key, []);
     return Array.isArray(value) ? value : [];
@@ -139,7 +139,7 @@ export class ListStore {
     this.#emit();
   }
 
-  /** Thêm lên đầu danh sách, nếu đã có thì đưa lên đầu (không trùng lặp) */
+  /** Add to the front of the list; if already present, move it to the front (no duplicates) */
   add(item) {
     const id = this.#idOf(item);
     const rest = this.getAll().filter((x) => this.#idOf(x) !== id);
@@ -150,7 +150,7 @@ export class ListStore {
     this.save(this.getAll().filter((x) => this.#idOf(x) !== id));
   }
 
-  /** Có rồi thì xóa, chưa có thì thêm. Trả về true nếu sau thao tác phần tử đang có trong list */
+  /** Remove if present, add if not. Returns true if the item is in the list afterwards */
   toggle(item) {
     const id = this.#idOf(item);
     if (this.has(id)) {

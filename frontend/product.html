@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Chi tiết tin đăng trên Market C2C - sàn mua bán đồ cũ giữa người với người.">
+  <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
+  <meta name="theme-color" content="#ee4d2d">
+
+  <!-- JS replaces this with the item name once loaded -->
+  <title>Chi tiết tin đăng | Market C2C</title>
+
+  <!-- Apply the light/dark theme before the page paints to avoid a color flash -->
+  <script src="/js/theme-init.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+
+<body>
+  <!-- =====================================================
+       HEADER (shared: copy this whole block to the other pages)
+       ===================================================== -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="/" aria-label="Market C2C - Trang chủ">
+        <!-- Responsive via HTML: screens < 576px use the square logo, larger ones the text logo.
+             Two versions: navy text for light backgrounds, light text for dark ones (CSS picks by [data-theme]) -->
+        <picture class="logo__picture logo__picture--light">
+          <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
+          <img class="logo__img" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C">
+        </picture>
+        <picture class="logo__picture logo__picture--dark">
+          <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
+          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C"
+            loading="lazy">
+        </picture>
+      </a>
+
+      <form class="search" id="search-form" role="search" autocomplete="off">
+        <label for="search-input" class="visually-hidden">Tìm kiếm tin đăng</label>
+        <input class="search__input" id="search-input" name="q" type="search" placeholder="Tìm iPhone, xe đạp, sách..."
+          maxlength="100" aria-controls="search-history" aria-expanded="false" aria-autocomplete="list">
+        <button class="search__submit" type="submit" aria-label="Tìm kiếm">
+          <i class="bi bi-search" aria-hidden="true"></i>
+        </button>
+
+        <!-- Search history (LocalStorage) -->
+        <div class="search__dropdown" id="search-history" hidden>
+          <div class="search__dropdown-head">
+            <span>Tìm kiếm gần đây</span>
+            <button type="button" class="link-btn" data-clear>Xóa tất cả</button>
+          </div>
+          <ul id="search-history-list" role="listbox" aria-label="Lịch sử tìm kiếm"></ul>
+        </div>
+      </form>
+
+      <nav class="header-actions" aria-label="Tiện ích và tài khoản">
+        <!-- CSS shows the moon (light) or the sun (dark) based on [data-theme] -->
+        <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
+          <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
+          <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
+        </button>
+        <a class="icon-btn" href="/favorites" aria-label="Tin yêu thích">
+          <i class="bi bi-heart" aria-hidden="true"></i>
+          <span class="icon-btn__badge" data-count="favorites" hidden>0</span>
+        </a>
+        <a class="icon-btn" href="/cart" aria-label="Giỏ hàng">
+          <i class="bi bi-cart3" aria-hidden="true"></i>
+          <span class="icon-btn__badge" data-count="cart" hidden>0</span>
+        </a>
+
+        <!-- Account: JS shows one of the two blocks after calling /api/auth/me -->
+        <div class="account" id="account-area">
+          <!-- Below 1200px only the icon is visible; the text is still read by screen readers -->
+          <a class="account__login" id="account-guest" href="/login" hidden>
+            <i class="bi bi-person-circle" aria-hidden="true"></i><span>Đăng nhập</span>
+          </a>
+
+          <details class="account-menu" id="account-user" hidden>
+            <summary aria-label="Menu tài khoản">
+              <span class="avatar" data-user="initial" aria-hidden="true"></span>
+              <span class="account-menu__dot" data-order-dot hidden></span>
+              <span class="account-menu__name" data-user="name"></span>
+            </summary>
+            <ul class="account-menu__list">
+              <li class="account-menu__header">
+                <strong data-user="name"></strong>
+                <span data-user="email"></span>
+              </li>
+              <li data-role="admin" hidden>
+                <a class="account-menu__item" href="/admin/"><i class="bi bi-speedometer2" aria-hidden="true"></i> Trang
+                  quản trị</a>
+              </li>
+              <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list" aria-hidden="true"></i>
+                  Tin đăng của tôi</a></li>
+              <li><a class="account-menu__item" id="menu-orders" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
+                  hàng <span class="account-menu__count" data-order-count hidden></span></a></li>
+              <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart" aria-hidden="true"></i> Tin yêu
+                  thích</a></li>
+              <li>
+                <button type="button" class="account-menu__item account-menu__item--danger" data-action="logout">
+                  <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Đăng xuất
+                </button>
+              </li>
+            </ul>
+          </details>
+        </div>
+
+        <a class="btn btn--white header-actions__sell" href="/sell">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Đăng tin</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- =====================================================
+       LISTING DETAIL PAGE CONTENT
+       ===================================================== -->
+  <main class="site-main">
+    <div class="container product-page">
+
+      <nav class="breadcrumb" aria-label="Đường dẫn">
+        <ol>
+          <li><a href="/"><i class="bi bi-house-door" aria-hidden="true"></i> Trang chủ</a></li>
+          <li><a href="/" id="crumb-category">Danh mục</a></li>
+          <li aria-current="page" id="crumb-title">Chi tiết tin</li>
+        </ol>
+      </nav>
+
+      <!-- Loading: skeleton -->
+      <div class="product product--loading" id="product-loading" aria-busy="true" aria-label="Đang tải tin đăng">
+        <div class="skeleton product__skeleton-media"></div>
+        <div class="product__skeleton-info">
+          <div class="skeleton skeleton--line skeleton--short"></div>
+          <div class="skeleton skeleton--line"></div>
+          <div class="skeleton skeleton--line skeleton--short"></div>
+          <div class="skeleton product__skeleton-block"></div>
+          <div class="skeleton product__skeleton-block"></div>
+        </div>
+      </div>
+
+      <!-- Not found (wrong id, deleted or not yet approved) -->
+      <div class="state" id="product-not-found" hidden>
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <h1 class="state__title">Không tìm thấy tin đăng</h1>
+        <p class="state__text">Tin có thể đã bị xóa, đang chờ duyệt hoặc đường dẫn không đúng.</p>
+        <a class="btn btn--primary" href="/">Xem tin khác</a>
+      </div>
+
+      <!-- Network / server error -->
+      <div class="state state--error" id="product-error" role="alert" hidden>
+        <i class="bi bi-wifi-off" aria-hidden="true"></i>
+        <h1 class="state__title">Không tải được tin đăng</h1>
+        <p class="state__text" id="product-error-message"></p>
+        <button type="button" class="btn btn--primary" id="product-retry">
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Thử lại
+        </button>
+      </div>
+
+      <!-- Main content -->
+      <article class="product" id="product-content" aria-labelledby="product-title" hidden>
+
+        <!-- Gallery -->
+        <section class="gallery product__gallery" id="gallery" aria-label="Ảnh sản phẩm">
+          <div class="gallery__stage">
+            <button type="button" class="gallery__view" data-gallery-open aria-label="Phóng to ảnh">
+              <img data-gallery-image alt="">
+            </button>
+            <span class="gallery__placeholder" data-gallery-placeholder hidden>
+              <i class="bi bi-box-seam" aria-hidden="true"></i>
+            </span>
+            <button type="button" class="gallery__nav gallery__nav--prev" data-gallery-nav="prev"
+              aria-label="Ảnh trước">
+              <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="gallery__nav gallery__nav--next" data-gallery-nav="next" aria-label="Ảnh sau">
+              <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </button>
+            <span class="gallery__counter" data-gallery-counter aria-live="polite"></span>
+            <span class="gallery__ribbon" id="sold-ribbon" hidden>Đã bán</span>
+          </div>
+          <ul class="gallery__thumbs" data-gallery-thumbs aria-label="Danh sách ảnh"></ul>
+        </section>
+
+        <!-- Info + actions + seller -->
+        <section class="product__info" aria-label="Thông tin tin đăng">
+          <div class="alert" id="product-status" role="status" hidden>
+            <i class="bi" aria-hidden="true"></i>
+            <span data-alert-message></span>
+          </div>
+
+          <div class="product__tags">
+            <span class="badge" id="product-condition"></span>
+            <a class="product__category" id="product-category" href="/">
+              <i class="bi" aria-hidden="true"></i> <span></span>
+            </a>
+          </div>
+
+          <h1 class="product__title" id="product-title"></h1>
+
+          <p class="product__price">
+            <span id="product-price"></span>
+            <!-- Empty when the exchange rate is unavailable -> hidden by CSS -->
+            <span class="product__usd" id="product-usd"></span>
+          </p>
+
+          <dl class="product__meta">
+            <div>
+              <dt><i class="bi bi-geo-alt" aria-hidden="true"></i> Khu vực</dt>
+              <dd id="product-province"></dd>
+            </div>
+            <div>
+              <dt><i class="bi bi-clock" aria-hidden="true"></i> Đăng</dt>
+              <dd><time id="product-time"></time></dd>
+            </div>
+            <div>
+              <dt><i class="bi bi-eye" aria-hidden="true"></i> Lượt xem</dt>
+              <dd id="product-views"></dd>
+            </div>
+            <div>
+              <dt><i class="bi bi-hash" aria-hidden="true"></i> Mã tin</dt>
+              <dd id="product-code"></dd>
+            </div>
+          </dl>
+
+          <!-- Buyer -->
+          <div class="product__actions" id="buyer-actions">
+            <button type="button" class="btn btn--primary btn--lg" id="buy-now">
+              <i class="bi bi-lightning-charge" aria-hidden="true"></i> Mua ngay
+            </button>
+            <!-- CSS swaps the text based on aria-pressed: not in cart / in cart -->
+            <button type="button" class="btn btn--outline btn--lg cart-toggle" id="add-to-cart" aria-pressed="false">
+              <span class="cart-toggle__add"><i class="bi bi-cart-plus" aria-hidden="true"></i> Thêm vào giỏ</span>
+              <span class="cart-toggle__added"><i class="bi bi-cart-check" aria-hidden="true"></i> Xem giỏ hàng</span>
+            </button>
+          </div>
+
+          <!-- Owner -->
+          <p class="alert alert--info" id="owner-note" hidden>
+            <i class="bi bi-person-check" aria-hidden="true"></i>
+            <span>Đây là tin của bạn. <a id="owner-edit" href="/my-listings">Sửa tin</a> · <a href="/my-listings">Quản lý tin đăng</a></span>
+          </p>
+
+          <div class="product__secondary">
+            <button type="button" class="product__link-btn favorite-toggle" id="favorite-btn" data-action="favorite"
+              aria-pressed="false" aria-label="Thêm vào yêu thích">
+              <i class="bi bi-heart" aria-hidden="true"></i>
+              <i class="bi bi-heart-fill" aria-hidden="true"></i>
+              <span class="favorite-toggle__off">Lưu tin</span>
+              <span class="favorite-toggle__on">Đã lưu</span>
+            </button>
+            <button type="button" class="product__link-btn" id="share-btn">
+              <i class="bi bi-share" aria-hidden="true"></i> Chia sẻ
+            </button>
+            <!-- Hidden for the owner (you cannot report your own listing) -->
+            <button type="button" class="product__link-btn product__report" id="report-btn">
+              <i class="bi bi-flag" aria-hidden="true"></i> Báo cáo
+            </button>
+          </div>
+
+          <section class="seller-card" aria-labelledby="seller-name">
+            <div class="seller-card__head">
+              <span class="avatar avatar--lg" id="seller-initial" aria-hidden="true"></span>
+              <div>
+                <h2 class="seller-card__name" id="seller-name"></h2>
+                <p class="seller-card__sub">
+                  <i class="bi bi-geo-alt" aria-hidden="true"></i> <span id="seller-province"></span>
+                  · <span id="seller-joined"></span>
+                </p>
+              </div>
+            </div>
+            <dl class="seller-card__stats">
+              <div>
+                <dt>Đang bán</dt>
+                <dd id="seller-active">0</dd>
+              </div>
+              <div>
+                <dt>Đã bán</dt>
+                <dd id="seller-sold">0</dd>
+              </div>
+            </dl>
+          </section>
+        </section>
+
+        <section class="product__description" aria-labelledby="description-title">
+          <h2 id="description-title">Mô tả chi tiết</h2>
+          <!-- white-space: pre-line keeps the seller's line breaks -->
+          <p id="product-description"></p>
+        </section>
+
+        <aside class="product__tips" aria-labelledby="tips-title">
+          <h2 id="tips-title"><i class="bi bi-shield-check" aria-hidden="true"></i> Mua bán an toàn</h2>
+          <ul>
+            <li>Gặp mặt trực tiếp ở nơi công cộng, kiểm tra kỹ hàng trước khi trả tiền.</li>
+            <li>Không chuyển khoản đặt cọc khi chưa xem hàng.</li>
+            <li>Cẩn thận với giá rẻ bất thường so với thị trường.</li>
+            <li>Đặt hàng qua Market C2C để theo dõi được trạng thái đơn.</li>
+          </ul>
+        </aside>
+      </article>
+
+      <!-- Related listings (hidden when empty or on error) -->
+      <section class="related" id="related-section" aria-labelledby="related-title" hidden>
+        <div class="section-heading">
+          <h2 id="related-title">Tin cùng danh mục</h2>
+          <a class="section-heading__link" id="related-more" href="/">Xem tất cả</a>
+        </div>
+        <div class="listing-grid listing-grid--scroll" id="related-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Report dialog -->
+  <dialog class="confirm-dialog confirm-dialog--form" id="report-dialog" aria-labelledby="report-title">
+    <h2 class="confirm-dialog__title" id="report-title">Báo cáo tin vi phạm</h2>
+    <p class="confirm-dialog__message">Quản trị viên sẽ xem xét. Thông tin người báo cáo được giữ kín với người bán.</p>
+
+    <div class="alert alert--error" id="report-alert" role="alert" hidden>
+      <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+      <span data-alert-message></span>
+    </div>
+
+    <form id="report-form" novalidate>
+      <fieldset class="form-group">
+        <legend class="form-label">Lý do <abbr title="bắt buộc">*</abbr></legend>
+        <div class="report-options">
+          <label class="checkbox"><input type="radio" name="type" value="Hàng giả, hàng nhái"> <span>Hàng giả, hàng nhái</span></label>
+          <label class="checkbox"><input type="radio" name="type" value="Có dấu hiệu lừa đảo"> <span>Có dấu hiệu lừa đảo</span></label>
+          <label class="checkbox"><input type="radio" name="type" value="Ảnh / thông tin sai sự thật"> <span>Ảnh / thông tin sai sự thật</span></label>
+          <label class="checkbox"><input type="radio" name="type" value="Hàng cấm kinh doanh"> <span>Hàng cấm kinh doanh</span></label>
+          <label class="checkbox"><input type="radio" name="type" value="other"> <span>Lý do khác</span></label>
+        </div>
+        <p class="form-hint form-hint--error" data-error-for="type" hidden></p>
+      </fieldset>
+
+      <div class="form-group">
+        <div class="form-label-row">
+          <label class="form-label" for="report-detail">Mô tả thêm</label>
+          <span class="char-counter" data-counter-for="report-detail" aria-hidden="true"></span>
+        </div>
+        <textarea class="form-control" id="report-detail" name="detail" rows="3" maxlength="400"
+                  placeholder="Bắt buộc khi chọn &quot;Lý do khác&quot;"></textarea>
+        <p class="form-hint form-hint--error" data-error-for="detail" hidden></p>
+      </div>
+
+      <div class="confirm-dialog__actions">
+        <button type="button" class="btn btn--ghost" id="report-cancel">Hủy</button>
+        <button type="submit" class="btn btn--danger" data-submit>
+          <span class="btn__spinner" aria-hidden="true"></span><span>Gửi báo cáo</span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Image zoom view: <dialog> has Esc-to-close + a dimmed backdrop (::backdrop) built in -->
+  <dialog class="lightbox" id="lightbox" aria-label="Xem ảnh phóng to">
+    <form method="dialog">
+      <!-- A button in a form method="dialog" closes the dialog, no JS needed -->
+      <button class="lightbox__close" aria-label="Đóng"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+    </form>
+    <img class="lightbox__image" data-lightbox-image alt="">
+    <button type="button" class="lightbox__nav lightbox__nav--prev" data-lightbox-nav="prev" aria-label="Ảnh trước">
+      <i class="bi bi-chevron-left" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="lightbox__nav lightbox__nav--next" data-lightbox-nav="next" aria-label="Ảnh sau">
+      <i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </button>
+    <span class="lightbox__counter" data-lightbox-counter></span>
+  </dialog>
+
+  <!-- =====================================================
+       FOOTER (shared)
+       ===================================================== -->
+  <footer class="site-footer">
+    <div class="container site-footer__grid">
+      <section>
+        <a class="site-footer__logo" href="/" aria-label="Market C2C - Trang chủ">
+          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296"
+            alt="Market C2C" loading="lazy">
+          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117"
+            alt="Market C2C" loading="lazy">
+        </a>
+        <p>Sàn mua bán giữa người với người. Đồ án môn Lập trình Web: HTML5, SCSS, JavaScript thuần.</p>
+      </section>
+      <nav aria-labelledby="footer-nav-title">
+        <h2 id="footer-nav-title">Khám phá</h2>
+        <ul>
+          <li><a href="/">Trang chủ</a></li>
+          <li><a href="/sell">Đăng tin bán</a></li>
+          <li><a href="/favorites">Tin yêu thích</a></li>
+          <li><a href="/cart">Giỏ hàng</a></li>
+        </ul>
+      </nav>
+      <section aria-labelledby="footer-help-title">
+        <h2 id="footer-help-title">Hỗ trợ</h2>
+        <ul>
+          <li><i class="bi bi-envelope" aria-hidden="true"></i> hotro@marketc2c.vn</li>
+          <li><i class="bi bi-telephone" aria-hidden="true"></i> 1900 0000</li>
+          <li><i class="bi bi-shield-check" aria-hidden="true"></i> Giao dịch an toàn, gặp mặt trực tiếp</li>
+        </ul>
+      </section>
+    </div>
+    <p class="site-footer__bottom">© <span id="year">2026</span> Market C2C. Dữ liệu tỉnh thành: provinces.open-api.vn ·
+      Tỷ giá: open.er-api.com</p>
+  </footer>
+
+  <!-- Toast notification area -->
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+  <!-- =====================================================
+       SHARED TEMPLATES (header, toast) - copy to the other pages
+       <template> is not rendered; JS clones it and fills in the data.
+       ===================================================== -->
+  <template id="tpl-history-item">
+    <li class="search__history-item" role="option" aria-selected="false">
+      <button type="button" class="search__history-term" data-term>
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span data-field="term"></span>
+      </button>
+      <button type="button" class="toast__close" data-remove aria-label="Xóa khỏi lịch sử">
+        <i class="bi bi-x" aria-hidden="true"></i>
+      </button>
+    </li>
+  </template>
+
+  <template id="tpl-toast">
+    <div class="toast">
+      <i class="bi toast__icon" aria-hidden="true"></i>
+      <p class="toast__message"></p>
+      <button type="button" class="toast__close" aria-label="Đóng thông báo">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+  </template>
+
+  <!-- =====================================================
+       LISTING DETAIL PAGE TEMPLATES
+       ===================================================== -->
+  <template id="tpl-gallery-thumb">
+    <li>
+      <button type="button" class="gallery__thumb">
+        <img alt="" loading="lazy">
+      </button>
+    </li>
+  </template>
+
+  <!-- Listing card (related listings) - same as the home page -->
+  <template id="tpl-listing-card">
+    <article class="listing-card">
+      <div class="listing-card__media">
+        <img class="listing-card__img" alt="" loading="lazy" hidden>
+        <span class="listing-card__placeholder"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
+        <span class="badge listing-card__condition" hidden></span>
+      </div>
+      <!-- CSS shows an empty / filled heart based on aria-pressed -->
+      <button type="button" class="listing-card__favorite" data-action="favorite" aria-pressed="false"
+        aria-label="Thêm vào yêu thích">
+        <i class="bi bi-heart" aria-hidden="true"></i>
+        <i class="bi bi-heart-fill" aria-hidden="true"></i>
+      </button>
+      <div class="listing-card__body">
+        <h3 class="listing-card__title">
+          <a class="listing-card__link" href="#" data-field="title"></a>
+        </h3>
+        <p class="listing-card__price">
+          <span data-field="price"></span>
+          <span class="listing-card__usd" data-field="usd"></span>
+        </p>
+        <p class="listing-card__meta">
+          <span><i class="bi bi-geo-alt" aria-hidden="true"></i> <span data-field="province"></span></span>
+          <time data-field="time"></time>
+        </p>
+      </div>
+    </article>
+  </template>
+
+  <script type="module" src="/js/pages/product.js"></script>
+</body>
+
+</html>

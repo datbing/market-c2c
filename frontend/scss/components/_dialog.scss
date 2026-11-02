@@ -1,0 +1,47 @@
+// =========================================================
+//  CONFIRM DIALOG (<dialog id="confirm-dialog">)
+// =========================================================
+@use '../abstracts' as *;
+
+.confirm-dialog {
+  width: min(420px, calc(100vw - 32px));
+  padding: $space-5;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-md);
+
+  // Dimmed backdrop (built-in <dialog> pseudo-element)
+  &::backdrop {
+    background: rgb(0 0 0 / 50%);
+  }
+
+  // Gentle appear animation
+  &[open] {
+    animation: dialog-in 0.18s ease;
+  }
+
+  &__title {
+    font-size: $font-size-lg;
+  }
+
+  &__message {
+    margin-top: $space-2;
+    color: var(--color-text-muted);
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space-2;
+    margin-top: $space-5;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}

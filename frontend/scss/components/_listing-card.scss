@@ -1,5 +1,5 @@
 // =========================================================
-//  THẺ TIN ĐĂNG (dùng ở trang chủ, yêu thích, tin đã xem...)
+//  LISTING CARD (used on the home page, favorites, recently viewed...)
 // =========================================================
 @use '../abstracts' as *;
 
@@ -8,34 +8,42 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $space-2;
 
+  // Columns by screen size: 2 (mobile) -> 3 (from 576px) -> 4 (desktop)
   @include respond-to(sm) {
-    gap: $space-3;
-  }
-
-  @include respond-to(md) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: $space-3;
   }
 
   @include respond-to(xl) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  // Biến thể cuộn ngang (tin vừa xem)
+  // Horizontal scroll variant (recently viewed): about 2.2 / 3.3 / 4.3 / 6 cards visible
+  // (part of the next card peeks out -> users know it scrolls)
   &--scroll {
     grid-auto-flow: column;
     grid-template-columns: none;
-    grid-auto-columns: 46%;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
+    grid-auto-columns: 44%;
     padding-bottom: $space-2;
+    scroll-snap-type: x mandatory;
+    @include scroll-x;
 
     > * {
       scroll-snap-align: start;
     }
 
-    @include respond-to(md) {
+    // Cards in the strip are always narrow -> province / time always on 2 lines
+    .listing-card__meta {
+      flex-direction: column;
+    }
+
+    @include respond-to(sm) {
       grid-template-columns: none;
-      grid-auto-columns: 23%;
+      grid-auto-columns: 29%;
+    }
+
+    @include respond-to(md) {
+      grid-auto-columns: 22%;
     }
 
     @include respond-to(xl) {
@@ -61,7 +69,29 @@
     box-shadow: var(--shadow-md);
   }
 
-  // Cả thẻ bấm được nhờ link phủ toàn bộ (::after)
+  // Listing no longer available (favorites page): faded + label taken from data-unavailable="Đã bán"
+  &[data-unavailable] {
+    .listing-card__media,
+    .listing-card__body {
+      opacity: 0.55;
+    }
+
+    &::before {
+      content: attr(data-unavailable);
+      position: absolute;
+      top: $space-2;
+      left: $space-2;
+      z-index: 1;
+      padding: 2px $space-2;
+      border-radius: $radius-sm;
+      background: var(--color-danger);
+      color: #fff;
+      font-size: 0.6875rem;
+      font-weight: 700;
+    }
+  }
+
+  // The whole card is clickable thanks to a full-cover link (::after)
   &__link {
     &::after {
       content: '';
@@ -73,16 +103,19 @@
   &__media {
     position: relative;
     aspect-ratio: 1 / 1;
+    overflow: hidden; // portrait images must not stretch the box beyond 1:1
     background: var(--color-surface-2);
 
     img {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
   }
 
-  // Khi tin chưa có ảnh: hiện icon danh mục
+  // Listing without images: show the category icon
   &__placeholder {
     @include flex-center;
     width: 100%;
@@ -98,7 +131,7 @@
     bottom: $space-2;
   }
 
-  // Nút tim nằm trên link phủ nên phải có z-index cao hơn
+  // The heart button sits above the cover link so it needs a higher z-index
   &__favorite {
     position: absolute;
     top: $space-2;
@@ -109,19 +142,33 @@
     height: 34px;
     border: 0;
     border-radius: 50%;
-    background: rgb(255 255 255 / 92%);
-    color: #555;
+    background: var(--fav-bg);
+    color: var(--fav-fg);
+    backdrop-filter: blur(4px);
     font-size: 1.05rem;
     box-shadow: var(--shadow-sm);
     transition: transform $transition, color $transition;
 
     &:hover {
       transform: scale(1.1);
-      color: $color-primary;
+      color: var(--color-primary);
     }
 
-    &.is-active {
-      color: $color-primary;
+    // Empty / filled heart: CSS switches on aria-pressed, JS only sets the attribute
+    .bi-heart-fill {
+      display: none;
+    }
+
+    &[aria-pressed='true'] {
+      color: var(--color-primary);
+
+      .bi-heart {
+        display: none;
+      }
+
+      .bi-heart-fill {
+        display: inline-block;
+      }
     }
   }
 
@@ -156,18 +203,36 @@
     color: var(--color-text-muted);
     font-size: 0.75rem;
     font-weight: 400;
+
+    // No exchange rate -> empty string -> hidden
+    &:empty {
+      display: none;
+    }
   }
 
+  // Narrow cards (< 768px) -> province and time on 2 lines; tablet and up: same line
   &__meta {
     display: flex;
-    justify-content: space-between;
-    gap: $space-2;
+    flex-direction: column;
+    gap: 0 $space-2;
     font-size: 0.75rem;
     color: var(--color-text-muted);
 
-    span {
+    @include respond-to(md) {
+      flex-direction: row;
+      justify-content: space-between;
+    }
+
+    // Long province names are truncated with "...", the time always stays on one line
+    > span {
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    time {
+      flex-shrink: 0;
       white-space: nowrap;
     }
   }

@@ -1,40 +1,74 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Market C2C - Sàn mua bán đồ cũ, đồ mới giữa người với người. Đăng tin miễn phí, tìm món đồ bạn cần gần bạn.">
+  <meta name="description"
+    content="Market C2C - Sàn mua bán đồ cũ, đồ mới giữa người với người. Đăng tin miễn phí, tìm món đồ bạn cần gần bạn.">
+  <meta name="keywords"
+    content="mua bán đồ cũ, mua bán đồ mới, sàn giao dịch C2C, đăng tin miễn phí, tìm kiếm sản phẩm, trao đổi hàng hóa">
+  <meta name="author" content="Market C2C">
+  <meta property="og:title" content="Market C2C - Mua bán đồ cũ dễ dàng">
+  <meta property="og:description"
+    content="Sàn mua bán đồ cũ, đồ mới giữa người với người. Đăng tin miễn phí, tìm món đồ bạn cần gần bạn.">
+  <meta property="og:image" content="/assets/images/logo-text.png">
+  <meta property="og:url" content="https://market-c2c.test/">
+  <!-- favicon -->
+  <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
   <meta name="theme-color" content="#ee4d2d">
-  <title>Market C2C - Mua bán đồ cũ dễ dàng</title>
 
-  <!-- Áp theme sáng/tối trước khi vẽ trang để không bị nháy màu -->
+  <title>Mua bán đồ cũ dễ dàng | Market C2C</title>
+
+  <!-- Apply the light/dark theme before the page paints to avoid a color flash -->
   <script src="/js/theme-init.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/css/main.css">
 </head>
+
 <body>
-  <!-- ================= HEADER ================= -->
+  <!-- =====================================================
+       HEADER (shared: copy this whole block to the other pages)
+       ===================================================== -->
   <header class="site-header">
     <div class="container site-header__inner">
       <a class="logo" href="/" aria-label="Market C2C - Trang chủ">
-        <i class="bi bi-bag-heart-fill" aria-hidden="true"></i>
-        <span>Market<strong>C2C</strong></span>
+        <!-- Responsive via HTML: screens < 576px use the square logo, larger ones the text logo.
+             Two versions: navy text for light backgrounds, light text for dark ones (CSS picks by [data-theme]) -->
+        <picture class="logo__picture logo__picture--light">
+          <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
+          <img class="logo__img" src="/assets/images/logo-text.png" width="1619" height="296" alt="Market C2C">
+        </picture>
+        <picture class="logo__picture logo__picture--dark">
+          <source media="(max-width: 575.98px)" srcset="/assets/images/logo.png" width="493" height="493">
+          <img class="logo__img" src="/assets/images/logo-text-dark.png" width="640" height="117" alt="Market C2C"
+            loading="lazy">
+        </picture>
       </a>
 
       <form class="search" id="search-form" role="search" autocomplete="off">
         <label for="search-input" class="visually-hidden">Tìm kiếm tin đăng</label>
-        <input class="search__input" id="search-input" name="q" type="search"
-               placeholder="Tìm iPhone, xe đạp, sách..." maxlength="100"
-               aria-controls="search-history" aria-expanded="false" aria-autocomplete="list">
+        <input class="search__input" id="search-input" name="q" type="search" placeholder="Tìm iPhone, xe đạp, sách..."
+          maxlength="100" aria-controls="search-history" aria-expanded="false" aria-autocomplete="list">
         <button class="search__submit" type="submit" aria-label="Tìm kiếm">
           <i class="bi bi-search" aria-hidden="true"></i>
         </button>
-        <div class="search__dropdown" id="search-history" hidden></div>
+
+        <!-- Search history (LocalStorage) -->
+        <div class="search__dropdown" id="search-history" hidden>
+          <div class="search__dropdown-head">
+            <span>Tìm kiếm gần đây</span>
+            <button type="button" class="link-btn" data-clear>Xóa tất cả</button>
+          </div>
+          <ul id="search-history-list" role="listbox" aria-label="Lịch sử tìm kiếm"></ul>
+        </div>
       </form>
 
       <nav class="header-actions" aria-label="Tiện ích và tài khoản">
-        <button type="button" class="icon-btn" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
-          <i class="bi bi-moon-stars" aria-hidden="true"></i>
+        <!-- CSS shows the moon (light) or the sun (dark) based on [data-theme] -->
+        <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Đổi giao diện sáng/tối">
+          <i class="bi bi-moon-stars theme-toggle__dark" aria-hidden="true"></i>
+          <i class="bi bi-sun theme-toggle__light" aria-hidden="true"></i>
         </button>
         <a class="icon-btn" href="/favorites" aria-label="Tin yêu thích">
           <i class="bi bi-heart" aria-hidden="true"></i>
@@ -44,7 +78,44 @@
           <i class="bi bi-cart3" aria-hidden="true"></i>
           <span class="icon-btn__badge" data-count="cart" hidden>0</span>
         </a>
-        <div class="account" id="account-area"></div>
+
+        <!-- Account: JS shows one of the two blocks after calling /api/auth/me -->
+        <div class="account" id="account-area">
+          <!-- Below 1200px only the icon is visible; the text is still read by screen readers -->
+          <a class="account__login" id="account-guest" href="/login" hidden>
+            <i class="bi bi-person-circle" aria-hidden="true"></i><span>Đăng nhập</span>
+          </a>
+
+          <details class="account-menu" id="account-user" hidden>
+            <summary aria-label="Menu tài khoản">
+              <span class="avatar" data-user="initial" aria-hidden="true"></span>
+              <span class="account-menu__dot" data-order-dot hidden></span>
+              <span class="account-menu__name" data-user="name"></span>
+            </summary>
+            <ul class="account-menu__list">
+              <li class="account-menu__header">
+                <strong data-user="name"></strong>
+                <span data-user="email"></span>
+              </li>
+              <li data-role="admin" hidden>
+                <a class="account-menu__item" href="/admin/"><i class="bi bi-speedometer2" aria-hidden="true"></i> Trang
+                  quản trị</a>
+              </li>
+              <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list" aria-hidden="true"></i>
+                  Tin đăng của tôi</a></li>
+              <li><a class="account-menu__item" id="menu-orders" href="/orders"><i class="bi bi-receipt" aria-hidden="true"></i> Đơn
+                  hàng <span class="account-menu__count" data-order-count hidden></span></a></li>
+              <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart" aria-hidden="true"></i> Tin yêu
+                  thích</a></li>
+              <li>
+                <button type="button" class="account-menu__item account-menu__item--danger" data-action="logout">
+                  <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Đăng xuất
+                </button>
+              </li>
+            </ul>
+          </details>
+        </div>
+
         <a class="btn btn--white header-actions__sell" href="/sell">
           <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Đăng tin</span>
         </a>
@@ -52,7 +123,9 @@
     </div>
   </header>
 
-  <!-- ================= NỘI DUNG ================= -->
+  <!-- =====================================================
+       HOME PAGE CONTENT
+       ===================================================== -->
   <main class="site-main">
     <div class="container home">
 
@@ -64,7 +137,8 @@
             Đăng tin miễn phí trong 1 phút. Hàng nghìn món đồ được người dùng trao tay mỗi ngày.
           </p>
           <div class="hero__actions">
-            <a class="btn btn--white" href="/sell"><i class="bi bi-plus-circle" aria-hidden="true"></i> Đăng tin miễn phí</a>
+            <a class="btn btn--white" href="/sell"><i class="bi bi-plus-circle" aria-hidden="true"></i> Đăng tin miễn
+              phí</a>
             <a class="btn btn--outline hero__secondary" href="#listings">Khám phá ngay</a>
           </div>
         </div>
@@ -75,15 +149,55 @@
         </ul>
       </section>
 
-      <!-- Danh mục -->
+      <!-- Categories -->
       <section aria-labelledby="categories-title">
         <div class="section-heading">
           <h2 id="categories-title">Khám phá danh mục</h2>
         </div>
-        <ul class="category-list" id="category-list" aria-busy="true"></ul>
+
+        <ul class="category-list" id="category-list" aria-busy="true">
+          <li>
+            <button type="button" class="category-tile is-active" data-category="" aria-pressed="true">
+              <span class="category-tile__icon"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i></span>
+              <span class="category-tile__name">Tất cả</span>
+              <span class="category-tile__count" id="category-all-count">&nbsp;</span>
+            </button>
+          </li>
+          <!-- Skeletons, removed once the categories have loaded -->
+          <li data-skeleton>
+            <div class="category-tile category-tile--loading" aria-hidden="true"><span
+                class="category-tile__icon skeleton"></span><span class="skeleton skeleton--line"></span></div>
+          </li>
+          <li data-skeleton>
+            <div class="category-tile category-tile--loading" aria-hidden="true"><span
+                class="category-tile__icon skeleton"></span><span class="skeleton skeleton--line"></span></div>
+          </li>
+          <li data-skeleton>
+            <div class="category-tile category-tile--loading" aria-hidden="true"><span
+                class="category-tile__icon skeleton"></span><span class="skeleton skeleton--line"></span></div>
+          </li>
+          <li data-skeleton>
+            <div class="category-tile category-tile--loading" aria-hidden="true"><span
+                class="category-tile__icon skeleton"></span><span class="skeleton skeleton--line"></span></div>
+          </li>
+          <li data-skeleton>
+            <div class="category-tile category-tile--loading" aria-hidden="true"><span
+                class="category-tile__icon skeleton"></span><span class="skeleton skeleton--line"></span></div>
+          </li>
+          <li data-skeleton>
+            <div class="category-tile category-tile--loading" aria-hidden="true"><span
+                class="category-tile__icon skeleton"></span><span class="skeleton skeleton--line"></span></div>
+          </li>
+        </ul>
+
+        <p class="inline-alert" id="category-error" role="alert" hidden>
+          <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+          <span>Không tải được danh mục: <span id="category-error-message"></span></span>
+          <button type="button" class="link-btn" id="category-retry">Thử lại</button>
+        </p>
       </section>
 
-      <!-- Tin vừa xem (LocalStorage) -->
+      <!-- Recently viewed (LocalStorage) -->
       <section id="recent-section" aria-labelledby="recent-title" hidden>
         <div class="section-heading">
           <h2 id="recent-title">Tin bạn vừa xem</h2>
@@ -92,7 +206,7 @@
         <div class="listing-grid listing-grid--scroll" id="recent-list"></div>
       </section>
 
-      <!-- Bộ lọc + danh sách tin -->
+      <!-- Filters + listing grid -->
       <div class="home-layout" id="listings">
         <aside class="filters" id="filters" aria-labelledby="filters-title">
           <div class="filters__head">
@@ -129,19 +243,23 @@
               <legend class="form-label">Khoảng giá (₫)</legend>
               <div class="form-range">
                 <label for="filter-min" class="visually-hidden">Giá từ</label>
-                <input class="form-control" id="filter-min" name="minPrice" type="number"
-                       min="0" step="1000" inputmode="numeric" placeholder="Từ">
+                <input class="form-control" id="filter-min" name="minPrice" type="number" min="0" step="1000"
+                  inputmode="numeric" placeholder="Từ">
                 <span aria-hidden="true">–</span>
                 <label for="filter-max" class="visually-hidden">Giá đến</label>
-                <input class="form-control" id="filter-max" name="maxPrice" type="number"
-                       min="0" step="1000" inputmode="numeric" placeholder="Đến">
+                <input class="form-control" id="filter-max" name="maxPrice" type="number" min="0" step="1000"
+                  inputmode="numeric" placeholder="Đến">
               </div>
-              <p class="form-hint form-hint--error" id="price-error" hidden></p>
+              <p class="form-hint form-hint--error" id="price-error" hidden>Giá "từ" phải nhỏ hơn hoặc bằng giá "đến"
+              </p>
               <div class="price-presets" id="price-presets">
                 <button type="button" class="btn btn--ghost btn--sm" data-min="" data-max="500000">Dưới 500K</button>
-                <button type="button" class="btn btn--ghost btn--sm" data-min="500000" data-max="2000000">500K – 2 triệu</button>
-                <button type="button" class="btn btn--ghost btn--sm" data-min="2000000" data-max="5000000">2 – 5 triệu</button>
-                <button type="button" class="btn btn--ghost btn--sm" data-min="5000000" data-max="">Trên 5 triệu</button>
+                <button type="button" class="btn btn--ghost btn--sm" data-min="500000" data-max="2000000">500K – 2
+                  triệu</button>
+                <button type="button" class="btn btn--ghost btn--sm" data-min="2000000" data-max="5000000">2 – 5
+                  triệu</button>
+                <button type="button" class="btn btn--ghost btn--sm" data-min="5000000" data-max="">Trên 5
+                  triệu</button>
               </div>
             </fieldset>
 
@@ -165,29 +283,77 @@
             </div>
             <div class="results__controls">
               <button type="button" class="btn btn--ghost btn--sm results__filter-toggle" id="filter-toggle"
-                      aria-controls="filters" aria-expanded="false">
+                aria-controls="filters" aria-expanded="false">
                 <i class="bi bi-sliders" aria-hidden="true"></i> Bộ lọc
                 <span class="filter-count" id="filter-count" hidden>0</span>
               </button>
               <label for="sort-select" class="visually-hidden">Sắp xếp theo</label>
-              <select class="form-control" id="sort-select"></select>
+              <!-- values match the backend sort whitelist -->
+              <select class="form-control" id="sort-select">
+                <option value="newest">Mới nhất</option>
+                <option value="price_asc">Giá thấp → cao</option>
+                <option value="price_desc">Giá cao → thấp</option>
+                <option value="popular">Xem nhiều</option>
+              </select>
             </div>
           </div>
 
-          <div class="active-filters" id="active-filters" hidden></div>
+          <!-- Chips for the active filters -->
+          <div class="active-filters" id="active-filters" hidden>
+            <div class="active-filters__list" id="chip-list"></div>
+            <button type="button" class="link-btn" data-action="reset" id="chip-reset" hidden>Xóa tất cả</button>
+          </div>
+
           <div class="listing-grid" id="listing-grid" aria-live="polite" aria-busy="true"></div>
-          <nav class="pagination" id="pagination" aria-label="Phân trang"></nav>
-          <p class="results__rate" id="usd-rate" hidden></p>
+
+          <!-- No results -->
+          <div class="state" id="listing-empty" hidden>
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <p class="state__title">Không tìm thấy tin đăng nào</p>
+            <p class="state__text">Thử bỏ bớt bộ lọc, đổi từ khóa khác hoặc tìm không dấu.</p>
+            <button type="button" class="btn btn--primary" data-action="reset">Xóa bộ lọc</button>
+          </div>
+
+          <!-- Loading error -->
+          <div class="state state--error" id="listing-error" role="alert" hidden>
+            <i class="bi bi-wifi-off" aria-hidden="true"></i>
+            <p class="state__title">Không tải được danh sách tin</p>
+            <p class="state__text" id="listing-error-message"></p>
+            <button type="button" class="btn btn--primary" data-action="retry">
+              <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Thử lại
+            </button>
+          </div>
+
+          <nav class="pagination" id="pagination" aria-label="Phân trang" hidden>
+            <button type="button" class="pagination__btn" data-nav="prev" aria-label="Trang trước">
+              <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </button>
+            <span class="pagination__pages" data-pages></span>
+            <button type="button" class="pagination__btn" data-nav="next" aria-label="Trang sau">
+              <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </button>
+          </nav>
+
+          <p class="results__rate" id="usd-rate" hidden>
+            Giá USD tham khảo theo tỷ giá 1 USD = <span id="usd-rate-value"></span>
+          </p>
         </section>
       </div>
     </div>
   </main>
 
-  <!-- ================= FOOTER ================= -->
+  <!-- =====================================================
+       FOOTER (shared)
+       ===================================================== -->
   <footer class="site-footer">
     <div class="container site-footer__grid">
       <section>
-        <h2 class="site-footer__brand"><i class="bi bi-bag-heart-fill" aria-hidden="true"></i> Market C2C</h2>
+        <a class="site-footer__logo" href="/" aria-label="Market C2C - Trang chủ">
+          <img class="logo__picture--light" src="/assets/images/logo-text.png" width="1619" height="296"
+            alt="Market C2C" loading="lazy">
+          <img class="logo__picture--dark" src="/assets/images/logo-text-dark.png" width="640" height="117"
+            alt="Market C2C" loading="lazy">
+        </a>
         <p>Sàn mua bán giữa người với người. Đồ án môn Lập trình Web: HTML5, SCSS, JavaScript thuần.</p>
       </section>
       <nav aria-labelledby="footer-nav-title">
@@ -208,9 +374,114 @@
         </ul>
       </section>
     </div>
-    <p class="site-footer__bottom">© <span id="year">2026</span> Market C2C. Dữ liệu tỉnh thành: provinces.open-api.vn · Tỷ giá: open.er-api.com</p>
+    <p class="site-footer__bottom">© <span id="year">2026</span> Market C2C. Dữ liệu tỉnh thành: provinces.open-api.vn ·
+      Tỷ giá: open.er-api.com</p>
   </footer>
+
+  <!-- Toast notification area -->
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+  <!-- =====================================================
+       SHARED TEMPLATES (header, toast) - copy to the other pages
+       <template> is not rendered; JS clones it and fills in the data.
+       ===================================================== -->
+  <template id="tpl-history-item">
+    <li class="search__history-item" role="option" aria-selected="false">
+      <button type="button" class="search__history-term" data-term>
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span data-field="term"></span>
+      </button>
+      <button type="button" class="toast__close" data-remove aria-label="Xóa khỏi lịch sử">
+        <i class="bi bi-x" aria-hidden="true"></i>
+      </button>
+    </li>
+  </template>
+
+  <template id="tpl-toast">
+    <div class="toast">
+      <i class="bi toast__icon" aria-hidden="true"></i>
+      <p class="toast__message"></p>
+      <button type="button" class="toast__close" aria-label="Đóng thông báo">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+  </template>
+
+  <!-- =====================================================
+       HOME PAGE TEMPLATES
+       ===================================================== -->
+  <!-- Listing card -->
+  <template id="tpl-listing-card">
+    <article class="listing-card">
+      <div class="listing-card__media">
+        <img class="listing-card__img" alt="" loading="lazy" hidden>
+        <span class="listing-card__placeholder"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
+        <span class="badge listing-card__condition" hidden></span>
+      </div>
+      <!-- CSS shows an empty / filled heart based on aria-pressed -->
+      <button type="button" class="listing-card__favorite" data-action="favorite" aria-pressed="false"
+        aria-label="Thêm vào yêu thích">
+        <i class="bi bi-heart" aria-hidden="true"></i>
+        <i class="bi bi-heart-fill" aria-hidden="true"></i>
+      </button>
+      <div class="listing-card__body">
+        <h3 class="listing-card__title">
+          <a class="listing-card__link" href="#" data-field="title"></a>
+        </h3>
+        <p class="listing-card__price">
+          <span data-field="price"></span>
+          <span class="listing-card__usd" data-field="usd"></span>
+        </p>
+        <p class="listing-card__meta">
+          <span><i class="bi bi-geo-alt" aria-hidden="true"></i> <span data-field="province"></span></span>
+          <time data-field="time"></time>
+        </p>
+      </div>
+    </article>
+  </template>
+
+  <!-- Skeleton card while loading -->
+  <template id="tpl-listing-skeleton">
+    <div class="listing-card" aria-hidden="true">
+      <div class="skeleton skeleton--media"></div>
+      <div class="listing-card__body">
+        <div class="skeleton skeleton--line"></div>
+        <div class="skeleton skeleton--line skeleton--short"></div>
+        <div class="skeleton skeleton--line skeleton--short"></div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Category tile -->
+  <template id="tpl-category-tile">
+    <li>
+      <button type="button" class="category-tile" data-category="" aria-pressed="false">
+        <span class="category-tile__icon"><i class="bi bi-tag" aria-hidden="true"></i></span>
+        <span class="category-tile__name" data-field="name"></span>
+        <span class="category-tile__count" data-field="count"></span>
+      </button>
+    </li>
+  </template>
+
+  <!-- Active filter chip -->
+  <template id="tpl-chip">
+    <span class="chip">
+      <span data-field="label"></span>
+      <button type="button" class="chip__remove" data-remove aria-label="Bỏ lọc">
+        <i class="bi bi-x" aria-hidden="true"></i>
+      </button>
+    </span>
+  </template>
+
+  <!-- Page number button -->
+  <template id="tpl-page-number">
+    <button type="button" class="pagination__btn"></button>
+  </template>
+  <template id="tpl-page-gap">
+    <span class="pagination__gap" aria-hidden="true">…</span>
+  </template>
 
   <script type="module" src="/js/pages/home.js"></script>
 </body>
+
 </html>

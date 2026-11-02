@@ -1,32 +1,31 @@
 /**
- * TRANG CHỦ
- *  - Tải song song (Promise.allSettled): danh mục (backend), tỉnh thành + tỷ giá (API công khai)
- *  - Danh sách tin: tìm kiếm, lọc (danh mục, khu vực, tình trạng, giá), sắp xếp, phân trang
- *  - Trạng thái bộ lọc lưu SessionStorage + URL (F5 / quay lại trang vẫn giữ)
- *  - Yêu thích (LocalStorage), tin vừa xem (LocalStorage)
- *  - AbortController hủy request cũ khi người dùng đổi bộ lọc liên tục
+ * HOME PAGE
+ *  - The HTML of every part lives in index.html (static markup + <template>);
+ *    this file only fetches data, clones templates, fills in text and toggles `hidden`.
+ *  - Loads in parallel (Promise.allSettled): categories (backend), provinces + exchange rate (public APIs)
+ *  - Listing grid: search, filters (category, area, condition, price), sorting, pagination
+ *  - Filter state is kept in SessionStorage + the URL (survives F5 / going back)
+ *  - Favorites (LocalStorage), recently viewed (LocalStorage)
+ *  - AbortController cancels the previous request when the user changes filters quickly
  */
-import { $, $$, escapeHtml, debounce } from '../utils/dom.js';
+import { $, $$, debounce } from '../utils/dom.js';
+import { cloneTemplate, fillFields } from '../utils/template.js';
 import { formatVND, formatCompact, CONDITION_LABELS, SORT_LABELS } from '../utils/format.js';
 import { session } from '../services/storage.js';
-import { favorites, recentlyViewed, toListingSnapshot } from '../services/stores.js';
+import { favorites, recentlyViewed } from '../services/stores.js';
 import { getCategories, getListings } from '../services/catalog.js';
 import { getProvinces, getUsdRate } from '../services/public-api.js';
 import { isAbortError } from '../services/api.js';
 import { initHeader, setSearchValue } from '../components/header.js';
 import { showToast } from '../components/toast.js';
+import { toggleFavorite, watchFavorites } from '../components/favorite.js';
 import { renderPagination } from '../components/pagination.js';
-import {
-  renderListingCard,
-  renderSkeletonCards,
-  applyUsdRate,
-  setFavoriteButton,
-} from '../components/listing-card.js';
+import { createListingCard, createSkeletonCards, applyUsdRate } from '../components/listing-card.js';
 
 const PAGE_SIZE = 12;
 const SESSION_KEY = 'homeFilters';
 
-/** Giá trị mặc định của bộ lọc; key cũng chính là tên query param gửi lên API */
+/** Default filter values; the keys are also the query param names sent to the API */
 const DEFAULT_FILTERS = Object.freeze({
   q: '',
   category: '',
@@ -40,24 +39,30 @@ const DEFAULT_FILTERS = Object.freeze({
 const FILTER_KEYS = Object.keys(DEFAULT_FILTERS);
 
 class HomePage {
-  /** Trạng thái bộ lọc hiện tại */
+  /** Current filter state */
   filters = { ...DEFAULT_FILTERS };
-  /** Map slug -> danh mục (để hiện tên trên chip, tiêu đề) */
+  /** Map slug -> category (to show names on chips and the title) */
   categories = new Map();
-  /** Map id -> tin đang hiển thị (để lưu snapshot khi bấm yêu thích) */
+  /** Map id -> listing on screen (to save a snapshot when favoriting) */
   listings = new Map();
   usdRate = null;
-  /** AbortController của request danh sách đang chạy */
+  /** AbortController of the running list request */
   controller = null;
 
   constructor() {
     this.el = {
       categoryList: $('#category-list'),
+      categoryError: $('#category-error'),
+      results: $('.results'),
       grid: $('#listing-grid'),
+      empty: $('#listing-empty'),
+      error: $('#listing-error'),
       pagination: $('#pagination'),
       count: $('#result-count'),
       title: $('#results-title'),
       chips: $('#active-filters'),
+      chipList: $('#chip-list'),
+      chipReset: $('#chip-reset'),
       form: $('#filter-form'),
       province: $('#filter-province'),
       provinceHint: $('#province-hint'),
@@ -77,7 +82,7 @@ class HomePage {
   }
 
   // =======================================================
-  //  KHỞI TẠO
+  //  INITIALIZATION
   // =======================================================
   init() {
     this.filters = this.readInitialFilters();
@@ -90,18 +95,17 @@ class HomePage {
     });
     setSearchValue(this.filters.q);
 
-    this.renderSortOptions();
     this.syncForm();
     this.renderChips();
     this.renderRecent();
     this.bindEvents();
 
-    // Danh sách tin tải ngay, không chờ dữ liệu phụ
+    // Load the listings right away, without waiting for the extra data
     this.loadListings();
     this.loadSideData();
   }
 
-  /** Ưu tiên bộ lọc trên URL (link chia sẻ), không có thì lấy từ SessionStorage */
+  /** Prefer filters from the URL (shared links), otherwise from SessionStorage */
   readInitialFilters() {
     const params = new URLSearchParams(window.location.search);
     const fromUrl = FILTER_KEYS.some((key) => params.has(key));
@@ -109,7 +113,7 @@ class HomePage {
     return this.sanitize({ ...DEFAULT_FILTERS, ...source });
   }
 
-  /** Chuẩn hóa dữ liệu bộ lọc (dữ liệu từ URL/Storage có thể bị sửa tay) */
+  /** Normalize filter data (URL/Storage data may have been edited by hand) */
   sanitize(raw) {
     const clean = {};
     for (const key of FILTER_KEYS) clean[key] = String(raw[key] ?? DEFAULT_FILTERS[key]).trim();
@@ -123,7 +127,7 @@ class HomePage {
     return clean;
   }
 
-  /** Dữ liệu phụ gọi song song, cái nào lỗi không ảnh hưởng cái khác */
+  /** Extra data loaded in parallel; one failing does not affect the others */
   async loadSideData() {
     const [categories, provinces, rate] = await Promise.allSettled([
       getCategories(),
@@ -137,16 +141,16 @@ class HomePage {
     if (provinces.status === 'fulfilled') this.renderProvinces(provinces.value);
     else this.renderProvinceError();
 
-    // getUsdRate không bao giờ reject, lỗi thì trả null
+    // getUsdRate never rejects, it returns null on error
     if (rate.status === 'fulfilled') this.applyRate(rate.value);
   }
 
   // =======================================================
-  //  CẬP NHẬT BỘ LỌC
+  //  UPDATING FILTERS
   // =======================================================
   /**
-   * Đổi một phần bộ lọc rồi tải lại danh sách.
-   * Đổi bất kỳ điều kiện nào (trừ page) đều quay về trang 1.
+   * Change part of the filters and reload the list.
+   * Changing any condition (except page) goes back to page 1.
    */
   setFilters(patch) {
     const next = this.sanitize({ ...this.filters, page: 1, ...patch });
@@ -161,7 +165,7 @@ class HomePage {
     this.loadListings();
   }
 
-  /** Lưu bộ lọc vào SessionStorage và URL (chỉ ghi các giá trị khác mặc định) */
+  /** Save the filters to SessionStorage and the URL (only non-default values) */
   persistFilters() {
     session.set(SESSION_KEY, this.filters);
 
@@ -175,7 +179,7 @@ class HomePage {
     history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
   }
 
-  /** Đưa giá trị bộ lọc lên các ô trong form */
+  /** Push the filter values into the form controls */
   syncForm() {
     const { province, condition, minPrice, maxPrice, sort } = this.filters;
     const { form } = this.el;
@@ -186,7 +190,7 @@ class HomePage {
     const radio = form.querySelector(`input[name="condition"][value="${CSS.escape(condition)}"]`);
     if (radio) radio.checked = true;
 
-    // Không ghi đè khi người dùng đang gõ trong ô giá
+    // Do not overwrite while the user is typing in a price field
     if (document.activeElement !== this.el.minPrice) this.el.minPrice.value = minPrice;
     if (document.activeElement !== this.el.maxPrice) this.el.maxPrice.value = maxPrice;
     this.el.sort.value = sort;
@@ -195,31 +199,48 @@ class HomePage {
       btn.classList.toggle('is-active', btn.dataset.min === minPrice && btn.dataset.max === maxPrice);
     });
 
-    // Số bộ lọc đang áp dụng (hiện trên nút "Bộ lọc" ở mobile)
+    // Number of active filters (shown on the "Filters" button on mobile)
     const activeCount = [province, condition, minPrice || maxPrice].filter(Boolean).length;
     this.el.filterCount.textContent = activeCount;
     this.el.filterCount.hidden = activeCount === 0;
   }
 
   // =======================================================
-  //  DANH SÁCH TIN
+  //  LISTING GRID
   // =======================================================
+  /**
+   * Pick the visible block: 'list' (grid) | 'empty' (no results) | 'error'.
+   * Every block is written in the HTML, this only toggles `hidden`.
+   */
+  showListingState(state) {
+    const { grid, empty, error, pagination } = this.el;
+    grid.hidden = state !== 'list';
+    empty.hidden = state !== 'empty';
+    error.hidden = state !== 'error';
+    if (state !== 'list') pagination.hidden = true;
+  }
+
   async loadListings() {
-    // Hủy request trước (nếu chưa xong) để kết quả cũ không đè kết quả mới
+    // Cancel the previous request (if still running) so old results do not overwrite new ones
     this.controller?.abort();
     const controller = new AbortController();
     this.controller = controller;
 
     const { grid, count } = this.el;
     grid.setAttribute('aria-busy', 'true');
-    if (grid.querySelector('.listing-card[data-id]')) grid.classList.add('is-loading');
-    else grid.innerHTML = renderSkeletonCards(PAGE_SIZE);
+    // Existing results -> fade them; none yet -> show skeleton cards
+    if (!grid.hidden && grid.querySelector('.listing-card[data-id]')) {
+      grid.classList.add('is-loading');
+    } else {
+      grid.replaceChildren(createSkeletonCards(PAGE_SIZE));
+      this.showListingState('list');
+    }
     count.textContent = 'Đang tải...';
 
     try {
       const { data, meta } = await getListings({ ...this.filters, limit: PAGE_SIZE }, controller.signal);
 
-      // Trang lưu trong session vượt quá tổng số trang (vd: tin đã bị bán bớt) -> về trang cuối
+      // The page saved in the session is past the last page (e.g. some listings were sold) -> go to the last page
       if (meta.total > 0 && this.filters.page > meta.totalPages) {
         this.setFilters({ page: meta.totalPages });
         return;
@@ -227,7 +248,7 @@ class HomePage {
 
       this.renderListings(data, meta);
     } catch (err) {
-      if (isAbortError(err)) return; // bị hủy chủ động, bỏ qua
+      if (isAbortError(err)) return; // cancelled on purpose, ignore
       this.renderListingError(err);
     } finally {
       if (this.controller === controller) {
@@ -238,107 +259,94 @@ class HomePage {
   }
 
   renderListings(items, meta) {
-    const { grid, pagination, count, title } = this.el;
+    const { grid, pagination, count } = this.el;
     this.listings = new Map(items.map((item) => [item.id, item]));
 
-    // Tiêu đề + số kết quả
-    const { q, category } = this.filters;
-    const categoryName = this.categories.get(category)?.name;
-    title.textContent = q ? `Kết quả cho "${q}"` : categoryName ?? 'Tin đăng mới nhất';
+    this.renderTitle();
     count.textContent =
       meta.total > 0
         ? `${meta.total.toLocaleString('vi-VN')} tin · Trang ${meta.page}/${meta.totalPages}`
         : 'Không có tin phù hợp';
 
     if (items.length === 0) {
-      grid.innerHTML = `
-        <div class="state">
-          <i class="bi bi-search" aria-hidden="true"></i>
-          <p class="state__title">Không tìm thấy tin đăng nào</p>
-          <p class="state__text">Thử bỏ bớt bộ lọc, đổi từ khóa khác hoặc tìm không dấu.</p>
-          <button type="button" class="btn btn--primary" data-action="reset">Xóa bộ lọc</button>
-        </div>`;
-      pagination.innerHTML = '';
+      this.showListingState('empty');
       return;
     }
 
-    grid.innerHTML = items
-      .map((item) =>
-        renderListingCard(item, { isFavorite: favorites.has(item.id), usdRate: this.usdRate }),
-      )
-      .join('');
-    pagination.innerHTML = renderPagination(meta);
+    grid.replaceChildren(
+      ...items.map((item) =>
+        createListingCard(item, { isFavorite: favorites.has(item.id), usdRate: this.usdRate }),
+      ),
+    );
+    this.showListingState('list');
+    renderPagination(pagination, meta);
   }
 
   renderListingError(err) {
     this.el.count.textContent = 'Không tải được dữ liệu';
-    this.el.pagination.innerHTML = '';
-    this.el.grid.innerHTML = `
-      <div class="state state--error" role="alert">
-        <i class="bi bi-wifi-off" aria-hidden="true"></i>
-        <p class="state__title">Không tải được danh sách tin</p>
-        <p class="state__text">${escapeHtml(err.message)}</p>
-        <button type="button" class="btn btn--primary" data-action="retry">
-          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Thử lại
-        </button>
-      </div>`;
+    $('#listing-error-message').textContent = err.message;
+    this.showListingState('error');
+  }
+
+  /** Results heading: keyword > category > default */
+  renderTitle() {
+    const { q, category } = this.filters;
+    const categoryName = this.categories.get(category)?.name;
+    this.el.title.textContent = q ? `Kết quả cho "${q}"` : categoryName ?? 'Tin đăng mới nhất';
   }
 
   // =======================================================
-  //  DANH MỤC
+  //  CATEGORIES
   // =======================================================
   renderCategories(categories) {
+    const { categoryList, categoryError } = this.el;
     this.categories = new Map(categories.map((c) => [c.slug, c]));
 
-    // Thống kê banner bằng reduce
+    // Totals with reduce
     const totalActive = categories.reduce((sum, c) => sum + c.listingCount, 0);
     $('#stat-listings').textContent = formatCompact(totalActive);
     $('#stat-categories').textContent = categories.length;
+    $('#category-all-count').textContent = `${totalActive} tin`;
 
-    const tile = ({ slug, name, icon, count }) => `
-      <li>
-        <button type="button" class="category-tile" data-category="${escapeHtml(slug)}"
-                aria-pressed="false">
-          <span class="category-tile__icon"><i class="bi ${escapeHtml(icon || 'bi-tag')}" aria-hidden="true"></i></span>
-          <span class="category-tile__name">${escapeHtml(name)}</span>
-          <span class="category-tile__count">${count} tin</span>
-        </button>
-      </li>`;
+    // Remove the skeletons + old tiles (when reloading), keep the "All" tile written in the HTML
+    $$('[data-skeleton], [data-generated]', categoryList).forEach((li) => li.remove());
 
-    this.el.categoryList.innerHTML = [
-      tile({ slug: '', name: 'Tất cả', icon: 'bi-grid-3x3-gap', count: totalActive }),
-      ...categories.map((c) => tile({ ...c, count: c.listingCount })),
-    ].join('');
-    this.el.categoryList.setAttribute('aria-busy', 'false');
+    const tiles = categories.map(({ slug, name, icon, listingCount }) => {
+      const li = cloneTemplate('tpl-category-tile');
+      li.dataset.generated = '';
+      fillFields(li, { name, count: `${listingCount} tin` });
+      li.querySelector('[data-category]').dataset.category = slug;
+      if (icon) li.querySelector('.category-tile__icon .bi').className = `bi ${icon}`;
+      return li;
+    });
+    categoryList.append(...tiles);
 
+    categoryList.setAttribute('aria-busy', 'false');
+    categoryError.hidden = true;
     this.highlightCategory();
-    this.renderChips(); // chip danh mục cần tên -> vẽ lại
-    // Cập nhật tiêu đề nếu danh sách đã về trước danh mục
-    const current = this.categories.get(this.filters.category);
-    if (current && !this.filters.q) this.el.title.textContent = current.name;
+    this.renderChips(); // category chips need names -> re-render
+    this.renderTitle();
   }
 
   renderCategoryError(err) {
+    $$('[data-skeleton]', this.el.categoryList).forEach((li) => {
+      li.hidden = true;
+    });
+    $('#category-error-message').textContent = err?.message ?? 'lỗi không xác định';
     this.el.categoryList.setAttribute('aria-busy', 'false');
-    this.el.categoryList.innerHTML = `
-      <li class="inline-alert" style="grid-column: 1 / -1">
-        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
-        Không tải được danh mục: ${escapeHtml(err?.message ?? 'lỗi không xác định')}
-        <button type="button" class="link-btn" data-action="retry-categories">Thử lại</button>
-      </li>`;
+    this.el.categoryError.hidden = false;
   }
 
-  renderCategorySkeleton() {
-    this.el.categoryList.innerHTML = Array.from(
-      { length: 9 },
-      () => `
-        <li>
-          <div class="category-tile category-tile--loading" aria-hidden="true">
-            <span class="category-tile__icon skeleton"></span>
-            <span class="skeleton skeleton--line" style="width: 70%"></span>
-          </div>
-        </li>`,
-    ).join('');
+  async retryCategories() {
+    this.el.categoryError.hidden = true;
+    $$('[data-skeleton]', this.el.categoryList).forEach((li) => {
+      li.hidden = false;
+    });
+    try {
+      this.renderCategories(await getCategories());
+    } catch (err) {
+      this.renderCategoryError(err);
+    }
   }
 
   highlightCategory() {
@@ -350,20 +358,18 @@ class HomePage {
   }
 
   // =======================================================
-  //  TỈNH THÀNH + TỶ GIÁ (API công khai)
+  //  PROVINCES + EXCHANGE RATE (public APIs)
   // =======================================================
   renderProvinces({ provinces, source }) {
     const { province: select, provinceHint } = this.el;
     const current = this.filters.province;
     const names = provinces.map((p) => p.name);
 
-    // Nếu bộ lọc cũ có tỉnh không còn trong danh sách thì vẫn giữ lại 1 option
+    // If the saved filter has a province no longer in the list, still keep one option for it
     if (current && !names.includes(current)) names.unshift(current);
 
-    select.innerHTML = [
-      '<option value="">Toàn quốc</option>',
-      ...names.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`),
-    ].join('');
+    // new Option(text, value): creates an <option> with the DOM API, no HTML string needed
+    select.replaceChildren(new Option('Toàn quốc', ''), ...names.map((name) => new Option(name, name)));
     select.value = current;
     select.disabled = false;
 
@@ -375,7 +381,7 @@ class HomePage {
 
   renderProvinceError() {
     const { province: select, provinceHint } = this.el;
-    select.innerHTML = '<option value="">Toàn quốc</option>';
+    select.replaceChildren(new Option('Toàn quốc', ''));
     select.disabled = true;
     provinceHint.hidden = false;
     provinceHint.classList.add('form-hint--error');
@@ -384,16 +390,16 @@ class HomePage {
 
   applyRate(rate) {
     this.usdRate = rate;
-    if (!rate) return; // không có tỷ giá -> phần quy đổi tự ẩn (chuỗi rỗng)
+    if (!rate) return; // no exchange rate -> the USD part stays empty (CSS hides empty elements)
 
     applyUsdRate(this.el.grid, rate);
     applyUsdRate(this.el.recentList, rate);
+    $('#usd-rate-value').textContent = formatVND(Math.round(rate));
     this.el.usdRate.hidden = false;
-    this.el.usdRate.textContent = `Giá USD tham khảo theo tỷ giá 1 USD = ${formatVND(Math.round(rate))}`;
   }
 
   // =======================================================
-  //  CHIP BỘ LỌC ĐANG ÁP DỤNG
+  //  ACTIVE FILTER CHIPS
   // =======================================================
   renderChips() {
     const { q, category, province, condition, minPrice, maxPrice } = this.filters;
@@ -404,7 +410,7 @@ class HomePage {
       return `Đến ${formatVND(maxPrice)}`;
     };
 
-    // Mảng [key cần xóa, nhãn] -> lọc bỏ các bộ lọc trống
+    // Array of [key to clear, label] -> drop the empty filters
     const chips = [
       q && ['q', `Từ khóa: ${q}`],
       category && ['category', this.categories.get(category)?.name ?? category],
@@ -413,56 +419,45 @@ class HomePage {
       (minPrice || maxPrice) && ['price', priceLabel()],
     ].filter(Boolean);
 
+    this.el.chipList.replaceChildren(
+      ...chips.map(([key, label]) => {
+        const chip = cloneTemplate('tpl-chip');
+        fillFields(chip, { label });
+        const btn = chip.querySelector('[data-remove]');
+        btn.dataset.remove = key;
+        btn.setAttribute('aria-label', `Bỏ lọc ${label}`);
+        return chip;
+      }),
+    );
     this.el.chips.hidden = chips.length === 0;
-    this.el.chips.innerHTML =
-      chips
-        .map(
-          ([key, label]) => `
-        <span class="chip">
-          ${escapeHtml(label)}
-          <button type="button" class="chip__remove" data-remove="${key}" aria-label="Bỏ lọc ${escapeHtml(label)}">
-            <i class="bi bi-x" aria-hidden="true"></i>
-          </button>
-        </span>`,
-        )
-        .join('') +
-      (chips.length > 1 ? '<button type="button" class="link-btn" data-action="reset">Xóa tất cả</button>' : '');
+    this.el.chipReset.hidden = chips.length < 2;
   }
 
   // =======================================================
-  //  TIN VỪA XEM
+  //  RECENTLY VIEWED
   // =======================================================
   renderRecent() {
     const items = recentlyViewed.getAll();
     this.el.recentSection.hidden = items.length === 0;
-    this.el.recentList.innerHTML = items
-      .map((item) => renderListingCard(item, { isFavorite: favorites.has(item.id), usdRate: this.usdRate }))
-      .join('');
+    this.el.recentList.replaceChildren(
+      ...items.map((item) =>
+        createListingCard(item, { isFavorite: favorites.has(item.id), usdRate: this.usdRate }),
+      ),
+    );
   }
 
   // =======================================================
-  //  YÊU THÍCH
+  //  FAVORITES
   // =======================================================
   toggleFavorite(button) {
     const id = Number(button.closest('[data-id]').dataset.id);
     const listing = this.listings.get(id) ?? recentlyViewed.getAll().find((x) => x.id === id);
-    if (!listing) return;
-
-    const active = favorites.toggle(toListingSnapshot(listing));
-    showToast(active ? 'Đã thêm vào tin yêu thích' : 'Đã bỏ khỏi tin yêu thích', active ? 'success' : 'info');
-    // Sự kiện favorites:change sẽ cập nhật mọi nút tim (cả danh sách chính và tin vừa xem)
-  }
-
-  /** Đồng bộ tất cả nút tim với LocalStorage */
-  refreshFavoriteButtons() {
-    $$('[data-action="favorite"]').forEach((btn) => {
-      const id = Number(btn.closest('[data-id]').dataset.id);
-      setFavoriteButton(btn, favorites.has(id));
-    });
+    // The favorites:change event updates every heart button (main grid and recently viewed)
+    if (listing) toggleFavorite(listing);
   }
 
   // =======================================================
-  //  NGĂN KÉO BỘ LỌC (mobile/tablet)
+  //  FILTER DRAWER (mobile/tablet)
   // =======================================================
   openFilters() {
     this.el.filters.classList.add('is-open');
@@ -481,60 +476,48 @@ class HomePage {
     this.el.filterToggle.focus();
   }
 
-  renderSortOptions() {
-    this.el.sort.innerHTML = Object.entries(SORT_LABELS)
-      .map(([value, label]) => `<option value="${value}">${label}</option>`)
-      .join('');
-  }
-
   resetFilters() {
     setSearchValue('');
+    this.el.priceError.hidden = true;
     this.setFilters({ ...DEFAULT_FILTERS });
   }
 
   // =======================================================
-  //  SỰ KIỆN (dùng event delegation cho phần tử render động)
+  //  EVENTS (event delegation for elements cloned from templates)
   // =======================================================
   bindEvents() {
-    const { form, grid, pagination, chips, categoryList, presets, sort, recentList } = this.el;
+    const { form, results, categoryList, presets, sort, recentList } = this.el;
 
-    // Danh mục
+    // Categories
     categoryList.addEventListener('click', (e) => {
-      if (e.target.closest('[data-action="retry-categories"]')) {
-        this.renderCategorySkeleton();
-        getCategories()
-          .then((data) => this.renderCategories(data))
-          .catch((err) => this.renderCategoryError(err));
-        return;
-      }
       const tile = e.target.closest('[data-category]');
       if (!tile) return;
       const slug = tile.dataset.category;
-      // Bấm lại danh mục đang chọn -> bỏ chọn
+      // Clicking the selected category again -> deselect it
       this.setFilters({ category: slug === this.filters.category ? '' : slug });
     });
+    $('#category-retry').addEventListener('click', () => this.retryCategories());
 
-    // Select khu vực + radio tình trạng: áp dụng ngay khi đổi
+    // Area select + condition radios: apply immediately on change
     form.addEventListener('change', (e) => {
       const { name, value } = e.target;
       if (name === 'province' || name === 'condition') this.setFilters({ [name]: value });
     });
 
-    // Ô giá: debounce để không gọi API mỗi phím gõ
+    // Price fields: debounced so the API is not called on every keystroke
     const applyPrice = debounce(() => {
       const min = this.el.minPrice.value.trim();
       const max = this.el.maxPrice.value.trim();
-      const invalid = min && max && Number(min) > Number(max);
+      const invalid = Boolean(min && max && Number(min) > Number(max));
 
       this.el.priceError.hidden = !invalid;
-      this.el.priceError.textContent = invalid ? 'Giá "từ" phải nhỏ hơn hoặc bằng giá "đến"' : '';
       if (!invalid) this.setFilters({ minPrice: min, maxPrice: max });
     }, 600);
     form.addEventListener('input', (e) => {
       if (e.target === this.el.minPrice || e.target === this.el.maxPrice) applyPrice();
     });
 
-    // Mức giá có sẵn
+    // Preset price ranges
     presets.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-min]');
       if (!btn) return;
@@ -545,56 +528,55 @@ class HomePage {
       );
     });
 
-    // Nút reset của form
+    // Form reset button
     form.addEventListener('reset', (e) => {
       e.preventDefault();
-      this.el.priceError.hidden = true;
       this.resetFilters();
     });
 
     sort.addEventListener('change', () => this.setFilters({ sort: sort.value }));
 
-    // Phân trang
-    pagination.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-page]');
-      if (!btn || btn.disabled) return;
-      this.setFilters({ page: Number(btn.dataset.page) });
-      $('#listings').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    // One listener for the whole results area: hearts, chips, pagination, retry, clear filters
+    results.addEventListener('click', (e) => {
+      const target = e.target;
 
-    // Xóa từng chip
-    chips.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-remove]');
-      if (!btn) return;
-      const key = btn.dataset.remove;
-      if (key === 'q') setSearchValue('');
-      this.setFilters(key === 'price' ? { minPrice: '', maxPrice: '' } : { [key]: '' });
-    });
-
-    // Lưới tin: yêu thích, thử lại, xóa bộ lọc
-    const onGridClick = (e) => {
-      const favBtn = e.target.closest('[data-action="favorite"]');
+      const favBtn = target.closest('[data-action="favorite"]');
       if (favBtn) return this.toggleFavorite(favBtn);
-      if (e.target.closest('[data-action="retry"]')) return this.loadListings();
-      if (e.target.closest('[data-action="reset"]')) return this.resetFilters();
-    };
-    grid.addEventListener('click', onGridClick);
-    recentList.addEventListener('click', onGridClick);
-    chips.addEventListener('click', (e) => {
-      if (e.target.closest('[data-action="reset"]')) this.resetFilters();
+
+      const pageBtn = target.closest('[data-page]');
+      if (pageBtn && !pageBtn.disabled) {
+        this.setFilters({ page: Number(pageBtn.dataset.page) });
+        $('#listings').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      const chipBtn = target.closest('[data-remove]');
+      if (chipBtn) {
+        const key = chipBtn.dataset.remove;
+        if (key === 'q') setSearchValue('');
+        this.setFilters(key === 'price' ? { minPrice: '', maxPrice: '' } : { [key]: '' });
+        return;
+      }
+
+      if (target.closest('[data-action="retry"]')) return this.loadListings();
+      if (target.closest('[data-action="reset"]')) return this.resetFilters();
     });
 
-    // Tin vừa xem
+    // Recently viewed
+    recentList.addEventListener('click', (e) => {
+      const favBtn = e.target.closest('[data-action="favorite"]');
+      if (favBtn) this.toggleFavorite(favBtn);
+    });
     $('#recent-clear').addEventListener('click', () => {
       recentlyViewed.clear();
       showToast('Đã xóa lịch sử xem', 'info');
     });
 
-    // CustomEvent từ stores.js (kể cả khi tab khác thay đổi)
-    window.addEventListener('favorites:change', () => this.refreshFavoriteButtons());
+    // CustomEvent from stores.js (including changes from other tabs)
+    watchFavorites();
     window.addEventListener('recentlyViewed:change', () => this.renderRecent());
 
-    // Ngăn kéo bộ lọc
+    // Filter drawer
     this.el.filterToggle.addEventListener('click', () => this.openFilters());
     document.addEventListener('click', (e) => {
       if (e.target.closest('[data-action="close-filters"]')) this.closeFilters();
@@ -602,13 +584,7 @@ class HomePage {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.closeFilters();
     });
-
-    // Năm ở footer
-    $('#year').textContent = new Date().getFullYear();
   }
 }
 
-// Hiện khung skeleton danh mục ngay khi trang mở
-const page = new HomePage();
-page.renderCategorySkeleton();
-page.init();
+new HomePage().init();
