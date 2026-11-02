@@ -1,5 +1,5 @@
 // =========================================================
-//  HEADER: logo, ô tìm kiếm (+ lịch sử), nút tiện ích, tài khoản
+//  HEADER: logo, search box (+ history), utility buttons, account
 // =========================================================
 @use '../abstracts' as *;
 
@@ -7,8 +7,9 @@
   position: sticky;
   top: 0;
   z-index: $z-header;
-  background: linear-gradient(90deg, $color-primary, #ff7337);
-  color: #fff;
+  background: var(--header-bg);
+  color: var(--header-fg);
+  border-bottom: 2px solid var(--header-border);
   box-shadow: var(--shadow-sm);
 
   &__inner {
@@ -21,7 +22,7 @@
     gap: $space-2 $space-3;
     padding-block: $space-2 $space-3;
 
-    // Tablet trở lên: 1 hàng logo | tìm kiếm | tiện ích
+    // Tablet and up: one row logo | search | utilities
     @include respond-to(md) {
       grid-template-columns: auto 1fr auto;
       grid-template-areas: 'logo search actions';
@@ -37,26 +38,51 @@
   grid-area: logo;
   display: inline-flex;
   align-items: center;
-  gap: $space-2;
-  font-size: 1.25rem;
-  font-weight: 400;
-  white-space: nowrap;
+  flex-shrink: 0;
 
-  .bi {
-    font-size: 1.6rem;
+  // Two logo versions: navy text (light background) / light text (dark background)
+  &__picture {
+    display: flex;
   }
 
-  strong {
-    font-weight: 800;
+  // Only the height is fixed, the width follows the image ratio
+  &__img {
+    width: auto;
+    height: 36px; // mobile: square logo
+    border-radius: $radius-sm;
+
+    @include respond-to(sm) {
+      height: 30px; // text logo (ratio ~5.5 : 1)
+    }
+
+    @include respond-to(xl) {
+      height: 36px;
+    }
   }
 }
 
-// ---------- Ô tìm kiếm ----------
+// Pick the logo version by theme (shared by header and footer)
+.logo__picture--dark {
+  display: none !important;
+}
+
+[data-theme='dark'] {
+  .logo__picture--light {
+    display: none !important;
+  }
+
+  .logo__picture--dark {
+    display: flex !important;
+  }
+}
+
+// ---------- Search box ----------
 .search {
   grid-area: search;
   position: relative;
   display: flex;
-  background: #fff;
+  background: var(--search-bg);
+  border: 1px solid var(--search-border);
   border-radius: $radius;
   padding: 3px;
 
@@ -65,11 +91,15 @@
     min-width: 0;
     border: 0;
     padding: $space-2 $space-3;
-    color: #222;
+    color: var(--search-fg);
     background: transparent;
     outline: none;
 
-    // Ẩn nút "x" mặc định của input type=search trên Chrome
+    &::placeholder {
+      color: var(--color-text-muted);
+    }
+
+    // Hide Chrome's default "x" button on input type=search
     &::-webkit-search-cancel-button {
       cursor: pointer;
     }
@@ -80,16 +110,16 @@
     border: 0;
     border-radius: $radius-sm;
     padding-inline: $space-4;
-    color: #fff;
-    background: $color-primary;
+    color: var(--color-on-primary);
+    background: var(--color-primary);
     transition: background-color $transition;
 
     &:hover {
-      background: $color-primary-dark;
+      background: var(--color-primary-hover);
     }
   }
 
-  // Dropdown lịch sử tìm kiếm (LocalStorage)
+  // Search history dropdown (LocalStorage)
   &__dropdown {
     position: absolute;
     top: calc(100% + 6px);
@@ -142,7 +172,7 @@
   }
 }
 
-// ---------- Nút tiện ích bên phải ----------
+// ---------- Utility buttons on the right ----------
 .header-actions {
   grid-area: actions;
   display: flex;
@@ -154,17 +184,22 @@
     gap: $space-2;
   }
 
+  // Below 1200px only the "+" icon is shown (square button) to leave room for the search box
   &__sell {
-    // Mobile chỉ hiện icon "+" cho gọn
-    span {
-      @include respond-below(sm) {
+    @include respond-below(xl) {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      font-size: 1.1rem;
+
+      span {
         @include visually-hidden;
       }
     }
   }
 }
 
-// Nút tròn chỉ có icon (theme, yêu thích, giỏ hàng)
+// Round icon-only buttons (theme, favorites, cart)
 .icon-btn {
   position: relative;
   @include flex-center;
@@ -178,10 +213,10 @@
   transition: background-color $transition;
 
   &:hover {
-    background: rgb(255 255 255 / 18%);
+    background: var(--header-hover);
   }
 
-  // Số đếm nhỏ ở góc
+  // Small counter in the corner
   &__badge {
     position: absolute;
     top: 2px;
@@ -190,8 +225,8 @@
     height: 18px;
     padding: 0 5px;
     border-radius: $radius-pill;
-    background: #fff;
-    color: $color-primary;
+    background: var(--badge-bg);
+    color: var(--badge-fg);
     font-size: 0.6875rem;
     font-weight: 700;
     line-height: 18px;
@@ -199,24 +234,62 @@
   }
 }
 
-// ---------- Tài khoản ----------
+// Theme button: the HTML has both icons, CSS picks one for the current theme
+.theme-toggle {
+  &__light {
+    display: none;
+  }
+
+  [data-theme='dark'] & {
+    .theme-toggle__dark {
+      display: none;
+    }
+
+    .theme-toggle__light {
+      display: inline-block;
+    }
+  }
+}
+
+// ---------- Account ----------
 .account {
   display: flex;
   align-items: center;
   min-height: 40px;
 
   &__login {
-    padding: $space-2 $space-2;
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-2;
+    border-radius: $radius-pill;
     font-weight: 600;
     white-space: nowrap;
 
+    .bi {
+      font-size: 1.35rem;
+    }
+
     &:hover {
-      text-decoration: underline;
+      background: var(--header-hover);
+    }
+
+    // Below 1200px: icon only
+    span {
+      @include respond-below(xl) {
+        @include visually-hidden;
+      }
+    }
+
+    @include respond-to(xl) {
+      .bi {
+        display: none;
+      }
     }
   }
 }
 
-// Menu tài khoản dùng <details>/<summary>: mở/đóng không cần JS
+// Account menu uses <details>/<summary>: opens/closes without JS
 .account-menu {
   position: relative;
 
@@ -235,7 +308,7 @@
     }
 
     &:hover {
-      background: rgb(255 255 255 / 18%);
+      background: var(--header-hover);
     }
   }
 
@@ -272,8 +345,14 @@
     font-size: $font-size-sm;
     color: var(--color-text-muted);
 
-    strong {
+    strong,
+    span {
       display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    strong {
       color: var(--color-text);
       font-size: $font-size-base;
     }
@@ -306,8 +385,39 @@
   height: 32px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: #fff;
-  color: $color-primary;
+  background: var(--badge-bg);
+  color: var(--badge-fg);
   font-weight: 700;
   text-transform: uppercase;
+}
+
+// ---------- Orders needing action ----------
+.account-menu > summary {
+  position: relative;
+}
+
+// Red dot on the avatar corner
+.account-menu__dot {
+  position: absolute;
+  top: 2px;
+  left: 28px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--header-fg);
+  border-radius: 50%;
+  background: var(--color-danger);
+}
+
+// Number on the "Orders" item in the menu
+.account-menu__count {
+  min-width: 20px;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: $radius-pill;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
 }

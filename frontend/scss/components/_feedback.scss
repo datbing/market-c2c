@@ -1,9 +1,9 @@
 // =========================================================
-//  PHẢN HỒI TRẠNG THÁI: skeleton loading, trống, lỗi, toast
+//  STATUS FEEDBACK: loading skeletons, empty, error, toast
 // =========================================================
 @use '../abstracts' as *;
 
-// ---------- Skeleton (khung xám nhấp nháy khi đang tải) ----------
+// ---------- Skeleton (pulsing gray blocks while loading) ----------
 @keyframes shimmer {
   from {
     background-position: 200% 0;
@@ -43,7 +43,7 @@
   }
 }
 
-// ---------- Trạng thái trống / lỗi ----------
+// ---------- Empty / error states ----------
 .state {
   grid-column: 1 / -1;
   display: grid;
@@ -75,7 +75,7 @@
   }
 }
 
-// Thông báo nhỏ trong một khối (vd: không tải được danh mục)
+// Small notice inside a block (e.g. categories failed to load)
 .inline-alert {
   display: flex;
   align-items: center;
@@ -145,7 +145,7 @@
     transition: opacity 0.25s, transform 0.25s;
   }
 
-  // Sinh biến thể màu bằng @each
+  // Color variants generated with @each
   @each $type, $color in (success: $color-success, error: $color-danger, warning: $color-warning) {
     &--#{$type} {
       border-left-color: $color;
@@ -153,6 +153,30 @@
       > .bi {
         color: $color;
       }
+    }
+  }
+}
+
+// ---------- In-page alert box (form errors, hints...) ----------
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-2;
+  padding: $space-3 $space-4;
+  border: 1px solid;
+  border-radius: $radius;
+  font-size: $font-size-sm;
+
+  > .bi {
+    margin-top: 1px;
+  }
+
+  // Generates .alert--error / --success / --info / --warning with @each
+  @each $type, $color in (error: $color-danger, success: $color-success, info: $color-info, warning: $color-warning) {
+    &--#{$type} {
+      border-color: rgba($color, 0.35);
+      background: rgba($color, 0.08);
+      color: $color;
     }
   }
 }

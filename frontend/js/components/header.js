@@ -1,18 +1,22 @@
 /**
- * Header dùng chung cho mọi trang:
- *  - Ô tìm kiếm + dropdown lịch sử tìm kiếm (LocalStorage), điều khiển bằng bàn phím
- *  - Số đếm giỏ hàng / yêu thích (nghe CustomEvent từ stores.js)
- *  - Khu vực tài khoản (gọi /api/auth/me)
- *  - Nút đổi theme sáng/tối (cookie)
+ * Header shared by every page. All of the header HTML is written in the .html files,
+ * this file only adds behavior:
+ *  - Search box + search history dropdown (LocalStorage), keyboard navigation
+ *  - Cart / favorites counters (listens to CustomEvents from stores.js)
+ *  - Account area: shows the "guest" or "logged in" block (calls /api/auth/me)
+ *  - Light/dark theme toggle (cookie)
  */
-import { $, escapeHtml, debounce } from '../utils/dom.js';
-import { getCurrentUser, logout } from '../services/auth.js';
+import { $, $$, debounce } from '../utils/dom.js';
+import { cloneTemplate } from '../utils/template.js';
+import { getCurrentUser, logout, loginUrl } from '../services/auth.js';
+import { consumeFlash } from '../services/flash.js';
+import { getOrderSummary } from '../services/orders.js';
 import { cart, favorites, searchHistory } from '../services/stores.js';
 import { initThemeToggle } from './theme.js';
 import { showToast } from './toast.js';
 
 // ---------------------------------------------------------
-//  Số đếm trên icon
+//  Icon counters
 // ---------------------------------------------------------
 function renderCount(name, count) {
   const badge = $(`[data-count="${name}"]`);
@@ -29,55 +33,67 @@ function initCounters() {
 }
 
 // ---------------------------------------------------------
-//  Tài khoản
+//  Account: the #account-guest and #account-user blocks already exist in the HTML
 // ---------------------------------------------------------
-function renderGuest(container) {
-  container.innerHTML = `
-    <a class="account__login" href="/login">Đăng nhập</a>`;
+function showUser(user) {
+  const menu = $('#account-user');
+  const fields = { name: user.name, email: user.email, initial: user.name.trim().charAt(0) || '?' };
+
+  $$('[data-user]', menu).forEach((el) => {
+    el.textContent = fields[el.dataset.user] ?? '';
+  });
+  // Admin-only item
+  $$('[data-role="admin"]', menu).forEach((el) => {
+    el.hidden = user.role !== 'admin';
+  });
+
+  menu.hidden = false;
+  $('#account-guest').hidden = true;
 }
 
-function renderUser(container, user) {
-  const initial = escapeHtml(user.name.trim().charAt(0) || '?');
-  const adminLink =
-    user.role === 'admin'
-      ? `<li><a class="account-menu__item" href="/admin/"><i class="bi bi-speedometer2"></i> Trang quản trị</a></li>`
-      : '';
+function showGuest() {
+  const link = $('#account-guest');
+  // After logging in, come back to the current page (unless it is the login/register page itself)
+  if (!/^\/(login|register)/.test(window.location.pathname)) link.href = loginUrl();
+  link.hidden = false;
+  $('#account-user').hidden = true;
+}
 
-  container.innerHTML = `
-    <details class="account-menu">
-      <summary aria-label="Menu tài khoản">
-        <span class="avatar" aria-hidden="true">${initial}</span>
-        <span class="account-menu__name">${escapeHtml(user.name)}</span>
-      </summary>
-      <ul class="account-menu__list">
-        <li class="account-menu__header">
-          <strong>${escapeHtml(user.name)}</strong>${escapeHtml(user.email)}
-        </li>
-        ${adminLink}
-        <li><a class="account-menu__item" href="/my-listings"><i class="bi bi-card-list"></i> Tin đăng của tôi</a></li>
-        <li><a class="account-menu__item" href="/orders"><i class="bi bi-receipt"></i> Đơn hàng</a></li>
-        <li><a class="account-menu__item" href="/favorites"><i class="bi bi-heart"></i> Tin yêu thích</a></li>
-        <li>
-          <button type="button" class="account-menu__item account-menu__item--danger" data-action="logout">
-            <i class="bi bi-box-arrow-right"></i> Đăng xuất
-          </button>
-        </li>
-      </ul>
-    </details>`;
+/**
+ * Orders needing action: red dot on the avatar + a number on the "Orders" item.
+ * Clicking opens the tab that has work (sales first, since sellers should confirm quickly).
+ */
+export async function showOrderBadge() {
+  try {
+    const { seller, buyer } = await getOrderSummary();
+    const total = seller + buyer;
+    $('[data-order-dot]').hidden = total === 0;
+    const count = $('[data-order-count]');
+    count.textContent = total > 99 ? '99+' : total;
+    count.hidden = total === 0;
+    if (total > 0) $('#menu-orders').href = `/orders?role=${seller > 0 ? 'seller' : 'buyer'}`;
+  } catch {
+    /* order counts are optional, the page still works without them */
+  }
 }
 
 async function initAccount() {
-  const container = $('#account-area');
-  if (!container) return;
+  const area = $('#account-area');
+  if (!area) return;
 
   try {
     const user = await getCurrentUser();
-    user ? renderUser(container, user) : renderGuest(container);
+    if (user) {
+      showUser(user);
+      showOrderBadge();
+    } else {
+      showGuest();
+    }
   } catch {
-    renderGuest(container); // lỗi mạng: vẫn cho người dùng bấm đăng nhập
+    showGuest(); // network error: still let the user click login
   }
 
-  container.addEventListener('click', async (e) => {
+  area.addEventListener('click', async (e) => {
     if (!e.target.closest('[data-action="logout"]')) return;
     try {
       await logout();
@@ -88,28 +104,44 @@ async function initAccount() {
     }
   });
 
-  // Bấm ra ngoài thì đóng menu <details>
+  // Clicking outside closes the <details> menu
   document.addEventListener('click', (e) => {
-    const menu = $('.account-menu[open]', container);
-    if (menu && !menu.contains(e.target)) menu.removeAttribute('open');
+    const menu = $('#account-user');
+    if (menu.open && !menu.contains(e.target)) menu.open = false;
   });
 }
 
 // ---------------------------------------------------------
-//  Tìm kiếm + lịch sử
+//  Search + history
 // ---------------------------------------------------------
-/** Bỏ dấu để lọc lịch sử: gõ "dien" vẫn gợi ý "điện thoại" */
+/** Strip diacritics to filter the history: typing "dien" still suggests "điện thoại" */
 const normalize = (str) =>
   str.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().trim();
+
+/** Build one history row from <template id="tpl-history-item"> */
+function createHistoryItem(term, isActive) {
+  const item = cloneTemplate('tpl-history-item');
+  item.classList.toggle('is-active', isActive);
+  item.setAttribute('aria-selected', String(isActive));
+
+  item.querySelector('[data-term]').dataset.term = term;
+  item.querySelector('[data-field="term"]').textContent = term;
+
+  const removeBtn = item.querySelector('[data-remove]');
+  removeBtn.dataset.remove = term;
+  removeBtn.setAttribute('aria-label', `Xóa "${term}" khỏi lịch sử`);
+  return item;
+}
 
 function initSearch({ onSearch, liveSearch }) {
   const form = $('#search-form');
   if (!form) return;
   const input = $('#search-input', form);
   const dropdown = $('#search-history', form);
-  let activeIndex = -1; // phần tử đang chọn bằng phím mũi tên
+  const list = $('#search-history-list', form);
+  let activeIndex = -1; // row selected with the arrow keys
 
-  // Điền sẵn từ khóa trên URL (?q=...)
+  // Prefill the keyword from the URL (?q=...)
   input.value = new URLSearchParams(window.location.search).get('q') ?? '';
 
   const getMatches = () => {
@@ -127,33 +159,12 @@ function initSearch({ onSearch, liveSearch }) {
     const matches = getMatches();
     if (matches.length === 0) return closeDropdown();
 
-    dropdown.innerHTML = `
-      <div class="search__dropdown-head">
-        <span>Tìm kiếm gần đây</span>
-        <button type="button" class="link-btn" data-clear>Xóa tất cả</button>
-      </div>
-      <ul role="listbox" aria-label="Lịch sử tìm kiếm">
-        ${matches
-          .map(
-            (term, i) => `
-          <li class="search__history-item ${i === activeIndex ? 'is-active' : ''}"
-              role="option" aria-selected="${i === activeIndex}">
-            <button type="button" class="search__history-term" data-term="${escapeHtml(term)}">
-              <i class="bi bi-clock-history" aria-hidden="true"></i> ${escapeHtml(term)}
-            </button>
-            <button type="button" class="toast__close" data-remove="${escapeHtml(term)}"
-                    aria-label="Xóa '${escapeHtml(term)}' khỏi lịch sử">
-              <i class="bi bi-x" aria-hidden="true"></i>
-            </button>
-          </li>`,
-          )
-          .join('')}
-      </ul>`;
+    list.replaceChildren(...matches.map((term, i) => createHistoryItem(term, i === activeIndex)));
     dropdown.hidden = false;
     input.setAttribute('aria-expanded', 'true');
   };
 
-  /** Thực hiện tìm kiếm (lưu lịch sử nếu là tìm chính thức) */
+  /** Run a search (saved to history when it is a real search) */
   const runSearch = (term, { saveHistory = true } = {}) => {
     const keyword = term.trim();
     if (saveHistory && keyword) searchHistory.add(keyword);
@@ -163,7 +174,7 @@ function initSearch({ onSearch, liveSearch }) {
     else window.location.href = keyword ? `/?q=${encodeURIComponent(keyword)}` : '/';
   };
 
-  // Tìm kiếm trực tiếp khi gõ (chỉ trang chủ bật), debounce 500ms
+  // Live search while typing (only enabled on the home page), 500ms debounce
   const liveHandler = debounce(() => runSearch(input.value, { saveHistory: false }), 500);
 
   form.addEventListener('submit', (e) => {
@@ -180,7 +191,7 @@ function initSearch({ onSearch, liveSearch }) {
     if (liveSearch && onSearch) liveHandler();
   });
 
-  // Điều hướng dropdown bằng bàn phím
+  // Keyboard navigation in the dropdown
   input.addEventListener('keydown', (e) => {
     const matches = dropdown.hidden ? [] : getMatches();
 
@@ -200,8 +211,8 @@ function initSearch({ onSearch, liveSearch }) {
     }
   });
 
-  // Event delegation cho các nút trong dropdown
-  dropdown.addEventListener('mousedown', (e) => e.preventDefault()); // giữ focus ở input
+  // Event delegation for the buttons in the dropdown
+  dropdown.addEventListener('mousedown', (e) => e.preventDefault()); // keep focus in the input
   dropdown.addEventListener('click', (e) => {
     const termBtn = e.target.closest('[data-term]');
     const removeBtn = e.target.closest('[data-remove]');
@@ -222,19 +233,27 @@ function initSearch({ onSearch, liveSearch }) {
 }
 
 /**
- * Khởi tạo header.
+ * Initialize the header.
  * @param {object} [options]
- * @param {(keyword: string) => void} [options.onSearch] Trang tự xử lý tìm kiếm (không thì chuyển về trang chủ)
- * @param {boolean} [options.liveSearch] Tìm ngay khi gõ (debounce)
+ * @param {(keyword: string) => void} [options.onSearch] The page handles searching itself (otherwise go to the home page)
+ * @param {boolean} [options.liveSearch] Search while typing (debounced)
  */
 export function initHeader({ onSearch, liveSearch = false } = {}) {
   initThemeToggle($('#theme-toggle'));
   initCounters();
   initSearch({ onSearch, liveSearch });
   initAccount();
+
+  // Message left by the previous page (e.g. "Đăng nhập thành công")
+  const flash = consumeFlash();
+  if (flash) showToast(flash.message, flash.type, 4500); // a bit longer since the page just loaded
+
+  // Year in the footer (the footer is shared too)
+  const year = $('#year');
+  if (year) year.textContent = new Date().getFullYear();
 }
 
-/** Đồng bộ ô tìm kiếm khi trang đổi từ khóa bằng cách khác (vd: bấm xóa chip) */
+/** Sync the search box when the page changes the keyword some other way (e.g. removing a chip) */
 export function setSearchValue(value) {
   const input = $('#search-input');
   if (input) input.value = value;

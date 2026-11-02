@@ -1,87 +1,83 @@
 /**
- * Render thẻ tin đăng thành chuỗi HTML (dùng template literal).
- * Mọi dữ liệu người dùng nhập đều qua escapeHtml trước khi chèn.
+ * Listing card. The HTML structure lives in the page's <template id="tpl-listing-card">
+ * and <template id="tpl-listing-skeleton">; this file only fills in the data.
  */
 import { assetUrl } from '../config.js';
-import { escapeHtml } from '../utils/dom.js';
+import { cloneTemplate, fillFields } from '../utils/template.js';
 import { formatVND, formatUSD, timeAgo, CONDITION_LABELS } from '../utils/format.js';
 
-/** Link tới trang chi tiết tin */
+/** Link to the listing detail page */
 export const listingUrl = (id) => `/product?id=${encodeURIComponent(id)}`;
 
 /**
- * @param {object} listing  Dữ liệu từ API (hoặc snapshot trong LocalStorage)
+ * Create a listing card element.
+ * @param {object} listing  Data from the API (or a LocalStorage snapshot)
  * @param {object} [options]
  * @param {boolean} [options.isFavorite]
- * @param {number|null} [options.usdRate]  Có tỷ giá thì hiện giá quy đổi USD
+ * @param {number|null} [options.usdRate]  When an exchange rate is given, show the USD price
+ * @returns {HTMLElement}
  */
-export function renderListingCard(listing, { isFavorite = false, usdRate = null } = {}) {
+export function createListingCard(listing, { isFavorite = false, usdRate = null } = {}) {
   const { id, title, price, thumbnail, province, condition, createdAt } = listing;
-  const icon = listing.category?.icon ?? listing.categoryIcon ?? 'bi-box-seam';
-  const safeTitle = escapeHtml(title);
+  const card = cloneTemplate('tpl-listing-card');
+  card.dataset.id = id;
 
-  const media = thumbnail
-    ? `<img src="${escapeHtml(assetUrl(thumbnail))}" alt="${safeTitle}" loading="lazy">`
-    : `<span class="listing-card__placeholder"><i class="bi ${escapeHtml(icon)}" aria-hidden="true"></i></span>`;
+  fillFields(card, {
+    title,
+    price: formatVND(price),
+    usd: formatUSD(price, usdRate),
+    province: province ?? '',
+    time: createdAt ? timeAgo(createdAt) : '',
+  });
 
-  const conditionBadge = CONDITION_LABELS[condition]
-    ? `<span class="badge badge--${condition} listing-card__condition">${CONDITION_LABELS[condition]}</span>`
-    : '';
+  card.querySelector('.listing-card__link').href = listingUrl(id);
+  card.querySelector('[data-field="usd"]').dataset.usd = Number(price) || 0;
 
-  return `
-    <article class="listing-card" data-id="${id}">
-      <div class="listing-card__media">
-        ${media}
-        ${conditionBadge}
-      </div>
-      <button type="button"
-              class="listing-card__favorite ${isFavorite ? 'is-active' : ''}"
-              data-action="favorite"
-              aria-pressed="${isFavorite}"
-              aria-label="${isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}">
-        <i class="bi ${isFavorite ? 'bi-heart-fill' : 'bi-heart'}" aria-hidden="true"></i>
-      </button>
-      <div class="listing-card__body">
-        <h3 class="listing-card__title">
-          <a class="listing-card__link" href="${listingUrl(id)}">${safeTitle}</a>
-        </h3>
-        <p class="listing-card__price">
-          <span>${formatVND(price)}</span>
-          <span class="listing-card__usd" data-usd="${Number(price) || 0}">${formatUSD(price, usdRate)}</span>
-        </p>
-        <p class="listing-card__meta">
-          <span><i class="bi bi-geo-alt" aria-hidden="true"></i> ${escapeHtml(province ?? '')}</span>
-          ${createdAt ? `<time datetime="${escapeHtml(createdAt)}">${timeAgo(createdAt)}</time>` : ''}
-        </p>
-      </div>
-    </article>`;
+  const time = card.querySelector('[data-field="time"]');
+  if (createdAt) time.dateTime = createdAt;
+
+  // Image: show the <img> if there is one, otherwise the category icon
+  if (thumbnail) {
+    const img = card.querySelector('.listing-card__img');
+    img.src = assetUrl(thumbnail);
+    img.alt = title;
+    img.hidden = false;
+    card.querySelector('.listing-card__placeholder').hidden = true;
+  } else {
+    const icon = listing.category?.icon ?? listing.categoryIcon;
+    if (icon) card.querySelector('.listing-card__placeholder .bi').className = `bi ${icon}`;
+  }
+
+  // Condition badge: the badge--new / badge--like_new / badge--used classes already exist in the CSS
+  const badge = card.querySelector('.listing-card__condition');
+  if (CONDITION_LABELS[condition]) {
+    badge.textContent = CONDITION_LABELS[condition];
+    badge.classList.add(`badge--${condition}`);
+    badge.hidden = false;
+  }
+
+  setFavoriteButton(card.querySelector('[data-action="favorite"]'), isFavorite);
+  return card;
 }
 
-/** Cập nhật giá USD cho các thẻ đã render (khi tỷ giá về sau danh sách) */
+/**
+ * Update the heart button. The empty/filled heart icon is switched by CSS based on aria-pressed.
+ */
+export function setFavoriteButton(button, active) {
+  button.setAttribute('aria-pressed', String(active));
+  button.setAttribute('aria-label', active ? 'Bỏ yêu thích' : 'Thêm vào yêu thích');
+}
+
+/** Update the USD price of cards already rendered (when the rate arrives after the list) */
 export function applyUsdRate(root, rate) {
   root.querySelectorAll('[data-usd]').forEach((el) => {
     el.textContent = formatUSD(el.dataset.usd, rate);
   });
 }
 
-/** Cập nhật trạng thái nút tim của một thẻ mà không render lại cả danh sách */
-export function setFavoriteButton(button, active) {
-  button.classList.toggle('is-active', active);
-  button.setAttribute('aria-pressed', String(active));
-  button.setAttribute('aria-label', active ? 'Bỏ yêu thích' : 'Thêm vào yêu thích');
-  button.querySelector('.bi').className = `bi ${active ? 'bi-heart-fill' : 'bi-heart'}`;
-}
-
-/** Khung xám khi đang tải */
-export function renderSkeletonCards(count = 8) {
-  const card = `
-    <div class="listing-card" aria-hidden="true">
-      <div class="skeleton skeleton--media"></div>
-      <div class="listing-card__body">
-        <div class="skeleton skeleton--line"></div>
-        <div class="skeleton skeleton--line skeleton--short"></div>
-        <div class="skeleton skeleton--line skeleton--short"></div>
-      </div>
-    </div>`;
-  return card.repeat(count);
+/** N skeleton cards while loading */
+export function createSkeletonCards(count = 8) {
+  const fragment = document.createDocumentFragment();
+  for (let i = 0; i < count; i += 1) fragment.append(cloneTemplate('tpl-listing-skeleton'));
+  return fragment;
 }

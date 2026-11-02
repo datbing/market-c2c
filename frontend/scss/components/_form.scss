@@ -1,10 +1,13 @@
 // =========================================================
-//  FORM: ô nhập, select, nhóm radio
+//  FORMS: inputs, selects, radio groups
 // =========================================================
 @use '../abstracts' as *;
 
 .form-group {
   display: grid;
+  // Push the label + input to the top. Without this, when the group is stretched taller
+  // (next to a group with an extra hint line) the extra space is split between rows -> misaligned inputs
+  align-content: start;
   gap: $space-2;
 
   & + & {
@@ -37,7 +40,7 @@
   }
 }
 
-// Hai ô giá "từ - đến" nằm cùng hàng
+// The two "from - to" price inputs on the same row
 .form-range {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -46,7 +49,7 @@
   color: var(--color-text-muted);
 }
 
-// Nhóm lựa chọn dạng "viên thuốc" (radio ẩn, label làm nút)
+// "Pill" choice group (hidden radio, the label acts as the button)
 .choice-group {
   display: flex;
   flex-wrap: wrap;
@@ -88,5 +91,196 @@
 
   &--error {
     color: var(--color-danger);
+  }
+}
+
+// ---------- Input error state ----------
+.form-control.is-invalid {
+  border-color: var(--color-danger);
+
+  &:focus {
+    box-shadow: 0 0 0 3px rgb(229 57 53 / 18%);
+  }
+}
+
+// The * of required fields
+.form-label abbr {
+  color: var(--color-danger);
+  text-decoration: none;
+}
+
+// Two fields per row from 576px (e.g. email + phone number)
+.form-row {
+  display: grid;
+  align-items: start; // each column is as tall as its content, the inputs line up
+  gap: $space-4;
+  margin-top: $space-4;
+
+  @include respond-to(sm) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-group + .form-group {
+    margin-top: 0;
+  }
+
+  & + .form-group {
+    margin-top: $space-4;
+  }
+}
+
+// ---------- Password field with a show/hide button ----------
+.password-field {
+  position: relative;
+
+  .form-control {
+    padding-right: 44px;
+
+    // Hide the browser's built-in reveal / clear buttons (Edge) -> only use the page's own button
+    &::-ms-reveal,
+    &::-ms-clear {
+      display: none;
+    }
+  }
+
+  &__toggle {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    transform: translateY(-50%);
+    @include flex-center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: $radius-sm;
+    background: none;
+    color: var(--color-text-muted);
+
+    &:hover {
+      color: var(--color-text);
+    }
+
+    // The closed eye icon only shows while the password is visible (aria-pressed=true)
+    .bi-eye-slash {
+      display: none;
+    }
+
+    &[aria-pressed='true'] {
+      .bi-eye {
+        display: none;
+      }
+
+      .bi-eye-slash {
+        display: inline-block;
+      }
+    }
+  }
+}
+
+// ---------- Password strength meter (<meter>) ----------
+.strength {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  min-height: 18px;
+
+  &__meter {
+    flex: 1;
+    height: 6px;
+    border: 0;
+    border-radius: $radius-pill;
+    background: var(--color-surface-2);
+    // Colors by the low / high / optimum ranges chosen by the browser
+    &::-webkit-meter-bar {
+      height: 6px;
+      border: 0;
+      border-radius: $radius-pill;
+      background: var(--color-border);
+    }
+
+    &::-webkit-meter-even-less-good-value {
+      background: $color-danger;
+    }
+
+    &::-webkit-meter-suboptimum-value {
+      background: $color-warning;
+    }
+
+    &::-webkit-meter-optimum-value {
+      background: $color-success;
+    }
+  }
+
+  &__label {
+    min-width: 120px;
+    font-size: $font-size-sm;
+    color: var(--color-text-muted);
+    text-align: right;
+
+    // No password typed yet -> takes no space, the meter spans the full width
+    &:empty {
+      min-width: 0;
+    }
+  }
+}
+
+// ---------- Checkbox with a label ----------
+.checkbox {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: $space-2;
+  font-size: $font-size-sm;
+  cursor: pointer;
+
+  input {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 1px 0 0;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+  }
+}
+
+// ---------- Label + character counter on one row ----------
+.form-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.char-counter {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums; // digits keep the same width while counting
+
+  &.is-near-limit {
+    color: var(--color-warning);
+    font-weight: 600;
+  }
+}
+
+textarea.form-control {
+  min-height: 140px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+// Input with a unit suffix at the end (e.g. the currency sign)
+.input-affix {
+  position: relative;
+
+  .form-control {
+    padding-right: 36px;
+  }
+
+  &__suffix {
+    position: absolute;
+    top: 50%;
+    right: $space-3;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    pointer-events: none;
   }
 }

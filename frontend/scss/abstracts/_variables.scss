@@ -1,15 +1,15 @@
 // =========================================================
-//  BIẾN SCSS DÙNG CHUNG (màu, breakpoint, khoảng cách, bo góc...)
-//  Màu thay đổi theo theme sáng/tối được khai báo bằng CSS custom
-//  properties trong base/_theme.scss, dựa trên các biến ở đây.
+//  SHARED SCSS VARIABLES (colors, breakpoints, spacing, radii...)
+//  Colors that change with the light/dark theme are declared as CSS custom
+//  properties in base/_theme.scss, based on the variables here.
 // =========================================================
 
-// ---------- Màu thương hiệu ----------
+// ---------- Brand colors ----------
 $color-primary: #ee4d2d;
 $color-primary-dark: #d73211;
 $color-primary-soft: #fff1ee;
 
-// ---------- Màu trạng thái ----------
+// ---------- Status colors ----------
 $color-success: #26aa99;
 $color-warning: #f6a700;
 $color-danger: #e53935;
@@ -33,13 +33,13 @@ $breakpoints: (
   xl: 1200px,
 );
 
-// ---------- Bố cục ----------
+// ---------- Layout ----------
 $container-max: 1200px;
 $container-padding: 16px;
 $header-height: 64px;
 $sidebar-width: 260px;
 
-// ---------- Khoảng cách (bội số của 4px) ----------
+// ---------- Spacing (multiples of 4px) ----------
 $space-1: 4px;
 $space-2: 8px;
 $space-3: 12px;
@@ -48,16 +48,16 @@ $space-5: 24px;
 $space-6: 32px;
 $space-7: 48px;
 
-// ---------- Bo góc ----------
+// ---------- Border radius ----------
 $radius-sm: 4px;
 $radius: 8px;
 $radius-lg: 12px;
 $radius-pill: 999px;
 
-// ---------- Hiệu ứng ----------
+// ---------- Effects ----------
 $transition: 0.2s ease;
 
-// ---------- Thứ tự lớp (z-index) ----------
+// ---------- Stacking order (z-index) ----------
 $z-header: 100;
 $z-dropdown: 150;
 $z-drawer: 200;

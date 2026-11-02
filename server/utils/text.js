@@ -1,19 +1,19 @@
 /**
- * Tiện ích xử lý chuỗi tiếng Việt.
+ * Vietnamese string helpers.
  */
 
-/** Bỏ dấu tiếng Việt: "Điện thoại" -> "Dien thoai" */
+/** Strip Vietnamese diacritics: "Điện thoại" -> "Dien thoai" */
 export function removeVietnameseTones(str = '') {
   return String(str)
-    .normalize('NFD') // tách chữ và dấu thành ký tự riêng
-    .replace(/[\u0300-\u036f]/g, '') // xóa các ký tự dấu
+    .normalize('NFD') // split letters and diacritics into separate characters
+    .replace(/[\u0300-\u036f]/g, '') // remove the diacritic characters
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D');
 }
 
 /**
- * Tạo chuỗi tìm kiếm: bỏ dấu + chữ thường + gộp khoảng trắng.
- * Lưu vào cột `search_text` để người dùng gõ không dấu vẫn tìm ra.
+ * Build the search string: no diacritics + lowercase + collapsed whitespace.
+ * Stored in the `search_text` column so users typing without diacritics still find matches.
  */
 export function toSearchText(...parts) {
   return removeVietnameseTones(parts.filter(Boolean).join(' '))
@@ -22,7 +22,7 @@ export function toSearchText(...parts) {
     .trim();
 }
 
-/** Tạo slug cho URL: "Điện thoại & Máy tính bảng" -> "dien-thoai-may-tinh-bang" */
+/** Build a URL slug: "Điện thoại & Máy tính bảng" -> "dien-thoai-may-tinh-bang" */
 export function slugify(str = '') {
   return removeVietnameseTones(str)
     .toLowerCase()

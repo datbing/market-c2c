@@ -1,0 +1,88 @@
+// =========================================================
+//  CANVAS CHARTS (components/charts.js)
+// =========================================================
+@use '../abstracts' as *;
+
+.chart {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+
+  canvas {
+    display: block;
+    max-width: 100%;
+  }
+
+  // Hover tooltip (JS sets left / top)
+  &__tooltip {
+    position: absolute;
+    z-index: 2;
+    display: grid;
+    gap: 2px;
+    min-width: 120px;
+    padding: $space-2 $space-3;
+    border: 1px solid var(--color-border);
+    border-radius: $radius;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+    font-size: 0.75rem;
+    pointer-events: none;
+    white-space: nowrap;
+
+    div {
+      display: flex;
+      align-items: center;
+      gap: $space-2;
+    }
+
+    // First line is the label (date / name)
+    div:first-child {
+      font-weight: 700;
+    }
+  }
+
+  // Color dot in the tooltip / legend
+  &__dot {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-text-muted);
+
+    &--primary {
+      background: var(--color-primary);
+    }
+
+    &--info {
+      background: var(--color-info);
+    }
+  }
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2 $space-4;
+  margin-bottom: $space-3;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+
+  strong {
+    margin-left: auto;
+    color: var(--color-text);
+  }
+
+  &--column {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    margin: 0;
+    font-size: $font-size-sm;
+  }
+}

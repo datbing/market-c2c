@@ -1,5 +1,5 @@
 // =========================================================
-//  PHÂN TRANG
+//  PAGINATION
 // =========================================================
 @use '../abstracts' as *;
 
@@ -36,6 +36,11 @@
       color: var(--color-on-primary);
       font-weight: 700;
     }
+  }
+
+  // Page number container: "transparent" to flexbox so the buttons share one row
+  &__pages {
+    display: contents;
   }
 
   &__gap {

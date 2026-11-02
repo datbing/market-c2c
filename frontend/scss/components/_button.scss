@@ -1,5 +1,5 @@
 // =========================================================
-//  NÚT BẤM: .btn + biến thể (--primary, --outline, --ghost, --white)
+//  BUTTONS: .btn + variants (--primary, --outline, --ghost, --white)
 // =========================================================
 @use '../abstracts' as *;
 
@@ -33,9 +33,10 @@
     @include button-variant(transparent, var(--color-text), var(--color-surface-2), var(--color-border));
   }
 
-  // Nút trắng chữ cam, dùng trên nền cam (header, banner)
+  // White button with orange text, used on orange backgrounds (header, banner)
   &--white {
-    @include button-variant(#fff, $color-primary, #fff3ef, #fff);
+    // Becomes an orange button in the dark theme (see --btn-white-* in base/_theme.scss)
+    @include button-variant(var(--btn-white-bg), var(--btn-white-fg), var(--btn-white-hover));
   }
 
   &--sm {
@@ -48,7 +49,7 @@
   }
 }
 
-// Nút dạng chữ (link)
+// Text-style button (link)
 .link-btn {
   padding: 0;
   border: 0;
@@ -58,5 +59,44 @@
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+.btn--lg {
+  padding: $space-3 $space-5;
+  font-size: 1rem;
+}
+
+// ---------- Spinner while sending (add the .is-loading class to the button) ----------
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.btn__spinner {
+  display: none;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.btn.is-loading {
+  cursor: progress;
+
+  .btn__spinner {
+    display: inline-block;
+  }
+}
+
+// Button for irreversible actions (delete...)
+.btn--danger {
+  @include button-variant(var(--color-danger), #fff, var(--color-danger));
+
+  &:hover:not(:disabled) {
+    filter: brightness(0.92);
   }
 }

@@ -1,10 +1,10 @@
 // =========================================================
-//  MIXIN DÙNG CHUNG
+//  SHARED MIXINS
 // =========================================================
 @use 'sass:map';
 @use 'variables' as *;
 
-/// Media query mobile-first: áp dụng từ breakpoint trở lên.
+/// Mobile-first media query: applies from the breakpoint up.
 /// @example scss  @include respond-to(md) { ... }
 @mixin respond-to($name) {
   $value: map.get($breakpoints, $name);
@@ -18,7 +18,7 @@
   }
 }
 
-/// Media query ngược lại: áp dụng khi nhỏ hơn breakpoint.
+/// Reverse media query: applies below the breakpoint.
 @mixin respond-below($name) {
   $value: map.get($breakpoints, $name);
 
@@ -31,7 +31,7 @@
   }
 }
 
-/// Căn giữa bằng flexbox
+/// Center with flexbox
 @mixin flex-center($gap: 0) {
   display: flex;
   align-items: center;
@@ -42,7 +42,7 @@
   }
 }
 
-/// Cắt chữ sau N dòng, thêm dấu "..."
+/// Truncate text after N lines, adding "..."
 @mixin line-clamp($lines: 2) {
   display: -webkit-box;
   -webkit-line-clamp: $lines;
@@ -51,7 +51,7 @@
   overflow: hidden;
 }
 
-/// Ẩn phần tử khỏi màn hình nhưng trình đọc màn hình vẫn đọc được
+/// Hide an element visually while keeping it readable by screen readers
 @mixin visually-hidden {
   position: absolute !important;
   width: 1px;
@@ -64,7 +64,16 @@
   border: 0;
 }
 
-/// Viền focus rõ ràng khi điều hướng bằng bàn phím
+/// Tidy horizontal scroll area (category strip, recently viewed): thin scrollbar,
+/// scrolling to the end does not drag the whole page
+@mixin scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/// Clear focus outline for keyboard navigation
 @mixin focus-ring {
   &:focus-visible {
     outline: 2px solid var(--color-primary);
@@ -72,7 +81,7 @@
   }
 }
 
-/// Khối nền "thẻ" (card) dùng chung
+/// Shared "card" surface
 @mixin surface($padding: $space-4) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -80,7 +89,7 @@
   padding: $padding;
 }
 
-/// Biến thể màu cho nút
+/// Button color variants
 @mixin button-variant($bg, $color, $hover-bg, $border: $bg) {
   background: $bg;
   color: $color;

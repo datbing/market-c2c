@@ -1,10 +1,10 @@
 // =========================================================
-//  NHÃN (badge) + CHIP bộ lọc đang áp dụng
+//  BADGES + active filter CHIPS
 // =========================================================
 @use 'sass:map';
 @use '../abstracts' as *;
 
-// Màu cho từng tình trạng hàng -> sinh class bằng vòng lặp @each
+// Colors per item condition -> classes generated with an @each loop
 $condition-colors: (
   new: $color-success,
   like_new: $color-info,
@@ -50,6 +50,40 @@ $condition-colors: (
 
     &:hover {
       background: rgb(238 77 45 / 20%);
+    }
+  }
+}
+
+// Listing status badges: .badge--status-active, --status-sold... (generated with @each)
+$status-colors: (
+  pending: $color-warning,
+  active: $color-success,
+  sold: $color-info,
+  hidden: #8a8f98,
+  rejected: $color-danger,
+);
+
+.badge {
+  @each $name, $color in $status-colors {
+    &--status-#{$name} {
+      background: $color;
+    }
+  }
+}
+
+// Order status badges: .badge--order-pending, --order-completed... (generated with @each)
+$order-colors: (
+  pending: $color-warning,
+  confirmed: $color-info,
+  shipping: #7b61ff,
+  completed: $color-success,
+  cancelled: #8a8f98,
+);
+
+.badge {
+  @each $name, $color in $order-colors {
+    &--order-#{$name} {
+      background: $color;
     }
   }
 }

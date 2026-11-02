@@ -1,11 +1,13 @@
 /**
- * Render thanh phân trang. Trang hiện tại được click sẽ xử lý bằng
- * event delegation ở trang sử dụng (đọc data-page của nút).
+ * Pagination bar. The prev/next buttons are in the HTML (<nav id="pagination">),
+ * page number buttons are cloned from <template id="tpl-page-number"> and <template id="tpl-page-gap">.
+ * Clicks are handled with event delegation by the page using it (reads data-page).
  */
+import { cloneTemplate } from '../utils/template.js';
 
 /**
- * Tính danh sách số trang cần hiện, rút gọn bằng "…" khi nhiều trang.
- * Ví dụ trang 6/20 -> [1, '…', 5, 6, 7, '…', 20]
+ * Compute the page numbers to show, collapsed with "…" when there are many pages.
+ * Example page 6/20 -> [1, '…', 5, 6, 7, '…', 20]
  */
 export function getPageItems(page, totalPages, siblings = 1) {
   const pages = new Set([1, totalPages]);
@@ -15,7 +17,7 @@ export function getPageItems(page, totalPages, siblings = 1) {
 
   const sorted = [...pages].sort((a, b) => a - b);
 
-  // Chèn "…" vào chỗ bị nhảy cóc
+  // Insert "…" where pages are skipped
   return sorted.reduce((items, p, index) => {
     if (index > 0 && p - sorted[index - 1] > 1) items.push('…');
     items.push(p);
@@ -23,33 +25,34 @@ export function getPageItems(page, totalPages, siblings = 1) {
   }, []);
 }
 
-/** @returns {string} HTML các nút phân trang ('' nếu chỉ có 1 trang) */
-export function renderPagination({ page, totalPages }) {
-  if (totalPages <= 1) return '';
+/**
+ * Update the pagination bar. Hidden when there is only one page.
+ * @param {HTMLElement} nav  the <nav class="pagination"> element
+ */
+export function renderPagination(nav, { page, totalPages }) {
+  nav.hidden = totalPages <= 1;
+  if (nav.hidden) return;
 
-  const button = (target, label, { disabled = false, current = false, aria } = {}) => `
-    <button type="button" class="pagination__btn ${current ? 'is-current' : ''}"
-            data-page="${target}" ${disabled ? 'disabled' : ''}
-            ${current ? 'aria-current="page"' : ''}
-            ${aria ? `aria-label="${aria}"` : ''}>${label}</button>`;
+  const prev = nav.querySelector('[data-nav="prev"]');
+  const next = nav.querySelector('[data-nav="next"]');
+  prev.dataset.page = page - 1;
+  prev.disabled = page <= 1;
+  next.dataset.page = page + 1;
+  next.disabled = page >= totalPages;
 
-  const numbers = getPageItems(page, totalPages)
-    .map((item) =>
-      item === '…'
-        ? '<span class="pagination__gap" aria-hidden="true">…</span>'
-        : button(item, item, { current: item === page, aria: `Trang ${item}` }),
-    )
-    .join('');
+  const numbers = getPageItems(page, totalPages).map((item) => {
+    if (item === '…') return cloneTemplate('tpl-page-gap');
 
-  return [
-    button(page - 1, '<i class="bi bi-chevron-left" aria-hidden="true"></i>', {
-      disabled: page <= 1,
-      aria: 'Trang trước',
-    }),
-    numbers,
-    button(page + 1, '<i class="bi bi-chevron-right" aria-hidden="true"></i>', {
-      disabled: page >= totalPages,
-      aria: 'Trang sau',
-    }),
-  ].join('');
+    const btn = cloneTemplate('tpl-page-number');
+    btn.textContent = item;
+    btn.dataset.page = item;
+    btn.setAttribute('aria-label', `Trang ${item}`);
+    if (item === page) {
+      btn.classList.add('is-current');
+      btn.setAttribute('aria-current', 'page');
+    }
+    return btn;
+  });
+
+  nav.querySelector('[data-pages]').replaceChildren(...numbers);
 }

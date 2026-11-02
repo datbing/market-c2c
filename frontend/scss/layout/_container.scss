@@ -10,7 +10,7 @@
   padding-inline: $container-padding;
 }
 
-// <main> chiếm phần còn lại để footer luôn nằm dưới cùng
+// <main> takes the remaining space so the footer always stays at the bottom
 .site-main {
   flex: 1;
   padding-block: $space-4 $space-6;
@@ -20,7 +20,7 @@
   }
 }
 
-// Tiêu đề của từng khối nội dung
+// Heading of each content section
 .section-heading {
   display: flex;
   align-items: center;
