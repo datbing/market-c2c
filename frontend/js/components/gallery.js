@@ -3,13 +3,11 @@
  * The HTML is written in product.html (main image, prev/next buttons, thumbnail strip,
  * zoom <dialog>), thumbnails are cloned from <template id="tpl-gallery-thumb">.
  *
- * Controls: click a thumbnail, prev/next buttons, Left/Right arrow keys, swipe on phones,
+ * Controls: click a thumbnail, prev/next buttons,
  * click the main image to open the zoom <dialog> (Esc closes it - built-in <dialog> behavior).
  */
 import { assetUrl } from '../config.js';
 import { cloneTemplate } from '../utils/template.js';
-
-const SWIPE_MIN_DISTANCE = 40; // px
 
 export class Gallery {
   index = 0;
@@ -146,35 +144,7 @@ export class Gallery {
       if (nav) nav.dataset.galleryNav === 'next' ? this.next() : this.prev();
     });
 
-
-    // Arrow keys while focus is inside the gallery
-    this.root.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight') this.next();
-      if (e.key === 'ArrowLeft') this.prev();
-    });
-
-    // Swipe left/right on touch screens.
-    // The browser still fires a "click" after a swipe -> use a flag so the zoom dialog does not open by mistake
-    let startX = null;
-    let swiped = false;
-    open.addEventListener('pointerdown', (e) => {
-      startX = e.clientX;
-    });
-    open.addEventListener('pointerup', (e) => {
-      if (startX === null) return;
-      const distance = e.clientX - startX;
-      startX = null;
-      if (Math.abs(distance) < SWIPE_MIN_DISTANCE) return;
-      swiped = true;
-      distance < 0 ? this.next() : this.prev();
-    });
-    open.addEventListener('click', () => {
-      if (swiped) {
-        swiped = false;
-        return;
-      }
-      this.openLightbox();
-    });
+    open.addEventListener('click', () => this.openLightbox());
 
     if (!dialog) return;
     dialog.addEventListener('click', (e) => {
@@ -182,10 +152,6 @@ export class Gallery {
       if (nav) nav.dataset.lightboxNav === 'next' ? this.next() : this.prev();
       // Click on the dark area outside the image -> close
       else if (e.target === dialog) dialog.close();
-    });
-    dialog.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight') this.next();
-      if (e.key === 'ArrowLeft') this.prev();
     });
   }
 }

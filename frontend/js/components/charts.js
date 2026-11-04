@@ -211,8 +211,11 @@ export class BaseChart {
     const every = Math.ceil(46 / slot);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
+    const last = labels.length - 1;
     labels.forEach((label, i) => {
-      if (i % every !== 0 && i !== labels.length - 1) return;
+      // Always show the last label, but drop the regular one just before it when they would collide
+      const regular = i % every === 0 && (i === last || last - i >= every);
+      if (!regular && i !== last) return;
       ctx.fillText(label, left + slot * i + slot / 2, bottom + 8);
     });
 

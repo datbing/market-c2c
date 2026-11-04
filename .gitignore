@@ -4,3 +4,7 @@ uploads/*
 !uploads/.gitkeep
 *.log
 .DS_Store
+
+# Word lock / temp files
+~$*
+~WRL*.tmp

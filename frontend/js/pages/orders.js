@@ -1,8 +1,8 @@
 /**
  * ORDERS PAGE: /orders?role=buyer|seller&status=&page= (login required)
- *  - "Purchases" / "Sales" tabs, status filter with counts
+ *  - "Purchases" / "Sales" tabs + status tabs with counts (shared logic in components/list-page.js)
  *  - Progress bar: Pending -> Confirmed -> Shipping -> Completed (drawn by CSS from classes)
- *  - Action buttons by role + status (matches the TRANSITIONS table in server/controllers/order.controller.js):
+ *  - Action buttons by role + status (matches TRANSITIONS in server/controllers/order.controller.js):
  *      seller: confirm, ship, complete, cancel
  *      buyer: cancel (while pending), received (while shipping)
  *  - Completing an order -> the listing automatically becomes "Sold" (the assignment's "mark as completed")
@@ -11,16 +11,13 @@ import { $, $$ } from '../utils/dom.js';
 import { cloneTemplate, fillFields } from '../utils/template.js';
 import { formatVND, formatDate, timeAgo, ORDER_STATUS_LABELS } from '../utils/format.js';
 import { assetUrl } from '../config.js';
-import { isAbortError } from '../services/api.js';
 import { getCurrentUser, loginUrl } from '../services/auth.js';
 import { getOrders, updateOrderStatus } from '../services/orders.js';
 import { initHeader, showOrderBadge } from '../components/header.js';
-import { showToast } from '../components/toast.js';
-import { renderPagination } from '../components/pagination.js';
 import { confirmDialog } from '../components/confirm-dialog.js';
 import { listingUrl } from '../components/listing-card.js';
+import { ListPage } from '../components/list-page.js';
 
-const PAGE_SIZE = 10;
 const STEPS = ['pending', 'confirmed', 'shipping', 'completed'];
 
 /** Buttons shown for each role + order status */
@@ -65,21 +62,21 @@ const EMPTY_TEXTS = {
   seller: 'Chưa có ai đặt mua tin của bạn.',
 };
 
-class OrdersPage {
-  filters = { role: 'buyer', status: '', page: 1 };
-  orders = new Map();
-  controller = null;
+class OrdersPage extends ListPage {
+  defaults = { role: 'buyer', status: '', page: 1 };
 
   constructor() {
-    this.el = {
-      roleTabs: $('#role-tabs'),
-      statusTabs: $('#status-tabs'),
-      list: $('#order-list'),
-      loading: $('#order-loading'),
-      empty: $('#order-empty'),
-      error: $('#order-error'),
-      pagination: $('#pagination'),
-    };
+    super({
+      list: '#order-list',
+      loading: '#order-loading',
+      empty: '#order-empty',
+      error: '#order-error',
+      errorMessage: '#order-error-message',
+      retry: '#order-retry',
+      pagination: '#pagination',
+      tabs: '#status-tabs',
+      roleTabs: '#role-tabs',
+    });
   }
 
   async init() {
@@ -89,81 +86,26 @@ class OrdersPage {
       return;
     }
     initHeader();
-    this.readFilters();
-    this.bindEvents();
-    this.load();
+    this.start();
   }
 
-  readFilters() {
-    const params = new URLSearchParams(window.location.search);
+  parseFilters(params) {
     const status = params.get('status') ?? '';
-    this.filters = {
+    return {
       role: params.get('role') === 'seller' ? 'seller' : 'buyer',
       status: status in ORDER_STATUS_LABELS ? status : '',
-      page: Math.max(1, Number.parseInt(params.get('page'), 10) || 1),
+      page: ListPage.readPage(params),
     };
   }
 
-  setFilters(patch) {
-    this.filters = { ...this.filters, page: 1, ...patch };
-    const { role, status, page } = this.filters;
-    const params = new URLSearchParams({ role });
-    if (status) params.set('status', status);
-    if (page > 1) params.set('page', page);
-    history.replaceState(null, '', `${window.location.pathname}?${params}`);
-    this.load();
-  }
-
-  showState(state) {
-    const { list, loading, empty, error, pagination } = this.el;
-    loading.hidden = state !== 'loading';
-    list.hidden = state !== 'list';
-    empty.hidden = state !== 'empty';
-    error.hidden = state !== 'error';
-    if (state !== 'list') pagination.hidden = true;
-  }
-
-  async load() {
-    this.controller?.abort();
-    const controller = new AbortController();
-    this.controller = controller;
-
-    this.renderRoleTabs();
-    if (this.el.list.hidden) this.showState('loading');
-    else this.el.list.classList.add('is-loading');
-
-    try {
-      const { data, meta } = await getOrders({ ...this.filters, limit: PAGE_SIZE }, controller.signal);
-      if (data.length === 0 && this.filters.page > 1) {
-        this.setFilters({ page: this.filters.page - 1 });
-        return;
-      }
-      this.renderStatusTabs(meta.counts);
-      this.renderRoleBadges(meta.needAction);
-      this.renderList(data, meta);
-    } catch (err) {
-      if (isAbortError(err)) return;
-      $('#order-error-message').textContent = err.message;
-      this.showState('error');
-    } finally {
-      if (this.controller === controller) this.el.list.classList.remove('is-loading');
-    }
-  }
-
-  // =======================================================
-  //  RENDERING
-  // =======================================================
-  renderRoleTabs() {
-    $$('[data-role-tab]', this.el.roleTabs).forEach((tab) => {
-      const active = tab.dataset.roleTab === this.filters.role;
-      tab.classList.toggle('is-active', active);
-      tab.setAttribute('aria-pressed', String(active));
-    });
+  fetchPage(params, signal) {
+    this.renderRoleTabs(); // switch the Purchases / Sales tab right away, before the data arrives
+    return getOrders(params, signal);
   }
 
   /** Red number on the Purchases / Sales tabs = orders waiting for you */
-  renderRoleBadges(needAction = {}) {
-    $('[data-role-tab]', this.el.roleTabs).forEach((tab) => {
+  onData({ needAction = {} }) {
+    $$('[data-role-tab]', this.el.roleTabs).forEach((tab) => {
       const n = needAction[tab.dataset.roleTab] ?? 0;
       const badge = tab.querySelector('[data-role-badge]');
       badge.textContent = n;
@@ -172,31 +114,22 @@ class OrdersPage {
     });
   }
 
-  renderStatusTabs(counts) {
-    $$('[data-status-tab]', this.el.statusTabs).forEach((tab) => {
-      const status = tab.dataset.statusTab;
-      tab.querySelector('[data-tab-count]').textContent = counts[status || 'all'] ?? 0;
-      const active = status === this.filters.status;
+  renderRoleTabs() {
+    $$('[data-role-tab]', this.el.roleTabs).forEach((tab) => {
+      const active = tab.dataset.roleTab === this.filters.role;
       tab.classList.toggle('is-active', active);
       tab.setAttribute('aria-pressed', String(active));
     });
   }
 
-  renderList(orders, meta) {
-    this.orders = new Map(orders.map((o) => [o.id, o]));
-    if (orders.length === 0) {
-      $('#order-empty-text').textContent = this.filters.status
-        ? `Không có đơn nào "${ORDER_STATUS_LABELS[this.filters.status]}".`
-        : EMPTY_TEXTS[this.filters.role];
-      this.showState('empty');
-      return;
-    }
-    this.el.list.replaceChildren(...orders.map((order) => this.createCard(order)));
-    this.showState('list');
-    renderPagination(this.el.pagination, meta);
+  renderEmpty() {
+    const { status, role } = this.filters;
+    $('#order-empty-text').textContent = status
+      ? `Không có đơn nào "${ORDER_STATUS_LABELS[status]}".`
+      : EMPTY_TEXTS[role];
   }
 
-  createCard(order) {
+  createItem(order) {
     const card = cloneTemplate('tpl-order');
     card.dataset.id = order.id;
     const isSeller = order.myRole === 'seller';
@@ -243,8 +176,8 @@ class OrdersPage {
 
     // Buttons by role + status
     const allowed = new Set(ACTIONS[order.myRole]?.[order.status] ?? []);
-    card.querySelectorAll('[data-order-action]').forEach((btn) => {
-      btn.hidden = !allowed.has(btn.dataset.orderAction);
+    card.querySelectorAll('[data-action]').forEach((btn) => {
+      btn.hidden = !allowed.has(btn.dataset.action);
     });
     card.querySelector('.order-card__actions').hidden = allowed.size === 0;
     return card;
@@ -252,15 +185,13 @@ class OrdersPage {
 
   /** Progress bar: past steps = is-done, current step = is-current */
   renderSteps(card, status) {
-    const steps = card.querySelector('.order-steps');
-    const cancelled = card.querySelector('.order-card__cancelled');
     if (status === 'cancelled') {
-      steps.hidden = true;
-      cancelled.hidden = false;
+      card.querySelector('.order-steps').hidden = true;
+      card.querySelector('.order-card__cancelled').hidden = false;
       return;
     }
     const current = STEPS.indexOf(status);
-    steps.querySelectorAll('[data-step]').forEach((li) => {
+    card.querySelectorAll('.order-steps [data-step]').forEach((li) => {
       const index = STEPS.indexOf(li.dataset.step);
       li.classList.toggle('is-done', index < current || status === 'completed');
       li.classList.toggle('is-current', index === current && status !== 'completed');
@@ -268,51 +199,19 @@ class OrdersPage {
     });
   }
 
-  // =======================================================
-  //  ACTIONS
-  // =======================================================
-  async runAction(order, action, button) {
+  async handleAction(order, action, button) {
     const { status, confirm } = ACTION_CONFIG[action];
     if (confirm && !(await confirmDialog(confirm))) return;
-
-    button.disabled = true;
-    try {
-      const { message } = await updateOrderStatus(order.id, status);
-      showToast(message, 'success');
-      this.load();
-      showOrderBadge(); // update the orders-needing-action count in the header
-    } catch (err) {
-      showToast(err.message, 'error');
-      button.disabled = false;
-    }
+    const ok = await this.runTask(button, async () => (await updateOrderStatus(order.id, status)).message);
+    if (ok) showOrderBadge(); // update the orders-needing-action count in the header
   }
 
   bindEvents() {
+    super.bindEvents();
     this.el.roleTabs.addEventListener('click', (e) => {
       const tab = e.target.closest('[data-role-tab]');
       if (tab && tab.dataset.roleTab !== this.filters.role) this.setFilters({ role: tab.dataset.roleTab, status: '' });
     });
-
-    this.el.statusTabs.addEventListener('click', (e) => {
-      const tab = e.target.closest('[data-status-tab]');
-      if (tab) this.setFilters({ status: tab.dataset.statusTab });
-    });
-
-    this.el.list.addEventListener('click', (e) => {
-      const button = e.target.closest('[data-order-action]');
-      if (!button) return;
-      const order = this.orders.get(Number(button.closest('[data-id]').dataset.id));
-      if (order) this.runAction(order, button.dataset.orderAction, button);
-    });
-
-    this.el.pagination.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-page]');
-      if (!btn || btn.disabled) return;
-      this.setFilters({ page: Number(btn.dataset.page) });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    $('#order-retry').addEventListener('click', () => this.load());
   }
 }
 

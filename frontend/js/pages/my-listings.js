@@ -1,30 +1,21 @@
 /**
- * MY LISTINGS PAGE: /my-listings (login required)
- *  - Status tabs with counts (All / Active / Pending / Sold / Hidden / Rejected)
- *  - Search within your own listings (debounced), pagination
+ * MY LISTINGS PAGE: /my-listings?status=&q=&page= (login required)
+ *  - Status tabs with counts, search, pagination (shared logic in components/list-page.js)
  *  - Actions by status: edit, mark as sold, hide, show again, relist, delete
  *    (confirmed with a <dialog> before deleting / marking as sold)
- *  - Filters are kept in the URL (?status=&q=&page=) -> F5 / shared links open the right tab
  */
-import { $, $$, debounce } from '../utils/dom.js';
+import { $ } from '../utils/dom.js';
 import { cloneTemplate, fillFields } from '../utils/template.js';
 import { formatVND, formatDate, timeAgo, LISTING_STATUS_LABELS } from '../utils/format.js';
 import { assetUrl } from '../config.js';
-import { isAbortError } from '../services/api.js';
 import { getCurrentUser, loginUrl } from '../services/auth.js';
 import { getMyListings, updateListingStatus, deleteListing } from '../services/catalog.js';
 import { initHeader } from '../components/header.js';
-import { showToast } from '../components/toast.js';
-import { renderPagination } from '../components/pagination.js';
 import { confirmDialog } from '../components/confirm-dialog.js';
 import { listingUrl } from '../components/listing-card.js';
+import { ListPage } from '../components/list-page.js';
 
-const PAGE_SIZE = 10;
-
-/**
- * Action buttons shown for each listing status (every button already exists in the template).
- * "delete" also depends on whether the listing already has orders (handled separately).
- */
+/** Buttons shown for each listing status ("delete" is also hidden when the listing has orders) */
 const ACTIONS_BY_STATUS = {
   active: ['edit', 'sold', 'hide', 'delete'],
   hidden: ['edit', 'show', 'sold', 'delete'],
@@ -58,23 +49,22 @@ const EMPTY_TEXTS = {
   rejected: 'Không có tin nào bị từ chối.',
 };
 
-class MyListingsPage {
-  filters = { status: '', q: '', page: 1 };
-  /** Map id -> listing on screen */
-  listings = new Map();
-  controller = null;
+class MyListingsPage extends ListPage {
+  defaults = { status: '', q: '', page: 1 };
 
   constructor() {
-    this.el = {
-      tabs: $('#status-tabs'),
-      search: $('#my-search'),
-      list: $('#my-list'),
-      loading: $('#my-loading'),
-      empty: $('#my-empty'),
-      error: $('#my-error'),
-      pagination: $('#pagination'),
-      summary: $('#my-summary'),
-    };
+    super({
+      list: '#my-list',
+      loading: '#my-loading',
+      empty: '#my-empty',
+      error: '#my-error',
+      errorMessage: '#my-error-message',
+      retry: '#my-retry',
+      pagination: '#pagination',
+      tabs: '#status-tabs',
+      search: '#my-search',
+      searchForm: '#my-search-form',
+    });
   }
 
   async init() {
@@ -83,120 +73,41 @@ class MyListingsPage {
       window.location.replace(loginUrl());
       return;
     }
-
     initHeader();
-    this.readFilters();
-    this.el.search.value = this.filters.q;
-    this.bindEvents();
-    this.load();
+    this.start();
   }
 
-  readFilters() {
-    const params = new URLSearchParams(window.location.search);
+  parseFilters(params) {
     const status = params.get('status') ?? '';
-    this.filters = {
+    return {
       status: status in LISTING_STATUS_LABELS ? status : '',
       q: (params.get('q') ?? '').slice(0, 100),
-      page: Math.max(1, Number.parseInt(params.get('page'), 10) || 1),
+      page: ListPage.readPage(params),
     };
   }
 
-  /** Change filters -> write them to the URL -> reload */
-  setFilters(patch) {
-    this.filters = { ...this.filters, page: 1, ...patch };
-    const params = new URLSearchParams();
-    if (this.filters.status) params.set('status', this.filters.status);
-    if (this.filters.q) params.set('q', this.filters.q);
-    if (this.filters.page > 1) params.set('page', this.filters.page);
-    const query = params.toString();
-    history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
-    this.load();
+  fetchPage(params, signal) {
+    return getMyListings(params, signal);
   }
 
-  // =======================================================
-  //  LOADING DATA
-  // =======================================================
-  /** 'loading' | 'list' | 'empty' | 'error' - blocks written in the HTML */
-  showState(state) {
-    const { list, loading, empty, error, pagination } = this.el;
-    loading.hidden = state !== 'loading';
-    list.hidden = state !== 'list';
-    empty.hidden = state !== 'empty';
-    error.hidden = state !== 'error';
-    if (state !== 'list') pagination.hidden = true;
-  }
-
-  async load() {
-    this.controller?.abort();
-    const controller = new AbortController();
-    this.controller = controller;
-
-    // A list is already shown -> fade it instead of showing skeletons (less jumpy)
-    if (this.el.list.hidden) this.showState('loading');
-    else this.el.list.classList.add('is-loading');
-
-    try {
-      const { data, meta } = await getMyListings({ ...this.filters, limit: PAGE_SIZE }, controller.signal);
-
-      // The current page has no listings left (e.g. the last one was just deleted) -> go back one page
-      if (data.length === 0 && this.filters.page > 1) {
-        this.setFilters({ page: this.filters.page - 1 });
-        return;
-      }
-
-      this.renderTabs(meta.counts);
-      this.renderList(data, meta);
-    } catch (err) {
-      if (isAbortError(err)) return;
-      $('#my-error-message').textContent = err.message;
-      this.showState('error');
-    } finally {
-      if (this.controller === controller) this.el.list.classList.remove('is-loading');
-    }
-  }
-
-  // =======================================================
-  //  RENDERING
-  // =======================================================
-  /** Update the counts + selected tab (the tabs are written in the HTML) */
-  renderTabs(counts) {
-    $$('[data-status-tab]', this.el.tabs).forEach((tab) => {
-      const status = tab.dataset.statusTab;
-      tab.querySelector('[data-tab-count]').textContent = counts[status || 'all'] ?? 0;
-      const active = status === this.filters.status;
-      tab.classList.toggle('is-active', active);
-      tab.setAttribute('aria-pressed', String(active));
-    });
-  }
-
-  renderList(items, meta) {
-    this.listings = new Map(items.map((item) => [item.id, item]));
+  onData(meta) {
     const { q, status } = this.filters;
-
-    this.el.summary.textContent = q
+    $('#my-summary').textContent = q
       ? `${meta.total} tin khớp với "${q}"`
       : `${meta.total} tin${status ? ` · ${LISTING_STATUS_LABELS[status]}` : ''}`;
+  }
 
-    if (items.length === 0) {
-      $('#my-empty-text').textContent = q
-        ? `Không tìm thấy tin nào khớp với "${q}".`
-        : EMPTY_TEXTS[status || 'all'];
-      // Only suggest posting when there really are no listings at all
-      $('#my-empty-cta').hidden = Boolean(q || status);
-      this.showState('empty');
-      return;
-    }
-
-    this.el.list.replaceChildren(...items.map((item) => this.createRow(item)));
-    this.showState('list');
-    renderPagination(this.el.pagination, meta);
+  renderEmpty() {
+    const { q, status } = this.filters;
+    $('#my-empty-text').textContent = q ? `Không tìm thấy tin nào khớp với "${q}".` : EMPTY_TEXTS[status || 'all'];
+    // Only suggest posting when there really are no listings at all
+    $('#my-empty-cta').hidden = Boolean(q || status);
   }
 
   /** One listing row from <template id="tpl-my-listing"> */
-  createRow(item) {
+  createItem(item) {
     const row = cloneTemplate('tpl-my-listing');
     row.dataset.id = item.id;
-
     fillFields(row, {
       title: item.title,
       price: formatVND(item.price),
@@ -242,86 +153,26 @@ class MyListingsPage {
     row.querySelectorAll('[data-action]').forEach((btn) => {
       btn.hidden = !allowed.has(btn.dataset.action);
     });
-    const edit = row.querySelector('[data-action="edit"]');
-    edit.href = `/sell?edit=${item.id}`;
-
+    row.querySelector('[data-action="edit"]').href = `/sell?edit=${item.id}`;
     return row;
   }
 
-  // =======================================================
-  //  ACTIONS
-  // =======================================================
-  async changeStatus(item, action, button) {
-    const { status, confirm } = STATUS_ACTIONS[action];
-    if (confirm && !(await confirmDialog(confirm))) return;
-
-    button.disabled = true;
-    try {
-      const { message } = await updateListingStatus(item.id, status);
-      showToast(message, 'success');
-      this.load(); // tab counts changed -> reload
-    } catch (err) {
-      showToast(err.message, 'error');
-      button.disabled = false;
+  async handleAction(item, action, button) {
+    if (action === 'delete') {
+      const ok = await confirmDialog({
+        title: 'Xóa tin đăng?',
+        message: `"${item.title}" và toàn bộ ảnh sẽ bị xóa vĩnh viễn, không khôi phục được.`,
+        confirmText: 'Xóa tin',
+        danger: true,
+      });
+      if (ok) this.runTask(button, () => deleteListing(item.id));
+      return;
     }
-  }
 
-  async remove(item, button) {
-    const ok = await confirmDialog({
-      title: 'Xóa tin đăng?',
-      message: `"${item.title}" và toàn bộ ảnh sẽ bị xóa vĩnh viễn, không khôi phục được.`,
-      confirmText: 'Xóa tin',
-      danger: true,
-    });
-    if (!ok) return;
-
-    button.disabled = true;
-    try {
-      showToast(await deleteListing(item.id), 'success');
-      this.load();
-    } catch (err) {
-      showToast(err.message, 'error');
-      button.disabled = false;
-    }
-  }
-
-  bindEvents() {
-    // Status tabs
-    this.el.tabs.addEventListener('click', (e) => {
-      const tab = e.target.closest('[data-status-tab]');
-      if (tab) this.setFilters({ status: tab.dataset.statusTab });
-    });
-
-    // Search: debounced, Enter searches immediately
-    const search = debounce(() => this.setFilters({ q: this.el.search.value.trim() }), 400);
-    this.el.search.addEventListener('input', search);
-    $('#my-search-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      search.cancel();
-      this.setFilters({ q: this.el.search.value.trim() });
-    });
-
-    // Buttons on each row (event delegation)
-    this.el.list.addEventListener('click', (e) => {
-      const button = e.target.closest('button[data-action]');
-      if (!button) return;
-      const item = this.listings.get(Number(button.closest('[data-id]').dataset.id));
-      if (!item) return;
-
-      const { action } = button.dataset;
-      if (action === 'delete') this.remove(item, button);
-      else if (STATUS_ACTIONS[action]) this.changeStatus(item, action, button);
-    });
-
-    // Pagination
-    this.el.pagination.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-page]');
-      if (!btn || btn.disabled) return;
-      this.setFilters({ page: Number(btn.dataset.page) });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    $('#my-retry').addEventListener('click', () => this.load());
+    const config = STATUS_ACTIONS[action];
+    if (!config) return;
+    if (config.confirm && !(await confirmDialog(config.confirm))) return;
+    this.runTask(button, async () => (await updateListingStatus(item.id, config.status)).message);
   }
 }
 

@@ -12,12 +12,9 @@ import { getUsdRate } from '../services/public-api.js';
 import { initHeader } from '../components/header.js';
 import { createListingCard } from '../components/listing-card.js';
 import { toggleFavorite } from '../components/favorite.js';
+import { normalizeText } from '../utils/text.js';
 import { confirmDialog } from '../components/confirm-dialog.js';
 import { showToast } from '../components/toast.js';
-
-/** Strip diacritics for accent-insensitive search: "Điện thoại" -> "dien thoai" */
-const normalize = (str = '') =>
-  str.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase();
 
 /** Sort options: comparison functions for Array.prototype.sort */
 const SORTERS = {
@@ -57,10 +54,10 @@ class FavoritesPage {
 
   /** List after keyword filtering + sorting */
   visibleItems() {
-    const keyword = normalize(this.el.search.value.trim());
+    const keyword = normalizeText(this.el.search.value.trim());
     return favorites
       .getAll()
-      .filter((item) => !keyword || normalize(`${item.title} ${item.province ?? ''}`).includes(keyword))
+      .filter((item) => !keyword || normalizeText(`${item.title} ${item.province ?? ''}`).includes(keyword))
       .sort(SORTERS[this.el.sort.value] ?? SORTERS.recent);
   }
 

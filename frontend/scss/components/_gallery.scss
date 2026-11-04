@@ -24,7 +24,6 @@
     border: 0;
     background: none;
     cursor: zoom-in;
-    touch-action: pan-y; // allow vertical page scrolling, horizontal swipes change the image
 
     img {
       width: 100%;

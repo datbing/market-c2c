@@ -346,7 +346,7 @@ button:focus-visible {
   gap: 8px;
   padding-right: 8px;
 }
-.search__history-item:hover, .search__history-item.is-active {
+.search__history-item:hover {
   background: var(--color-surface-2);
 }
 .search__history-term {
@@ -1787,7 +1787,6 @@ textarea.form-control {
   border: 0;
   background: none;
   cursor: zoom-in;
-  touch-action: pan-y;
 }
 .gallery__view img {
   width: 100%;
@@ -2030,19 +2029,14 @@ textarea.form-control {
   border-radius: 8px;
   overflow: hidden;
   background: var(--color-surface-2);
-  cursor: grab;
 }
 .image-picker__item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  pointer-events: none;
 }
 .image-picker__item:first-child {
   border: 2px solid var(--color-primary);
-}
-.image-picker__item.is-dragging {
-  opacity: 0.4;
 }
 .image-picker__cover, .image-picker__size {
   position: absolute;

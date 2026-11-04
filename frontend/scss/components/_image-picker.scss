@@ -78,22 +78,16 @@
     border-radius: $radius;
     overflow: hidden;
     background: var(--color-surface-2);
-    cursor: grab;
 
     img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      pointer-events: none; // drag the whole tile, not just the image
     }
 
     // The first image (cover) gets an orange border
     &:first-child {
       border: 2px solid var(--color-primary);
-    }
-
-    &.is-dragging {
-      opacity: 0.4;
     }
   }
 

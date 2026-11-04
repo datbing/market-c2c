@@ -17,7 +17,7 @@ Sàn mua bán **C2C** (người dùng tự đăng bán đồ cho nhau, kiểu Ch
 | Trang chủ | `/` | Danh mục, tìm kiếm không dấu (debounce + lịch sử tìm kiếm), lọc theo khu vực / tình trạng / giá, sắp xếp, phân trang, tin vừa xem |
 | Chi tiết tin | `/product?id=` | Bộ ảnh + xem phóng to (`<dialog>`), giá quy đổi USD, thêm giỏ / mua ngay / yêu thích / chia sẻ, báo cáo vi phạm, tin cùng danh mục |
 | Đăng ký / đăng nhập | `/register`, `/login` | Validate theo từng ô (cùng quy tắc với server), đo độ mạnh mật khẩu (`<meter>`), ghi nhớ email |
-| Đăng tin / sửa tin | `/sell`, `/sell?edit=` | Chọn / kéo thả ảnh, **nén ảnh bằng Canvas**, sắp xếp ảnh, nháp tự lưu, thẻ xem trước trực tiếp |
+| Đăng tin / sửa tin | `/sell`, `/sell?edit=` | Chọn / kéo thả ảnh vào khung, **nén ảnh bằng Canvas**, chọn ảnh bìa, nháp tự lưu, thẻ xem trước trực tiếp |
 | Tin đăng của tôi | `/my-listings` | Lọc theo trạng thái, tìm kiếm, **sửa / xóa / đánh dấu đã bán** / ẩn / hiện / đăng bán lại |
 | Giỏ hàng | `/cart` | Kiểm tra lại từng món với server, nhóm theo người bán, đặt hàng (mỗi món 1 đơn) |
 | Đơn hàng | `/orders` | Đơn mua / đơn bán, thanh tiến trình, xác nhận → giao → **hoàn thành** (tin tự chuyển "đã bán"), hủy |
@@ -52,10 +52,10 @@ Giao diện **sáng / tối** (lưu bằng cookie), **responsive** từ 320px t�
 | **Gọi API công khai** (fetch + async/await, try/catch, loading, lỗi, dự phòng) | Tỉnh thành `provinces.open-api.vn` (dự phòng `data/provinces.json`), tỷ giá `open.er-api.com` (lỗi thì ẩn phần USD) |
 
 Một số kỹ thuật JavaScript nâng cao đã dùng:
-- **Class / kế thừa:** `BaseChart` → `BarChart`, `LineChart`, `HBarChart`, `DonutChart`; `FormHandler`, `ImagePicker`, `Gallery`, `ListStore`.
+- **Class / kế thừa:** `BaseChart` → `BarChart`, `LineChart`, `HBarChart`, `DonutChart`; `ListPage` → 5 trang danh sách (tin của tôi, đơn hàng, 3 trang admin); `FormHandler`, `ImagePicker`, `Gallery`, `ListStore`.
 - **Event delegation, `CustomEvent`** giữa các module (`cart:change`, `favorites:change`, `theme:change`) và đồng bộ giữa các tab (sự kiện `storage`).
 - **`Promise.all` / `Promise.allSettled`, `AbortController`** (hủy request cũ khi lọc liên tục), **debounce**.
-- **`FormData`** gửi ảnh, **Canvas API** nén ảnh và vẽ biểu đồ, **`ResizeObserver`**, **`URL.createObjectURL`**, **HTML5 Drag & Drop**, **Web Share / Clipboard API**.
+- **`FormData`** gửi ảnh, **Canvas API** nén ảnh và vẽ biểu đồ, **`ResizeObserver`**, **`URL.createObjectURL`**, **HTML5 Drag & Drop** (thả file ảnh), **Web Share / Clipboard API**.
 - `filter / map / reduce / sort`, destructuring, spread, template literal, optional chaining.
 - **Không dùng `innerHTML`** với dữ liệu: component viết sẵn trong `<template>`, JS nhân bản rồi gán `textContent` (tự chống XSS).
 
@@ -244,3 +244,21 @@ Mọi key có tiền tố `mc2c:`, bọc trong `frontend/js/services/storage.js`
 - **`Không đọc được chứng chỉ SSL`** khi chạy API: bật SSL trong Laragon hoặc sửa `SSL_CERT` / `SSL_KEY` trong `.env`.
 - **Đăng nhập xong vẫn như chưa đăng nhập**: mở bằng `https://market-c2c.test` (không dùng `localhost` — khác site nên cookie không dùng chung).
 - **Giao diện chưa đổi sau khi sửa**: nhấn **Ctrl + F5** (trình duyệt còn giữ CSS / JS cũ).
+
+---
+
+## 8. Ảnh chụp màn hình và tiểu luận
+
+Tiểu luận: [docs/TieuLuan-MarketC2C.docx](docs/TieuLuan-MarketC2C.docx) (bản PDF: [docs/TieuLuan-MarketC2C.pdf](docs/TieuLuan-MarketC2C.pdf)). Toàn bộ ảnh nằm trong `docs/screenshots/`.
+
+| Trang chủ | Giao diện tối |
+|---|---|
+| ![Trang chủ](docs/screenshots/01-trang-chu.jpg) | ![Giao diện tối](docs/screenshots/03-giao-dien-toi.jpg) |
+| **Chi tiết tin** | **Đăng tin** |
+| ![Chi tiết tin](docs/screenshots/05-chi-tiet-tin.jpg) | ![Đăng tin](docs/screenshots/08-dang-tin.jpg) |
+| **Giỏ hàng** | **Đơn hàng** |
+| ![Giỏ hàng](docs/screenshots/10-gio-hang.jpg) | ![Đơn hàng](docs/screenshots/11-don-hang.jpg) |
+| **Quản trị: tổng quan** | **Quản trị: duyệt tin** |
+| ![Tổng quan](docs/screenshots/13-admin-tong-quan.jpg) | ![Duyệt tin](docs/screenshots/15-admin-duyet-tin.jpg) |
+
+![Giao diện điện thoại](docs/screenshots/04-giao-dien-dien-thoai.jpg)

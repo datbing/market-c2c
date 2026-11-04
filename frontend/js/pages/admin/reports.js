@@ -3,94 +3,54 @@
  *  - Tabs: Open / Resolved / Dismissed / All (defaults to "Open")
  *  - Each report: reported listing, reporter, reason
  *  - Actions: dismiss | resolve | take down (enter a reason, also closes every report of that listing)
+ *  - Tabs, pagination, loading states: components/list-page.js
  */
-import { $, $$ } from '../../utils/dom.js';
 import { cloneTemplate, fillFields } from '../../utils/template.js';
 import { formatDate, timeAgo, LISTING_STATUS_LABELS } from '../../utils/format.js';
 import { assetUrl } from '../../config.js';
-import { isAbortError } from '../../services/api.js';
 import { getAdminReports, handleReport } from '../../services/admin.js';
 import { initAdminShell, refreshAdminBadges } from '../../components/admin-shell.js';
-import { renderPagination } from '../../components/pagination.js';
 import { promptDialog } from '../../components/prompt-dialog.js';
 import { confirmDialog } from '../../components/confirm-dialog.js';
-import { showToast } from '../../components/toast.js';
 import { listingUrl } from '../../components/listing-card.js';
+import { ListPage } from '../../components/list-page.js';
 
-const PAGE_SIZE = 10;
 const REPORT_LABELS = { open: 'Chưa xử lý', resolved: 'Đã xử lý', dismissed: 'Bỏ qua' };
 const REPORT_BADGES = { open: 'badge--status-pending', resolved: 'badge--status-active', dismissed: 'badge--status-hidden' };
 
-class AdminReportsPage {
-  filters = { status: 'open', page: 1 };
-  reports = new Map();
-  controller = null;
+class AdminReportsPage extends ListPage {
+  defaults = { status: 'open', page: 1 };
+
+  constructor() {
+    super({
+      list: '#report-list',
+      empty: '#admin-empty',
+      error: '#admin-error',
+      errorMessage: '#admin-error-message',
+      retry: '#admin-retry',
+      pagination: '#pagination',
+      tabs: '#status-tabs',
+    });
+  }
 
   async init() {
-    if (!(await initAdminShell())) return;
-    this.el = {
-      tabs: $('#status-tabs'),
-      list: $('#report-list'),
-      empty: $('#admin-empty'),
-      error: $('#admin-error'),
-      pagination: $('#pagination'),
-    };
-    const params = new URLSearchParams(window.location.search);
+    if (await initAdminShell()) this.start();
+  }
+
+  parseFilters(params) {
     const status = params.get('status');
-    this.filters = {
+    return {
+      // No status in the URL -> "Open"; ?status= (empty) -> "All"
       status: status === null ? 'open' : status in REPORT_LABELS ? status : '',
-      page: Math.max(1, Number.parseInt(params.get('page'), 10) || 1),
+      page: ListPage.readPage(params),
     };
-    this.bindEvents();
-    this.load();
   }
 
-  setFilters(patch) {
-    this.filters = { ...this.filters, page: 1, ...patch };
-    const params = new URLSearchParams({ status: this.filters.status });
-    if (this.filters.page > 1) params.set('page', this.filters.page);
-    history.replaceState(null, '', `${window.location.pathname}?${params}`);
-    this.load();
+  fetchPage(params, signal) {
+    return getAdminReports(params, signal);
   }
 
-  showState(state) {
-    this.el.list.hidden = state !== 'list';
-    this.el.empty.hidden = state !== 'empty';
-    this.el.error.hidden = state !== 'error';
-    if (state !== 'list') this.el.pagination.hidden = true;
-  }
-
-  async load() {
-    this.controller?.abort();
-    const controller = new AbortController();
-    this.controller = controller;
-    this.el.list.classList.add('is-loading');
-    try {
-      const { data, meta } = await getAdminReports({ ...this.filters, limit: PAGE_SIZE }, controller.signal);
-      $$('[data-status-tab]', this.el.tabs).forEach((tab) => {
-        const status = tab.dataset.statusTab;
-        tab.querySelector('[data-tab-count]').textContent = meta.counts[status || 'all'] ?? 0;
-        tab.classList.toggle('is-active', status === this.filters.status);
-        tab.setAttribute('aria-pressed', String(status === this.filters.status));
-      });
-      this.reports = new Map(data.map((r) => [r.id, r]));
-      if (data.length === 0) {
-        this.showState('empty');
-        return;
-      }
-      this.el.list.replaceChildren(...data.map((r) => this.createCard(r)));
-      this.showState('list');
-      renderPagination(this.el.pagination, meta);
-    } catch (err) {
-      if (isAbortError(err)) return;
-      $('#admin-error-message').textContent = err.message;
-      this.showState('error');
-    } finally {
-      if (this.controller === controller) this.el.list.classList.remove('is-loading');
-    }
-  }
-
-  createCard(report) {
+  createItem(report) {
     const card = cloneTemplate('tpl-report');
     card.dataset.id = report.id;
     const { listing } = report;
@@ -125,7 +85,7 @@ class AdminReportsPage {
     return card;
   }
 
-  async act(report, action, button) {
+  async handleAction(report, action, button) {
     let reason;
     if (action === 'takedown') {
       reason = await promptDialog({
@@ -145,34 +105,7 @@ class AdminReportsPage {
       );
       if (!ok) return;
     }
-
-    button.disabled = true;
-    try {
-      showToast(await handleReport(report.id, action, reason || undefined), 'success');
-      this.load();
-      refreshAdminBadges();
-    } catch (err) {
-      showToast(err.message, 'error');
-      button.disabled = false;
-    }
-  }
-
-  bindEvents() {
-    this.el.tabs.addEventListener('click', (e) => {
-      const tab = e.target.closest('[data-status-tab]');
-      if (tab) this.setFilters({ status: tab.dataset.statusTab });
-    });
-    this.el.list.addEventListener('click', (e) => {
-      const button = e.target.closest('button[data-action]');
-      if (!button) return;
-      const report = this.reports.get(Number(button.closest('[data-id]').dataset.id));
-      if (report) this.act(report, button.dataset.action, button);
-    });
-    this.el.pagination.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-page]');
-      if (btn && !btn.disabled) this.setFilters({ page: Number(btn.dataset.page) });
-    });
-    $('#admin-retry').addEventListener('click', () => this.load());
+    if (await this.runTask(button, () => handleReport(report.id, action, reason || undefined))) refreshAdminBadges();
   }
 }
 

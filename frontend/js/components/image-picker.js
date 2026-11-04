@@ -9,7 +9,7 @@
  *   </div>
  *
  * Features: pick multiple images, drop files onto the box, compress with Canvas,
- * preview (URL.createObjectURL), remove, set as cover, drag and drop to reorder.
+ * preview (URL.createObjectURL), remove, set as cover (the first image is the cover).
  * When editing: preloads the existing images (addExisting), mixed with new ones.
  * Every change to the list -> dispatches the 'images:change' CustomEvent on the root element.
  */
@@ -30,8 +30,6 @@ export class ImagePicker {
   items = [];
   /** Number of images being compressed */
   #processing = 0;
-  /** id of the image being dragged (reordering) */
-  #draggingId = null;
 
   /**
    * @param {HTMLElement} root
@@ -158,18 +156,6 @@ export class ImagePicker {
     this.#changed();
   }
 
-  /** Move image `id` to the position of image `targetId` (drag and drop reordering) */
-  move(id, targetId) {
-    const from = this.items.findIndex((x) => x.id === id);
-    const to = this.items.findIndex((x) => x.id === targetId);
-    if (from < 0 || to < 0 || from === to) return;
-    const next = [...this.items];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    this.items = next;
-    this.#changed();
-  }
-
   clear() {
     this.items.forEach((item) => item.blob && URL.revokeObjectURL(item.url));
     this.items = [];
@@ -206,7 +192,7 @@ export class ImagePicker {
 
     this.status.textContent = this.isProcessing
       ? `Đang xử lý ${this.#processing} ảnh...`
-      : `${this.items.length}/${this.max} ảnh${this.items.length ? ' · Kéo thả để sắp xếp, ảnh đầu tiên là ảnh bìa' : ''}`;
+      : `${this.items.length}/${this.max} ảnh${this.items.length ? ' · Ảnh đầu tiên là ảnh bìa' : ''}`;
   }
 
   // ---------------------------------------------------------
@@ -243,28 +229,6 @@ export class ImagePicker {
       const id = Number(button.closest('[data-image-id]').dataset.imageId);
       if (button.dataset.imageAction === 'remove') this.remove(id);
       else this.makeCover(id);
-    });
-
-    // Drag and drop to reorder images (HTML5 Drag and Drop API)
-    this.list.addEventListener('dragstart', (e) => {
-      const li = e.target.closest('[data-image-id]');
-      if (!li) return;
-      this.#draggingId = Number(li.dataset.imageId);
-      e.dataTransfer.effectAllowed = 'move';
-      li.classList.add('is-dragging');
-    });
-    this.list.addEventListener('dragover', (e) => {
-      if (this.#draggingId !== null) e.preventDefault();
-    });
-    this.list.addEventListener('drop', (e) => {
-      const target = e.target.closest('[data-image-id]');
-      if (this.#draggingId === null || !target) return;
-      e.preventDefault();
-      this.move(this.#draggingId, Number(target.dataset.imageId));
-    });
-    this.list.addEventListener('dragend', () => {
-      this.#draggingId = null;
-      this.list.querySelector('.is-dragging')?.classList.remove('is-dragging');
     });
   }
 }

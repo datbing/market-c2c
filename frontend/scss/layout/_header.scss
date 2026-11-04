@@ -150,8 +150,7 @@
     gap: $space-2;
     padding-right: $space-2;
 
-    &:hover,
-    &.is-active {
+    &:hover {
       background: var(--color-surface-2);
     }
   }

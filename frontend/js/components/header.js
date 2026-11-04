@@ -8,6 +8,7 @@
  */
 import { $, $$, debounce } from '../utils/dom.js';
 import { cloneTemplate } from '../utils/template.js';
+import { normalizeText } from '../utils/text.js';
 import { getCurrentUser, logout, loginUrl } from '../services/auth.js';
 import { consumeFlash } from '../services/flash.js';
 import { getOrderSummary } from '../services/orders.js';
@@ -114,16 +115,9 @@ async function initAccount() {
 // ---------------------------------------------------------
 //  Search + history
 // ---------------------------------------------------------
-/** Strip diacritics to filter the history: typing "dien" still suggests "điện thoại" */
-const normalize = (str) =>
-  str.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().trim();
-
 /** Build one history row from <template id="tpl-history-item"> */
-function createHistoryItem(term, isActive) {
+function createHistoryItem(term) {
   const item = cloneTemplate('tpl-history-item');
-  item.classList.toggle('is-active', isActive);
-  item.setAttribute('aria-selected', String(isActive));
-
   item.querySelector('[data-term]').dataset.term = term;
   item.querySelector('[data-field="term"]').textContent = term;
 
@@ -139,27 +133,26 @@ function initSearch({ onSearch, liveSearch }) {
   const input = $('#search-input', form);
   const dropdown = $('#search-history', form);
   const list = $('#search-history-list', form);
-  let activeIndex = -1; // row selected with the arrow keys
 
   // Prefill the keyword from the URL (?q=...)
   input.value = new URLSearchParams(window.location.search).get('q') ?? '';
 
   const getMatches = () => {
-    const keyword = normalize(input.value);
-    return searchHistory.getAll().filter((term) => normalize(term).includes(keyword));
+    // Accent-insensitive: typing "dien" still suggests "điện thoại"
+    const keyword = normalizeText(input.value);
+    return searchHistory.getAll().filter((term) => normalizeText(term).includes(keyword));
   };
 
   const closeDropdown = () => {
     dropdown.hidden = true;
     input.setAttribute('aria-expanded', 'false');
-    activeIndex = -1;
   };
 
   const renderDropdown = () => {
     const matches = getMatches();
     if (matches.length === 0) return closeDropdown();
 
-    list.replaceChildren(...matches.map((term, i) => createHistoryItem(term, i === activeIndex)));
+    list.replaceChildren(...matches.map((term) => createHistoryItem(term)));
     dropdown.hidden = false;
     input.setAttribute('aria-expanded', 'true');
   };
@@ -186,29 +179,12 @@ function initSearch({ onSearch, liveSearch }) {
 
   input.addEventListener('focus', renderDropdown);
   input.addEventListener('input', () => {
-    activeIndex = -1;
     renderDropdown();
     if (liveSearch && onSearch) liveHandler();
   });
 
-  // Keyboard navigation in the dropdown
   input.addEventListener('keydown', (e) => {
-    const matches = dropdown.hidden ? [] : getMatches();
-
-    if (e.key === 'Escape') return closeDropdown();
-    if (matches.length === 0) return;
-
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const step = e.key === 'ArrowDown' ? 1 : -1;
-      activeIndex = (activeIndex + step + matches.length) % matches.length;
-      renderDropdown();
-    } else if (e.key === 'Enter' && activeIndex >= 0) {
-      e.preventDefault();
-      input.value = matches[activeIndex];
-      liveHandler.cancel();
-      runSearch(input.value);
-    }
+    if (e.key === 'Escape') closeDropdown();
   });
 
   // Event delegation for the buttons in the dropdown
